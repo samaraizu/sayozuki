@@ -48,8 +48,10 @@ export default function Home() {
       <main id="top">
         {/* ファーストビュー */}
         <section className="relative flex h-[100svh] min-h-[560px] items-center justify-center bg-ink text-washi">
-          <Photo src={photos.hero} alt="外観（夕方）" priority className="absolute inset-0" />
-          <div className="absolute inset-0 bg-ink/35" />
+          <div className="absolute inset-0">
+            <Photo src={photos.hero} alt="岩組みの内湯" priority className="h-full" />
+          </div>
+          <div className="absolute inset-0 bg-ink/55" />
           <div className="relative flex flex-col items-center">
             <h1 className="vertical font-serif text-5xl tracking-[0.5em] md:text-6xl">{site.name}</h1>
             <p className="mt-8 text-[11px] tracking-[0.5em] opacity-80">{site.roman}</p>
@@ -69,7 +71,7 @@ export default function Home() {
               </p>
               <div className="mt-10 space-y-6 text-[15px] leading-[2.2] text-ink/75">
                 <p>
-                  山形・かみのやま温泉。蔵王の山並みを望む城下の湯の町に、小さな宿「小夜月」はあります。
+                  山形・かみのやま温泉。蔵王のふもと、城下の湯の町に、小さな宿「小夜月」はあります。
                 </p>
                 <p>
                   にぎやかな演出はありません。湯に浸かり、窓の外の気配に耳を澄ませ、ただ何もしない時間を過ごす。そのための余白を、ご用意しました。
@@ -77,8 +79,8 @@ export default function Home() {
               </div>
             </div>
             <div className="grid grid-cols-5 gap-4">
-              <Photo src={photos.exterior} alt="外観（昼）" sizes="(min-width: 768px) 30vw, 60vw" className="col-span-3 aspect-[3/4]" />
-              <Photo src={photos.scenery} alt="周辺の風景" sizes="(min-width: 768px) 20vw, 40vw" className="col-span-2 mt-16 aspect-[3/4]" />
+              <Photo src={photos.lobby} alt="ロビー" sizes="(min-width: 768px) 30vw, 60vw" className="col-span-3 aspect-[3/4]" />
+              <Photo src={photos.noren} alt="湯ののれん" sizes="(min-width: 768px) 20vw, 40vw" className="col-span-2 mt-16 aspect-[3/4]" />
             </div>
           </div>
         </section>
@@ -86,7 +88,7 @@ export default function Home() {
         {/* 温泉 */}
         <section id="onsen" className="bg-ink text-washi">
           <div className="grid md:grid-cols-2">
-            <Photo src={photos.onsen} alt="温泉（湯気と光）" sizes="(min-width: 768px) 50vw, 100vw" className="aspect-[4/3] md:aspect-auto md:min-h-[640px]" />
+            <Photo src={photos.onsen} alt="大浴場" sizes="(min-width: 768px) 50vw, 100vw" className="aspect-[4/3] md:aspect-auto md:min-h-[640px]" />
             <div className="px-5 py-20 md:px-16 md:py-28">
               <div className="mb-12">
                 <p className="text-[11px] tracking-[0.4em] text-moon">HOT SPRING</p>
@@ -119,8 +121,8 @@ export default function Home() {
         <section id="rooms" className="mx-auto max-w-6xl px-5 py-24 md:py-36">
           <SectionTitle en="ROOMS" ja="客室" />
           <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
-            <Photo src={photos.room} alt="客室（引き）" sizes="(min-width: 768px) 66vw, 100vw" className="aspect-[16/10]" />
-            <Photo src={photos.roomDetail} alt="客室（布団・寝具）" sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[16/10] md:aspect-auto" />
+            <Photo src={photos.room} alt="和室の客室" sizes="(min-width: 768px) 66vw, 100vw" className="aspect-[16/10]" />
+            <Photo src={photos.corridor} alt="館内の廊下" sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[16/10] md:aspect-auto" />
           </div>
           <p className="mt-12 max-w-2xl text-[15px] leading-[2.2] text-ink/75">
             客室は全{rooms.length}室。おふたりで過ごす小さな部屋から、ご家族やお仲間と囲める広めの部屋まで。山の名を冠した「蔵王」「月山」もございます。
@@ -176,7 +178,9 @@ export default function Home() {
               </div>
               <div>
                 <h3 className="font-serif text-lg tracking-[0.15em]">お食事</h3>
-                <Photo src={photos.meal} alt="料理（メインの一皿）" sizes="(min-width: 768px) 33vw, 100vw" className="mt-6 aspect-[4/3]" />
+                {photos.meal && (
+                  <Photo src={photos.meal} alt="料理" sizes="(min-width: 768px) 33vw, 100vw" className="mt-6 aspect-[4/3]" />
+                )}
                 <dl className="mt-6 text-[15px]">
                   <div className="flex justify-between border-b border-ink/15 py-4">
                     <dt>朝食</dt>
