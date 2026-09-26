@@ -14,6 +14,8 @@ export const site = {
   url: "https://kaminoyama-sayoduki.com",
   // Notion では「営業日数22日・水〜日あたり」。確定したら書き換える
   openDays: "水曜日〜日曜日を中心に営業しております",
+  // Google ビジネスプロフィール（現在の登録名は「旅館 静山荘 次元ブレッド」）
+  gbpUrl: "https://share.google/ZoLhpDujEC7RIG0Xq",
 } as const;
 
 /**
