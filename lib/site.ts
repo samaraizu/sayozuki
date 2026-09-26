@@ -26,20 +26,18 @@ export const otaLinks = [
 ] as const;
 
 /**
- * 写真。Google Drive の sayozuki_01〜09.jpg を public/images に置き、
- * それぞれの場面に合うファイル名を入れる。null のあいだは仮の枠を出す。
+ * 写真（Google Drive の sayozuki_01〜09.jpg）。
+ * null の枠は表示しない。料理・周辺風景は撮影後に追加する。
+ * 08（外観）は看板が旧名「静山荘」のため未使用。02 は 04 の縮小版なので未使用。
  */
-export const photos: Record<
-  "hero" | "exterior" | "onsen" | "room" | "roomDetail" | "meal" | "scenery",
-  string | null
-> = {
-  hero: null,
-  exterior: null,
-  onsen: null,
-  room: null,
-  roomDetail: null,
-  meal: null,
-  scenery: null,
+export const photos = {
+  hero: "/images/sayozuki_04.jpg",
+  lobby: "/images/sayozuki_07.jpg",
+  noren: "/images/sayozuki_05.jpg",
+  onsen: "/images/sayozuki_03.jpg",
+  room: "/images/sayozuki_09.jpg",
+  corridor: "/images/sayozuki_06.jpg",
+  meal: null as string | null,
 };
 
 export const onsen = {

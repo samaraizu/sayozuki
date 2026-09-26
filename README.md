@@ -13,10 +13,10 @@ npm run dev   # http://localhost:3000
 | --- | --- |
 | 客室・料金・温泉・住所などの宿情報 | `lib/site.ts` |
 | 楽天トラベル・じゃらんの予約URL | `lib/site.ts` の `otaLinks` |
-| 写真 | `public/images/` に置き、`lib/site.ts` の `photos` にパスを書く（例 `"/images/sayozuki_01.jpg"`） |
+| 写真 | `public/images/` に置き、`lib/site.ts` の `photos` にパスを書く |
 | ページの文章・構成 | `app/page.tsx` |
 
-写真が未設定の場所には、撮影メモ入りの仮の枠が表示されます。
+料理の写真は `photos.meal` に入れると「お食事」欄に表示されます。
 
 ## ご予約フォーム
 
