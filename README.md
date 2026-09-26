@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 小夜月（さよづき）
 
-## Getting Started
-
-First, run the development server:
+かみのやま温泉の湯宿「小夜月」の公式サイト。Next.js 16 + Tailwind CSS 4。
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 更新する場所
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| 変えたいもの | ファイル |
+| --- | --- |
+| 客室・料金・温泉・住所などの宿情報 | `lib/site.ts` |
+| 楽天トラベル・じゃらんの予約URL | `lib/site.ts` の `otaLinks` |
+| 写真 | `public/images/` に置き、`lib/site.ts` の `photos` にパスを書く（例 `"/images/sayozuki_01.jpg"`） |
+| ページの文章・構成 | `app/page.tsx` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+写真が未設定の場所には、撮影メモ入りの仮の枠が表示されます。
 
-## Learn More
+## ご予約フォーム
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+直接のお問い合わせは Resend でメール通知します。`.env.local.example` を `.env.local` にコピーして値を入れてください。
+未設定のあいだは送信せず、内容をサーバーのログに出します。
