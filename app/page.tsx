@@ -22,8 +22,31 @@ function SectionTitle({ en, ja }: { en: string; ja: string }) {
 export default function Home() {
   const mapQuery = encodeURIComponent(`${site.address} ${site.name}`);
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    name: site.name,
+    alternateName: site.roman,
+    url: site.url,
+    image: `${site.url}${photos.hero}`,
+    address: {
+      "@type": "PostalAddress",
+      postalCode: site.postalCode.replace("〒", ""),
+      addressRegion: "山形県",
+      addressLocality: "上山市",
+      streetAddress: "葉山5-63",
+      addressCountry: "JP",
+    },
+    priceRange: `${yen(Math.min(...rooms.map((r) => r.price)))}〜`,
+    sameAs: [site.gbpUrl],
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
       <header className="fixed inset-x-0 top-0 z-50 bg-ink/80 text-washi backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
           <a href="#top" className="font-serif text-lg tracking-[0.3em]">
@@ -251,6 +274,17 @@ export default function Home() {
                     {site.postalCode}
                     <br />
                     {site.address}
+                  </dd>
+                  <dd className="mt-4">
+                    <a
+                      href={site.gbpUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-3 border border-washi/30 px-5 py-3 text-[13px] tracking-[0.15em] transition-colors hover:bg-washi hover:text-ink"
+                    >
+                      Google マップで見る
+                      <span aria-hidden>→</span>
+                    </a>
                   </dd>
                 </div>
                 <div>
