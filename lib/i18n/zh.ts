@@ -134,5 +134,13 @@ export const zh: Dict = {
     aroundLabel: "周边",
     around: "藏王温泉・上山城・武家屋敷街",
   },
+  topbar: "本馆主要于周三至周日营业",
+  bar: "预订・咨询请点击这里",
+  sake: {
+    en: "SAKE",
+    title: "旅馆精选的日本酒",
+    lead: "山形地酒网购（仅限日本国内配送・日语页面）",
+    more: "前往日本酒网店",
+  },
   footer: { operator: "运营：{company}" },
 };

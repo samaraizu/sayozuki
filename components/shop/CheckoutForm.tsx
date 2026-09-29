@@ -9,8 +9,8 @@ import { findProduct, shop } from "@/lib/shop";
 import { yen } from "@/lib/site";
 
 const field =
-  "w-full border-b border-ink/25 bg-transparent py-2.5 text-[15px] outline-none transition-colors focus:border-moon";
-const label = "block text-xs tracking-[0.15em] text-ink/60";
+  "mt-1.5 w-full border border-line bg-white px-3 py-2.5 text-[15px] outline-none transition-colors focus:border-green";
+const label = "block text-[13px] font-bold";
 
 function Err({ msg }: { msg?: string }) {
   return msg ? <p className="mt-1 text-xs text-red-700">{msg}</p> : null;
@@ -29,8 +29,8 @@ export function CheckoutForm() {
   if (!count) {
     return (
       <div className="py-20 text-center">
-        <p className="text-ink/70">カートに商品が入っていません。</p>
-        <Link href="/shop#sake" className="mt-8 inline-block border border-ink px-8 py-4 text-sm tracking-[0.2em]">
+        <p className="text-ink">カートに商品が入っていません。</p>
+        <Link href="/shop#sake" className="mt-8 inline-block border border-ink px-8 py-4 text-sm">
           日本酒を見る
         </Link>
       </div>
@@ -46,18 +46,18 @@ export function CheckoutForm() {
     >
       {/* カートの中身 */}
       <section aria-labelledby="cart-title">
-        <h2 id="cart-title" className="font-serif text-lg tracking-[0.15em]">
+        <h2 id="cart-title" className="font-bold text-lg">
           ご注文内容
         </h2>
-        <ul className="mt-6 divide-y divide-ink/10 border-y border-ink/10">
+        <ul className="mt-6 divide-y divide-line border-y border-line">
           {lines.map(({ product: p, qty }) => (
             <li key={p.id} className="flex gap-4 py-5">
-              <Bottle product={p} className="size-20 shrink-0" />
+              <Bottle product={p} className="size-20 shrink-0 bg-surface" />
               <div className="flex-1">
-                <Link href={`/shop/${p.id}`} className="font-serif hover:underline">
+                <Link href={`/shop/${p.id}`} className="font-bold hover:underline">
                   {p.name}
                 </Link>
-                <p className="mt-1 text-xs text-ink/60">
+                <p className="mt-1 text-xs text-sub">
                   {p.volume}　{yen(p.price)}
                 </p>
                 <div className="mt-3 flex items-center gap-3">
@@ -70,7 +70,7 @@ export function CheckoutForm() {
                     id={`qty_${p.id}`}
                     value={qty}
                     onChange={(e) => setQty(p.id, Number(e.target.value))}
-                    className="border border-ink/25 bg-transparent px-2 py-1 text-sm"
+                    className="border border-line bg-transparent px-2 py-1 text-sm"
                   >
                     {Array.from({ length: shop.maxQty }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
@@ -81,7 +81,7 @@ export function CheckoutForm() {
                   <button
                     type="button"
                     onClick={() => setQty(p.id, 0)}
-                    className="text-xs text-ink/50 underline underline-offset-4"
+                    className="text-xs text-sub underline underline-offset-4"
                   >
                     削除
                   </button>
@@ -95,12 +95,12 @@ export function CheckoutForm() {
           <span className="text-sm">小計（税込）</span>
           <span className="text-2xl tabular-nums">{yen(total)}</span>
         </div>
-        <p className="mt-3 text-xs leading-6 text-ink/60">{shop.shippingNote}</p>
+        <p className="mt-3 text-xs leading-6 text-sub">{shop.shippingNote}</p>
       </section>
 
       {/* お届け先 */}
       <section aria-labelledby="ship-title" className="grid content-start gap-7">
-        <h2 id="ship-title" className="font-serif text-lg tracking-[0.15em]">
+        <h2 id="ship-title" className="font-bold text-lg">
           お届け先
         </h2>
 
@@ -173,7 +173,7 @@ export function CheckoutForm() {
             <input type="checkbox" name="adult" defaultChecked={v.adult === "on"} className="mt-1 accent-moon" />
             <span>
               私は20歳以上です。
-              <span className="block text-xs text-ink/50">
+              <span className="block text-xs text-sub">
                 お届けの際に年齢確認をお願いする場合があります。
               </span>
             </span>
@@ -190,12 +190,12 @@ export function CheckoutForm() {
           <button
             type="submit"
             disabled={pending || !shop.open}
-            className="w-full bg-ink px-8 py-4 text-sm tracking-[0.3em] text-washi transition-opacity hover:opacity-85 disabled:opacity-40"
+            className="w-full bg-ink px-8 py-4 text-sm text-washi transition-opacity hover:opacity-85 disabled:opacity-40"
           >
             {!shop.open ? "販売準備中です" : pending ? "送信しています…" : "注文を確定する"}
           </button>
-          <p className="mt-4 text-xs leading-6 text-ink/60">{shop.paymentNote}</p>
-          <p className="mt-2 text-xs leading-6 text-ink/60">
+          <p className="mt-4 text-xs leading-6 text-sub">{shop.paymentNote}</p>
+          <p className="mt-2 text-xs leading-6 text-sub">
             ご注文前に
             <Link href="/shop/legal" className="underline underline-offset-4">
               特定商取引法に基づく表記

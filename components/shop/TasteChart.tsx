@@ -2,7 +2,7 @@ import type { Product } from "@/lib/shop";
 
 function Scale({ left, right, value }: { left: string; right: string; value: number }) {
   return (
-    <div className="grid grid-cols-[3.5rem_1fr_3.5rem] items-center gap-3 text-xs text-ink/60">
+    <div className="grid grid-cols-[3.5rem_1fr_3.5rem] items-center gap-3 text-xs text-sub">
       <span>{left}</span>
       <div className="relative h-px bg-ink/20">
         {[0, 1, 2, 3, 4].map((i) => (

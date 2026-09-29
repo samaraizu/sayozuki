@@ -134,5 +134,13 @@ export const ko: Dict = {
     aroundLabel: "주변",
     around: "자오 온천・가미노야마성・무가야시키 거리",
   },
+  topbar: "주로 수요일부터 일요일까지 영업합니다",
+  bar: "예약・문의는 이쪽",
+  sake: {
+    en: "SAKE",
+    title: "료칸에서 제공하는 엄선된 사케",
+    lead: "야마가타 지역 사케를 주문하실 수 있습니다 (일본 국내 배송・일본어 페이지)",
+    more: "사케 온라인숍 보기",
+  },
   footer: { operator: "운영: {company}" },
 };
