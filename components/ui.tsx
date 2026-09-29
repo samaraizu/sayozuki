@@ -8,7 +8,7 @@ export function SectionHeading({ en, ja, light = false }: { en: string; ja: stri
       <h2 className={`font-en text-[34px] font-medium leading-none md:text-[44px] ${light ? "text-white" : "text-ink"}`}>
         {en}
       </h2>
-      <p className={`mt-4 text-sm font-bold ${light ? "text-white/90" : "text-ink"}`}>{ja}</p>
+      <p className={`mt-4 font-brush text-lg font-bold md:text-xl ${light ? "text-white/90" : "text-ink"}`}>{ja}</p>
     </div>
   );
 }
@@ -75,7 +75,7 @@ export function PhotoBand({
         <div className="absolute inset-0 bg-black/35" />
       </div>
       <div className="relative mx-auto max-w-6xl px-4 pt-16 text-center text-white md:pt-20">
-        <h3 className="text-xl font-bold tracking-[0.06em] text-balance md:text-3xl">{title}</h3>
+        <h3 className="font-brush text-2xl font-bold tracking-[0.06em] text-balance md:text-4xl">{title}</h3>
         {lead && <p className="mt-3 text-[13px] font-bold text-balance opacity-95 md:text-sm">{lead}</p>}
       </div>
       {children}
@@ -95,7 +95,7 @@ export function Crest({ className = "", tone = "green" }: { className?: string; 
         y="17"
         fill={color}
         fontSize="13"
-        fontFamily="var(--font-shippori), serif"
+        fontFamily="var(--font-yuji), var(--font-shippori), serif"
         writingMode="vertical-rl"
         textAnchor="start"
         letterSpacing="1"

@@ -52,7 +52,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
           <p className="text-[11px] text-moon">
             {p.kind}・山形県{p.town}
           </p>
-          <h1 className="mt-3 text-2xl font-bold md:text-3xl">{p.name}</h1>
+          <h1 className="mt-3 font-brush text-3xl font-bold md:text-4xl">{p.name}</h1>
           <p className="mt-5 text-2xl tabular-nums">
             {yen(p.price)}
             <span className="ml-1 text-xs text-sub">（税込・送料別）</span>

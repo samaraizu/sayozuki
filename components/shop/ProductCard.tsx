@@ -10,7 +10,7 @@ export function ProductCard({ product: p, badge }: { product: Product; badge?: s
       <Bottle product={p} className="aspect-square bg-surface transition-opacity group-hover:opacity-85" />
       <div className="flex flex-1 flex-col px-1 pt-3 text-[13px] leading-6 md:text-sm">
         <p>【{badge ?? p.kind}】</p>
-        <p className="group-hover:underline">{p.name}</p>
+        <p className="font-brush text-[15px] group-hover:underline md:text-base">{p.name}</p>
         <p>{p.volume}</p>
         <p className="mt-auto pt-4 text-right">
           {yen(p.price)}

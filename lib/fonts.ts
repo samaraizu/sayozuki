@@ -1,4 +1,4 @@
-import { Noto_Sans_JP, Roboto, Shippori_Mincho } from "next/font/google";
+import { Noto_Sans_JP, Roboto, Shippori_Mincho, Yuji_Syuku } from "next/font/google";
 
 export const notoSans = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -18,4 +18,11 @@ export const roboto = Roboto({
   weight: ["400", "500"],
 });
 
-export const fontVariables = `${notoSans.variable} ${shippori.variable} ${roboto.variable}`;
+/** 筆で書いた楷書体。見出し・屋号・商品名に使う */
+export const yuji = Yuji_Syuku({
+  variable: "--font-yuji",
+  subsets: ["latin"],
+  weight: "400",
+});
+
+export const fontVariables = `${notoSans.variable} ${shippori.variable} ${roboto.variable} ${yuji.variable}`;

@@ -79,13 +79,13 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
             <p className="font-en text-2xl font-medium tracking-[0.08em] md:text-4xl">YAMAGATA SAKE</p>
             <div className="mt-6 flex items-center gap-5">
               <Crest tone="white" className="size-20 md:size-28" />
-              <h1 className="text-2xl font-bold leading-[1.6] tracking-[0.08em] md:text-4xl">
+              <h1 className="font-brush text-3xl font-bold leading-[1.6] md:text-5xl">
                 宿でお出ししている
                 <br />
                 厳選した山形の地酒
               </h1>
             </div>
-            <p className="mt-6 text-sm md:text-base">かみのやま温泉 小夜月</p>
+            <p className="mt-6 font-brush text-base md:text-xl">かみのやま温泉 小夜月</p>
           </div>
         </div>
       </section>
@@ -149,7 +149,7 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
           {promises.map((p, i) => (
             <div key={p.title} className="bg-white px-7 py-9">
               <p className="font-en text-3xl font-medium text-green">{String(i + 1).padStart(2, "0")}</p>
-              <h3 className="mt-3 text-lg font-bold">{p.title}</h3>
+              <h3 className="mt-3 font-brush text-xl font-bold">{p.title}</h3>
               <p className="mt-4 text-sm leading-7 text-sub">{p.body}</p>
             </div>
           ))}

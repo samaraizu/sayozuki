@@ -34,7 +34,7 @@ export default function ShopLayout({ children }: LayoutProps<"/shop">) {
             <Crest className="size-11 md:size-14" />
             <span className="leading-tight">
               <span className="block font-serif-ja text-lg tracking-[0.2em]">{site.name}</span>
-              <span className="block text-[11px] tracking-[0.2em] text-sub">お取り寄せ</span>
+              <span className="block font-brush text-[13px] text-sub">お取り寄せ</span>
             </span>
           </Link>
           <div className="flex items-end gap-2">

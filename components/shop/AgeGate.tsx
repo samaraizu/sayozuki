@@ -29,7 +29,7 @@ export function AgeGate() {
     >
       <div className="w-full max-w-sm bg-white px-8 py-10 text-center shadow-xl">
         <p className="font-en text-2xl font-medium">AGE CHECK</p>
-        <h2 id="age-title" className="mt-4 font-bold text-xl">
+        <h2 id="age-title" className="mt-4 font-brush text-2xl font-bold">
           あなたは20歳以上ですか？
         </h2>
         <p className="mt-4 text-xs leading-6 text-sub">

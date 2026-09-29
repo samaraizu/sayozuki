@@ -46,7 +46,7 @@ export function CheckoutForm() {
     >
       {/* カートの中身 */}
       <section aria-labelledby="cart-title">
-        <h2 id="cart-title" className="font-bold text-lg">
+        <h2 id="cart-title" className="font-brush text-xl font-bold">
           ご注文内容
         </h2>
         <ul className="mt-6 divide-y divide-line border-y border-line">
@@ -100,7 +100,7 @@ export function CheckoutForm() {
 
       {/* お届け先 */}
       <section aria-labelledby="ship-title" className="grid content-start gap-7">
-        <h2 id="ship-title" className="font-bold text-lg">
+        <h2 id="ship-title" className="font-brush text-xl font-bold">
           お届け先
         </h2>
 

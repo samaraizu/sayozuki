@@ -40,9 +40,21 @@ body {
   text-orientation: upright;
 }
 
-/* 屋号など、どの言語のページでも日本語の書体で見せたいもの */
+/* 屋号など、どの言語のページでも日本語の書体で見せたいもの（筆の楷書体） */
 .font-serif-ja {
-  font-family: var(--font-shippori), "Hiragino Mincho ProN", serif;
+  font-family: var(--font-yuji), var(--font-shippori), "Hiragino Mincho ProN", serif;
+  font-weight: 400;
+}
+
+/*
+ * 見出し・商品名などの筆文字（楷書体）。
+ * 日本語の部分だけに効かせ、外国語のページでは各言語の書体のままにする。
+ * 筆文字に太字を掛けると潰れるので太さは標準に戻す。
+ */
+.font-brush:lang(ja) {
+  font-family: var(--font-yuji), var(--font-shippori), serif;
+  font-weight: 400;
+  letter-spacing: 0.06em;
 }
 
 /* 日本語フォントに無い文字（簡体字・ハングル・タイ文字）は各言語の書体で出す */

@@ -13,7 +13,7 @@ export default async function CompletePage({ searchParams }: PageProps<"/shop/co
     <div className="mx-auto max-w-xl px-5 py-24 text-center">
       <ClearCart />
       <p className="text-[11px] text-moon">THANK YOU</p>
-      <h1 className="mt-4 font-bold text-2xl">ご注文ありがとうございます</h1>
+      <h1 className="mt-4 font-brush text-3xl font-bold">ご注文ありがとうございます</h1>
       {orderNo && (
         <p className="mt-8 text-sm">
           ご注文番号　<span className="font-medium tabular-nums">{orderNo}</span>
