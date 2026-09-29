@@ -70,28 +70,30 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
   return (
     <>
       {/* ファーストビュー */}
-      <section className="relative h-[70svh] min-h-[440px] overflow-hidden md:h-[640px]">
-        {/* eslint-disable-next-line @next/next/no-img-element -- 背景の写真 */}
-        <img src={photos.room} alt="宿の客室" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-transparent" />
-        <div className="relative mx-auto flex h-full max-w-6xl items-center px-6 md:px-10">
-          <div className="text-white">
-            <p className="font-en text-2xl font-medium tracking-[0.08em] md:text-4xl">YAMAGATA SAKE</p>
-            <div className="mt-6 flex items-center gap-5">
-              <Crest tone="white" className="size-20 md:size-28" />
-              <h1 className="font-brush text-3xl font-bold leading-[1.6] md:text-5xl">
+      {/* 写真は暗くせずそのまま見せ、見出しの帯を写真の下端から次のセクションへ半分はみ出させる */}
+      <section className="relative">
+        <div className="h-[60svh] min-h-[360px] overflow-hidden md:h-[600px]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- 背景の写真 */}
+          <img src={photos.room} alt="宿の客室" className="h-full w-full object-cover" />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 z-10 translate-y-1/2 px-4 md:px-5">
+          <div className="mx-auto flex max-w-5xl items-center gap-4 bg-green px-6 py-6 text-white shadow-lg md:gap-8 md:px-10 md:py-8">
+            <Crest tone="white" className="size-16 shrink-0 md:size-24" />
+            <div>
+              <p className="font-en text-sm font-medium tracking-[0.1em] opacity-90 md:text-lg">YAMAGATA SAKE</p>
+              <h1 className="mt-1 font-brush text-2xl font-bold leading-[1.5] md:text-4xl">
                 宿でお出ししている
-                <br />
+                <br className="sm:hidden" />
                 厳選した山形の地酒
               </h1>
+              <p className="mt-1 font-brush text-sm opacity-90 md:text-lg">かみのやま温泉 小夜月</p>
             </div>
-            <p className="mt-6 font-brush text-base md:text-xl">かみのやま温泉 小夜月</p>
           </div>
         </div>
       </section>
 
       {/* ラインナップ */}
-      <section id="lineup" className="scroll-mt-4 pt-20 md:pt-24">
+      <section id="lineup" className="scroll-mt-4 pt-36 md:pt-40">
         <SectionHeading en="LINEUP" ja="日本酒ラインナップ" />
         {products.some((p) => p.sample) && (
           <p className="-mt-6 mb-10 text-center text-xs text-sub">※ 掲載中の商品はサンプルです。実際の銘柄は準備中です。</p>
