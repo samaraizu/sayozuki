@@ -8,7 +8,7 @@ import { site } from "@/lib/site";
 export const metadata: Metadata = {
   title: { default: `${shop.name}｜山形の地酒`, template: `%s｜${shop.name}` },
   description:
-    "かみのやま温泉の宿「小夜月」で出している山形の地酒を、ご自宅へお届けします。山形の米と水で醸した、地産地消の日本酒。",
+    "かみのやま温泉の宿「小夜月」でお出ししている厳選した山形の地酒を、ご自宅へお届けします。山形の米と水で醸した、地産地消の日本酒。",
 };
 
 export default function ShopLayout({ children }: LayoutProps<"/shop">) {
