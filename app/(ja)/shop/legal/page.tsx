@@ -20,7 +20,7 @@ export default function LegalPage() {
   const m = legal.salesManager;
   return (
     <div className="mx-auto max-w-3xl px-5 py-14 md:py-20">
-      <h1 className="font-bold text-2xl">特定商取引法に基づく表記</h1>
+      <h1 className="font-brush text-3xl font-bold">特定商取引法に基づく表記</h1>
       <Table
         rows={[
           ["販売業者", legal.seller],
@@ -38,7 +38,7 @@ export default function LegalPage() {
         ]}
       />
 
-      <h2 id="manager" className="mt-20 font-bold text-2xl">
+      <h2 id="manager" className="mt-20 font-brush text-3xl font-bold">
         酒類販売管理者標識
       </h2>
       <Table

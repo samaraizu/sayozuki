@@ -124,7 +124,7 @@ export function InnPage({ lang }: { lang: Locale }) {
                   <p className="mt-3 font-en text-xs tracking-[0.4em] opacity-90 md:text-sm">{site.roman}</p>
                 </div>
               </div>
-              <p className="mt-6 text-sm md:text-base">{t.hero.tagline}</p>
+              <p className="mt-6 font-brush text-base md:text-xl">{t.hero.tagline}</p>
             </div>
           </div>
         </section>
@@ -134,7 +134,7 @@ export function InnPage({ lang }: { lang: Locale }) {
           <SectionHeading en="CONCEPT" ja={t.about.title} />
           <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
             <div>
-              <p className="text-xl font-bold leading-[1.9] md:text-2xl">
+              <p className="font-brush text-2xl font-bold leading-[1.9] md:text-3xl">
                 {t.about.lead[0]}
                 <br />
                 {t.about.lead[1]}
@@ -188,7 +188,7 @@ export function InnPage({ lang }: { lang: Locale }) {
             <ul className="mt-10 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {rooms.map((r) => (
                 <li key={r.name} className="bg-white px-6 py-6">
-                  <p className="text-lg font-bold">{roomName(r.name)}</p>
+                  <p className="font-brush text-xl font-bold">{roomName(r.name)}</p>
                   <p className="mt-1 text-[13px] text-sub">
                     {fmt(t.rooms.capacity, { n: r.capacity })}
                     {r.note && ` / ${t.rooms.familyNote}`}
@@ -234,7 +234,7 @@ export function InnPage({ lang }: { lang: Locale }) {
               </ul>
             </div>
             <div>
-              <h3 className="border-l-4 border-green pl-3 text-lg font-bold">{t.price.mealsTitle}</h3>
+              <h3 className="border-l-4 border-green pl-3 font-brush text-xl font-bold">{t.price.mealsTitle}</h3>
               {photos.meal && (
                 <Photo src={photos.meal} alt={t.price.altMeal} sizes="(min-width: 768px) 33vw, 100vw" className="mt-6 aspect-[4/3]" />
               )}
@@ -287,7 +287,7 @@ export function InnPage({ lang }: { lang: Locale }) {
             </div>
 
             <div className="mt-12 bg-white px-5 py-10 md:px-12">
-              <h3 className="border-l-4 border-green pl-3 text-lg font-bold">{t.reserve.directTitle}</h3>
+              <h3 className="border-l-4 border-green pl-3 font-brush text-xl font-bold">{t.reserve.directTitle}</h3>
               <p className="mt-4 mb-8 text-sm leading-7 text-sub">{t.reserve.directBody}</p>
               <InquiryForm lang={lang} t={t.form} roomNames={t.rooms.names} />
             </div>
