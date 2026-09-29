@@ -107,32 +107,30 @@ export function InnPage({ lang }: { lang: Locale }) {
 
       <main id="top">
         {/* ファーストビュー */}
-        {/* 写真は暗くせずそのまま見せ、屋号の帯を写真の下端から次のセクションへ半分はみ出させる */}
-        <section className="relative">
-          <div className="h-[64svh] min-h-[380px] overflow-hidden md:h-[640px]">
+        <section className="relative h-[72svh] min-h-[460px] overflow-hidden md:h-[680px]">
+          <div className="absolute inset-0">
             <Photo src={photos.hero} alt={t.hero.alt} priority className="h-full" />
           </div>
-          <div className="absolute inset-x-0 bottom-0 z-10 translate-y-1/2 px-4 md:px-5">
-            <div className="mx-auto flex max-w-5xl flex-col items-start gap-4 bg-green px-6 py-6 text-white shadow-lg sm:flex-row sm:items-center sm:gap-8 md:px-10 md:py-8">
-              <div className="flex items-center gap-4 md:gap-5">
-                <Crest tone="white" className="size-16 shrink-0 md:size-24" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-transparent" />
+          <div className="relative mx-auto flex h-full max-w-6xl items-center px-6 md:px-10">
+            <div className="text-white">
+              <p className="font-en text-xl font-medium tracking-[0.08em] md:text-3xl">KAMINOYAMA ONSEN</p>
+              <div className="mt-6 flex items-center gap-5">
+                <Crest tone="white" className="size-20 md:size-28" />
                 <div>
-                  <h1 lang="ja" className="font-serif-ja text-3xl tracking-[0.3em] md:text-5xl">
+                  <h1 lang="ja" className="font-serif-ja text-4xl tracking-[0.3em] md:text-6xl">
                     {site.name}
                   </h1>
-                  <p className="mt-2 font-en text-[11px] tracking-[0.4em] opacity-90 md:text-sm">{site.roman}</p>
+                  <p className="mt-3 font-en text-xs tracking-[0.4em] opacity-90 md:text-sm">{site.roman}</p>
                 </div>
               </div>
-              <div className="sm:border-l sm:border-white/30 sm:pl-8">
-                <p className="font-en text-sm font-medium tracking-[0.1em] opacity-90 md:text-lg">KAMINOYAMA ONSEN</p>
-                <p className="mt-1 font-brush text-base md:text-2xl">{t.hero.tagline}</p>
-              </div>
+              <p className="mt-6 font-brush text-base md:text-xl">{t.hero.tagline}</p>
             </div>
           </div>
         </section>
 
         {/* 小夜月について */}
-        <section id="about" className="mx-auto max-w-6xl px-4 pt-48 pb-20 sm:pt-36 md:px-5 md:pt-44 md:pb-24">
+        <section id="about" className="mx-auto max-w-6xl px-4 py-20 md:px-5 md:py-24">
           <SectionHeading en="CONCEPT" ja={t.about.title} />
           <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
             <div>
