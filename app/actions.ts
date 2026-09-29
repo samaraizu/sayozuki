@@ -1,5 +1,6 @@
 "use server";
 
+import { dictionaries, isLocale, type Locale } from "@/lib/i18n";
 import { sendInquiryMail } from "@/lib/mail";
 import { rooms } from "@/lib/site";
 
@@ -32,6 +33,9 @@ export async function submitInquiry(
   if (formData.get("website")) return { status: "ok" };
 
   const get = (k: string) => String(formData.get(k) ?? "").trim();
+  const langRaw = get("lang");
+  const lang: Locale = isLocale(langRaw) ? langRaw : "ja";
+  const t = dictionaries[lang].form;
   const name = get("name");
   const email = get("email");
   const tel = get("tel");
@@ -43,17 +47,18 @@ export async function submitInquiry(
   const message = get("message");
 
   const errors: InquiryState["errors"] = {};
-  if (!name) errors.name = "お名前をご入力ください";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = "メールアドレスをご確認ください";
+  if (!name) errors.name = t.errName;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = t.errEmail;
   if (checkin && checkin < todayInJapan())
-    errors.checkin = "本日以降の日付をお選びください";
-  if (!guests) errors.guests = "人数をお選びください";
+    errors.checkin = t.errCheckin;
+  if (!guests) errors.guests = t.errGuests;
   const values = Object.fromEntries(FIELDS.map((k) => [k, get(k)]));
   if (Object.keys(errors).length) return { status: "error", errors, values, key: crypto.randomUUID() };
 
   const roomLabel = rooms.some((r) => r.name === room) ? room : "指定なし";
 
   const body = [
+    `言語：${lang === "ja" ? "日本語" : `${dictionaries[lang].label}（${lang}）`}`,
     `お名前：${name}`,
     `メール：${email}`,
     `電話番号：${tel || "未入力"}`,
@@ -73,12 +78,12 @@ export async function submitInquiry(
       status: "error",
       values,
       key: crypto.randomUUID(),
-      message: "送信できませんでした。お手数ですが、時間をおいて再度お試しください。",
+      message: t.errSend,
     };
   }
 
   return {
     status: "ok",
-    message: "お問い合わせを承りました。空室を確認のうえ、メールにてご連絡いたします。",
+    message: t.ok,
   };
 }

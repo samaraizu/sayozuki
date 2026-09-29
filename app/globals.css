@@ -28,3 +28,32 @@ body {
   writing-mode: vertical-rl;
   text-orientation: upright;
 }
+
+/* 屋号など、どの言語のページでも日本語の書体で見せたいもの */
+.font-serif-ja {
+  font-family: var(--font-shippori), "Hiragino Mincho ProN", serif;
+}
+
+/* 日本語フォントに無い文字（簡体字・ハングル・タイ文字）は各言語の書体で出す */
+html:lang(zh-Hans) body {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+}
+html:lang(zh-Hans) .font-serif {
+  font-family: "Songti SC", "Noto Serif SC", "SimSun", serif;
+}
+html:lang(ko) body {
+  font-family: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+}
+html:lang(ko) .font-serif {
+  font-family: "AppleMyungjo", "Nanum Myeongjo", "Noto Serif KR", serif;
+}
+html:lang(th) body {
+  font-family: "Noto Sans Thai", "Thonburi", "Leelawadee UI", sans-serif;
+}
+html:lang(th) .font-serif {
+  font-family: "Noto Serif Thai", "Noto Sans Thai", "Thonburi", serif;
+}
+/* タイ文字は字間を空けると声調記号が離れて読みにくくなる */
+html:lang(th) body * {
+  letter-spacing: normal;
+}
