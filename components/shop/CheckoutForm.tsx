@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { submitOrder, type OrderState } from "@/app/shop/actions";
+import { submitOrder, type OrderState } from "@/app/(ja)/shop/actions";
 import { Bottle } from "@/components/shop/Bottle";
 import { setQty, useCart } from "@/lib/cart";
 import { findProduct, shop } from "@/lib/shop";
