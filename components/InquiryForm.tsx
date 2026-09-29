@@ -25,14 +25,15 @@ export function InquiryForm() {
   }
 
   const err = state.errors ?? {};
+  const v = state.values ?? {};
 
   return (
-    <form action={formAction} className="relative grid gap-7 sm:grid-cols-2" noValidate>
+    <form key={state.key ?? "init"} action={formAction} className="relative grid gap-7 sm:grid-cols-2" noValidate>
       <div>
         <label htmlFor="name" className={label}>
           お名前<span className="ml-1 text-moon">*</span>
         </label>
-        <input id="name" name="name" autoComplete="name" className={field} aria-invalid={!!err.name} />
+        <input id="name" name="name" defaultValue={v.name} autoComplete="name" className={field} aria-invalid={!!err.name} />
         {err.name && <p className="mt-1 text-xs text-red-700">{err.name}</p>}
       </div>
 
@@ -42,7 +43,7 @@ export function InquiryForm() {
         </label>
         <input
           id="email"
-          name="email"
+          name="email" defaultValue={v.email}
           type="email"
           autoComplete="email"
           className={field}
@@ -55,14 +56,14 @@ export function InquiryForm() {
         <label htmlFor="tel" className={label}>
           電話番号
         </label>
-        <input id="tel" name="tel" type="tel" autoComplete="tel" className={field} />
+        <input id="tel" name="tel" defaultValue={v.tel} type="tel" autoComplete="tel" className={field} />
       </div>
 
       <div>
         <label htmlFor="checkin" className={label}>
           ご到着日
         </label>
-        <input id="checkin" name="checkin" type="date" className={field} aria-invalid={!!err.checkin} />
+        <input id="checkin" name="checkin" defaultValue={v.checkin} type="date" className={field} aria-invalid={!!err.checkin} />
         {err.checkin && <p className="mt-1 text-xs text-red-700">{err.checkin}</p>}
       </div>
 
@@ -71,7 +72,7 @@ export function InquiryForm() {
           <label htmlFor="nights" className={label}>
             泊数
           </label>
-          <select id="nights" name="nights" className={field} defaultValue="1">
+          <select id="nights" name="nights" className={field} defaultValue={v.nights || "1"}>
             {[1, 2, 3, 4, 5, 6, 7].map((n) => (
               <option key={n} value={n}>
                 {n}泊
@@ -83,7 +84,7 @@ export function InquiryForm() {
           <label htmlFor="guests" className={label}>
             人数<span className="ml-1 text-moon">*</span>
           </label>
-          <select id="guests" name="guests" className={field} defaultValue="2" aria-invalid={!!err.guests}>
+          <select id="guests" name="guests" className={field} defaultValue={v.guests || "2"} aria-invalid={!!err.guests}>
             {[1, 2, 3, 4, 5].map((n) => (
               <option key={n} value={n}>
                 {n}名
@@ -98,7 +99,7 @@ export function InquiryForm() {
         <label htmlFor="room" className={label}>
           ご希望の客室
         </label>
-        <select id="room" name="room" className={field} defaultValue="">
+        <select id="room" name="room" className={field} defaultValue={v.room ?? ""}>
           <option value="">指定なし</option>
           {rooms.map((r) => (
             <option key={r.name} value={r.name}>
@@ -117,7 +118,7 @@ export function InquiryForm() {
             ["both", "1泊2食付き"],
           ].map(([value, text]) => (
             <label key={value} className="flex cursor-pointer items-center gap-2">
-              <input type="radio" name="meal" value={value} defaultChecked={value === "none"} className="accent-moon" />
+              <input type="radio" name="meal" value={value} defaultChecked={value === (v.meal || "none")} className="accent-moon" />
               {text}
             </label>
           ))}
@@ -128,7 +129,7 @@ export function InquiryForm() {
         <label htmlFor="message" className={label}>
           ご要望・ご質問
         </label>
-        <textarea id="message" name="message" rows={4} className={`${field} resize-y`} />
+        <textarea id="message" name="message" defaultValue={v.message} rows={4} className={`${field} resize-y`} />
       </div>
 
       {/* ボット対策の見えない欄 */}

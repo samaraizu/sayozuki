@@ -7,7 +7,13 @@ export type InquiryState = {
   status: "idle" | "ok" | "error";
   message?: string;
   errors?: Partial<Record<"name" | "email" | "checkin" | "guests", string>>;
+  /** エラー時に入力を戻すため（React はフォーム送信後に入力欄をリセットする） */
+  values?: Record<string, string>;
+  /** エラーのたびにフォームを作り直して values を確実に反映させるため */
+  key?: string;
 };
+
+const FIELDS = ["name", "email", "tel", "checkin", "nights", "guests", "room", "meal", "message"];
 
 const MEAL_LABELS: Record<string, string> = {
   none: "素泊まり",
@@ -42,7 +48,8 @@ export async function submitInquiry(
   if (checkin && checkin < todayInJapan())
     errors.checkin = "本日以降の日付をお選びください";
   if (!guests) errors.guests = "人数をお選びください";
-  if (Object.keys(errors).length) return { status: "error", errors };
+  const values = Object.fromEntries(FIELDS.map((k) => [k, get(k)]));
+  if (Object.keys(errors).length) return { status: "error", errors, values, key: crypto.randomUUID() };
 
   const roomLabel = rooms.some((r) => r.name === room) ? room : "指定なし";
 
@@ -64,6 +71,8 @@ export async function submitInquiry(
   if ("failed" in result) {
     return {
       status: "error",
+      values,
+      key: crypto.randomUUID(),
       message: "送信できませんでした。お手数ですが、時間をおいて再度お試しください。",
     };
   }
