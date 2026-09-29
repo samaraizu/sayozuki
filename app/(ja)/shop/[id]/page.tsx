@@ -32,8 +32,8 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-12 md:py-20">
-      <nav className="text-xs text-ink/50" aria-label="パンくず">
+    <div className="mx-auto max-w-6xl px-4 py-10 md:px-5 md:py-16">
+      <nav className="text-xs text-sub" aria-label="パンくず">
         <Link href="/shop" className="hover:underline">
           お取り寄せ
         </Link>
@@ -42,47 +42,47 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
           日本酒
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-ink/70">{p.name}</span>
+        <span className="text-ink">{p.name}</span>
       </nav>
 
       <div className="mt-8 grid gap-10 md:grid-cols-2 md:gap-16">
-        <Bottle product={p} className="aspect-square md:aspect-[4/5]" />
+        <Bottle product={p} className="aspect-square bg-surface md:aspect-[4/5]" />
 
         <div>
-          <p className="text-[11px] tracking-[0.25em] text-moon">
+          <p className="text-[11px] text-moon">
             {p.kind}・山形県{p.town}
           </p>
-          <h1 className="mt-3 font-serif text-3xl tracking-[0.08em]">{p.name}</h1>
+          <h1 className="mt-3 text-2xl font-bold md:text-3xl">{p.name}</h1>
           <p className="mt-5 text-2xl tabular-nums">
             {yen(p.price)}
-            <span className="ml-1 text-xs text-ink/60">（税込・送料別）</span>
+            <span className="ml-1 text-xs text-sub">（税込・送料別）</span>
           </p>
-          {p.sample && <p className="mt-3 text-xs text-ink/50">※ サンプル商品です</p>}
+          {p.sample && <p className="mt-3 text-xs text-sub">※ サンプル商品です</p>}
 
-          <p className="mt-8 text-[15px] leading-[2.1] text-ink/80">{p.description}</p>
+          <p className="mt-8 text-[15px] leading-[2.1] text-ink">{p.description}</p>
 
           <div className="mt-10">
             <AddToCart id={p.id} />
             {!shop.open && (
-              <p className="mt-3 text-xs text-ink/50">※ 現在は販売準備中のため、ご注文の確定はできません。</p>
+              <p className="mt-3 text-xs text-sub">※ 現在は販売準備中のため、ご注文の確定はできません。</p>
             )}
           </div>
 
-          <div className="mt-12 border-t border-ink/10 pt-10">
-            <h2 className="text-xs tracking-[0.25em] text-ink/60">味わい</h2>
+          <div className="mt-12 border-t border-line pt-10">
+            <h2 className="text-xs text-sub">味わい</h2>
             <div className="mt-5">
               <TasteChart taste={p.taste} />
             </div>
-            <p className="mt-6 text-sm leading-7 text-ink/70">
+            <p className="mt-6 text-sm leading-7 text-ink">
               <span className="mr-2 text-moon">合う料理</span>
               {p.pairing}
             </p>
           </div>
 
-          <dl className="mt-10 divide-y divide-ink/10 border-y border-ink/10 text-sm">
+          <dl className="mt-10 divide-y divide-line border-y border-line text-sm">
             {specs.map(([t, d]) => (
               <div key={t} className="grid grid-cols-[7rem_1fr] py-3">
-                <dt className="text-ink/60">{t}</dt>
+                <dt className="text-sub">{t}</dt>
                 <dd>{d}</dd>
               </div>
             ))}

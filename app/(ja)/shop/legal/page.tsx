@@ -5,10 +5,10 @@ export const metadata: Metadata = { title: "特定商取引法に基づく表記
 
 function Table({ rows }: { rows: [string, string][] }) {
   return (
-    <dl className="mt-8 divide-y divide-ink/10 border-y border-ink/10 text-sm leading-7">
+    <dl className="mt-8 divide-y divide-line border-y border-line text-sm leading-7">
       {rows.map(([t, d]) => (
         <div key={t} className="grid gap-1 py-4 md:grid-cols-[12rem_1fr]">
-          <dt className="text-ink/60">{t}</dt>
+          <dt className="text-sub">{t}</dt>
           <dd>{d}</dd>
         </div>
       ))}
@@ -20,7 +20,7 @@ export default function LegalPage() {
   const m = legal.salesManager;
   return (
     <div className="mx-auto max-w-3xl px-5 py-14 md:py-20">
-      <h1 className="font-serif text-2xl tracking-[0.12em]">特定商取引法に基づく表記</h1>
+      <h1 className="font-bold text-2xl">特定商取引法に基づく表記</h1>
       <Table
         rows={[
           ["販売業者", legal.seller],
@@ -38,7 +38,7 @@ export default function LegalPage() {
         ]}
       />
 
-      <h2 id="manager" className="mt-20 font-serif text-2xl tracking-[0.12em]">
+      <h2 id="manager" className="mt-20 font-bold text-2xl">
         酒類販売管理者標識
       </h2>
       <Table
@@ -50,7 +50,7 @@ export default function LegalPage() {
           ["研修実施団体名", m.trainer],
         ]}
       />
-      <p className="mt-8 text-xs leading-6 text-ink/50">
+      <p className="mt-8 text-xs leading-6 text-sub">
         20歳未満の者の飲酒は法律で禁止されています。
       </p>
     </div>

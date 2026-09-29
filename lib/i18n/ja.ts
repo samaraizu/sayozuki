@@ -137,6 +137,14 @@ export const ja = {
     aroundLabel: "周辺",
     around: "蔵王温泉・上山城・武家屋敷通り",
   },
+  topbar: "水曜日〜日曜日を中心に営業しております",
+  bar: "ご予約・お問い合わせはこちら",
+  sake: {
+    en: "SAKE",
+    title: "宿でお出ししている厳選したお酒",
+    lead: "山形の地酒をご自宅へお取り寄せいただけます",
+    more: "お取り寄せを見る",
+  },
   footer: { operator: "運営：{company}" },
 };
 

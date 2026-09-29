@@ -8,8 +8,8 @@ import { rooms } from "@/lib/site";
 const initialState: InquiryState = { status: "idle" };
 
 const field =
-  "w-full border-b border-ink/25 bg-transparent py-2.5 text-[15px] outline-none transition-colors focus:border-moon";
-const label = "block text-xs tracking-[0.15em] text-ink/60";
+  "mt-1.5 w-full border border-line bg-white px-3 py-2.5 text-[15px] outline-none transition-colors focus:border-green";
+const label = "block text-[13px] font-bold";
 
 export function InquiryForm({
   lang,
@@ -24,9 +24,9 @@ export function InquiryForm({
 
   if (state.status === "ok") {
     return (
-      <div className="border border-ink/15 px-6 py-12 text-center" role="status">
-        <p className="font-serif text-lg">{t.thanks}</p>
-        <p className="mt-4 text-sm leading-7 text-ink/70">
+      <div className="border border-line bg-green-soft px-6 py-12 text-center" role="status">
+        <p className="text-lg font-bold text-green">{t.thanks}</p>
+        <p className="mt-4 text-sm leading-7">
           {state.message ?? t.ok}
         </p>
       </div>
@@ -156,11 +156,11 @@ export function InquiryForm({
         <button
           type="submit"
           disabled={pending}
-          className="w-full bg-ink px-8 py-4 text-sm tracking-[0.3em] text-washi transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto"
+          className="w-full bg-green px-10 py-4 text-sm font-bold text-white transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto"
         >
           {pending ? t.sending : t.submit}
         </button>
-        <p className="mt-4 text-xs leading-6 text-ink/50">
+        <p className="mt-4 text-xs leading-6 text-sub">
           {t.disclaimer}
         </p>
       </div>

@@ -23,7 +23,7 @@ export function AddToCart({ id }: { id: string }) {
           value={Math.min(qty, Math.max(room, 1))}
           onChange={(e) => setQty(Number(e.target.value))}
           disabled={room <= 0}
-          className="border border-ink/25 bg-transparent px-4 py-4 text-sm"
+          className="border border-line bg-transparent px-4 py-4 text-sm"
         >
           {Array.from({ length: Math.max(room, 1) }, (_, i) => i + 1).map((n) => (
             <option key={n} value={n}>
@@ -38,13 +38,13 @@ export function AddToCart({ id }: { id: string }) {
             addToCart(id, Math.min(qty, room));
             setAdded(true);
           }}
-          className="flex-1 bg-ink px-6 py-4 text-sm tracking-[0.25em] text-washi transition-opacity hover:opacity-85 disabled:opacity-40"
+          className="flex-1 bg-ink px-6 py-4 text-sm text-washi transition-opacity hover:opacity-85 disabled:opacity-40"
         >
           {room <= 0 ? "上限までカートに入っています" : "カートに入れる"}
         </button>
       </div>
       {added && inCart > 0 && (
-        <p className="mt-3 text-sm text-ink/70" role="status">
+        <p className="mt-3 text-sm text-ink" role="status">
           カートに{inCart}本入っています。
           <Link href="/shop/cart" className="ml-2 underline underline-offset-4">
             カートを見る

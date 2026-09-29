@@ -136,5 +136,13 @@ export const vi: Dict = {
     aroundLabel: "Lân cận",
     around: "Zao Onsen, lâu đài Kaminoyama, phố nhà samurai Bukeyashiki",
   },
+  topbar: "Mở cửa chủ yếu từ thứ Tư đến Chủ nhật",
+  bar: "Đặt phòng & liên hệ",
+  sake: {
+    en: "SAKE",
+    title: "Rượu sake tuyển chọn được phục vụ tại lữ quán",
+    lead: "Đặt mua rượu sake Yamagata (chỉ giao trong Nhật Bản, trang tiếng Nhật)",
+    more: "Xem cửa hàng rượu sake",
+  },
   footer: { operator: "Điều hành: {company}" },
 };

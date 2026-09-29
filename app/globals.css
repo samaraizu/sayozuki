@@ -1,20 +1,30 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* 夜の墨色と、月明かりの淡い金 */
-  --color-ink: #1c1d22;
-  --color-dusk: #2a2c33;
-  --color-washi: #f5f2ea;
-  --color-paper: #ebe6da;
-  --color-moon: #a8894f;
+  /* 白地に深い緑。山形の山と田んぼの色 */
+  --color-ink: #2e2e2e;
+  --color-sub: #6b6b6b;
+  --color-line: #e3e3e3;
+  --color-surface: #f5f5f5;
+  --color-green: #1f6a45;
+  --color-green-soft: #eef5f0;
+  --color-gold: #b58c2a;
+  --color-dark: #333333;
+  /* 以前の名前。残っている箇所のために新しい色へ対応させる */
+  --color-washi: #ffffff;
+  --color-paper: #f5f5f5;
+  --color-moon: #1f6a45;
+  --color-dusk: #3a3a3a;
 
-  --font-sans: var(--font-noto-sans-jp), system-ui, sans-serif;
+  --font-sans: var(--font-noto-sans-jp), "Yu Gothic", YuGothic, "Hiragino Sans", system-ui, sans-serif;
   --font-serif: var(--font-shippori), "Hiragino Mincho ProN", serif;
+  /* 英字の大見出し */
+  --font-en: var(--font-roboto), "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 4rem;
+  scroll-padding-top: 5rem;
 }
 
 body {
@@ -22,6 +32,7 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-feature-settings: "palt";
+  line-height: 1.8;
 }
 
 .vertical {

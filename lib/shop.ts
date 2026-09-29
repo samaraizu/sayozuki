@@ -142,3 +142,21 @@ export const products: Product[] = [
 ];
 
 export const findProduct = (id: string) => products.find((p) => p.id === id);
+
+/**
+ * 商品に付くタグ。一覧の「#辛口」などの絞り込みに使う。
+ * 商品データから決めるので、商品を差し替えればタグも変わる。
+ */
+export function tagsOf(p: Product): string[] {
+  const tags = [p.kind];
+  if (p.taste.dry >= 3) tags.push("辛口");
+  if (p.taste.dry <= 1) tags.push("甘口");
+  if (p.town === "上山市") tags.push("上山の酒");
+  if (p.volume === "1800ml") tags.push("一升瓶");
+  if (p.price >= 4000) tags.push("贈りもの");
+  return tags;
+}
+
+/** 一覧に出すタグ（商品に1つでも付いているものだけ、この順で） */
+export const tagOrder = ["純米大吟醸", "純米吟醸", "特別純米", "本醸造", "辛口", "甘口", "上山の酒", "贈りもの", "一升瓶"];
+export const allTags = tagOrder.filter((t) => products.some((p) => tagsOf(p).includes(t)));

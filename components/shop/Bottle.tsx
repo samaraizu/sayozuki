@@ -4,10 +4,11 @@ import type { Product } from "@/lib/shop";
 export function Bottle({ product, className = "" }: { product: Product; className?: string }) {
   const tall = product.volume === "1800ml";
   return (
-    <div className={`flex items-end justify-center bg-paper ${className}`}>
+    <div className={`relative overflow-hidden ${className}`}>
+      {/* 高さを枠に対する割合で決めるため絶対配置にする（aspect-ratio の枠では % の高さが効かないことがある） */}
       <svg
         viewBox="0 0 120 320"
-        className={tall ? "h-[88%]" : "h-[76%]"}
+        className={`absolute bottom-[4%] left-1/2 w-auto -translate-x-1/2 ${tall ? "h-[88%]" : "h-[74%]"}`}
         role="img"
         aria-label={`${product.name} ${product.volume}`}
       >
