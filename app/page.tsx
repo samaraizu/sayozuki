@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { InquiryForm } from "@/components/InquiryForm";
 import { Photo } from "@/components/Photo";
 import { meals, onsen, otaLinks, photos, pricingNotes, rooms, site, yen } from "@/lib/site";
@@ -58,7 +59,13 @@ export default function Home() {
                 {label}
               </a>
             ))}
+            <Link href="/shop" className="text-moon transition-opacity hover:opacity-80">
+              お取り寄せ
+            </Link>
           </nav>
+          <Link href="/shop" className="ml-auto mr-4 text-[12px] tracking-[0.15em] text-moon md:hidden">
+            お取り寄せ
+          </Link>
           <a
             href="#reserve"
             className="border border-washi/40 px-4 py-2 text-[12px] tracking-[0.25em] transition-colors hover:bg-washi hover:text-ink"
