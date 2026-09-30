@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { TasteMap } from "@/components/shop/TasteMap";
 import { Chip, Crest, MoreLink, PhotoBand, SectionHeading } from "@/components/ui";
-import { allTags, products, shop, tagsOf, type Product } from "@/lib/shop";
+import { allTags, delivery, products, shop, tagsOf, type Product } from "@/lib/shop";
 import { photos } from "@/lib/site";
 
 const promises = [
@@ -162,6 +162,7 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
         <dl className="mx-auto max-w-3xl divide-y divide-line border-y border-line text-sm leading-7">
           {[
             ["お届け", "日本国内のみのお届けです。"],
+            ["受け取り方法", `${delivery.method}。${delivery.methodNote}`],
             ["送料", shop.shippingNote],
             ["お支払い", shop.paymentNote],
             ["年齢確認", "ご注文時に生年月日をお伺いします。20歳未満の方には販売いたしません。"],

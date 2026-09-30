@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddToCart } from "@/components/shop/AddToCart";
 import { Bottle } from "@/components/shop/Bottle";
+import { AgeNotice } from "@/components/shop/Notice";
 import { TasteChart } from "@/components/shop/TasteChart";
 import { findProduct, products, shop } from "@/lib/shop";
 import { yen } from "@/lib/site";
@@ -29,6 +30,8 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
     ["精米歩合", p.polish],
     ["アルコール分", p.abv],
     ["容量", p.volume],
+    ["商品区分", p.type === "custom" ? "別注ラベル（受注生産）" : "通常商品"],
+    ["送料", "お届け先・本数により計算（ご注文手続きで表示）"],
   ];
 
   return (
@@ -58,6 +61,14 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
             <span className="ml-1 text-xs text-sub">（税込・送料別）</span>
           </p>
           {p.sample && <p className="mt-3 text-xs text-sub">※ サンプル商品です</p>}
+          {p.custom && (
+            <div className="mt-5 border border-green/40 bg-green-soft px-4 py-3 text-sm">
+              <p className="font-bold text-green">別注ラベル商品（受注生産）</p>
+              <p className="mt-1 text-[13px] leading-6">
+                {p.custom.minQty}本から{p.custom.maxQty}本までご注文いただけます。{p.custom.leadTime}となります。
+              </p>
+            </div>
+          )}
 
           <p className="mt-8 text-[15px] leading-[2.1] text-ink">{p.description}</p>
 
@@ -66,6 +77,7 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
             {!shop.open && (
               <p className="mt-3 text-xs text-sub">※ 現在は販売準備中のため、ご注文の確定はできません。</p>
             )}
+            <AgeNotice className="mt-5" />
           </div>
 
           <div className="mt-12 border-t border-line pt-10">

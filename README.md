@@ -37,3 +37,12 @@ npm run dev   # http://localhost:3000
 日本酒の通販。注文はフォームで受けてメール通知し、送料と支払い方法は注文後にメールで案内する。
 インターネットで酒を売るには「通信販売酒類小売業免許」が必要なため、取得するまでは `lib/shop.ts` の `open` を `false` にして注文の確定を止めている。
 取得後に `legal`（特定商取引法の表記・酒類販売管理者標識）を実際の内容で埋め、`open: true` にする。
+
+注文の流れは カート（/shop/cart）→ お届け先（/shop/checkout）→ お支払い方法（/shop/checkout/payment）→ 確認（/shop/checkout/confirm）→ 完了（/shop/complete）。
+送料表・支払方法・受け取り方法・商品区分（通常／別注）は `lib/shop.ts`。送料の金額は仮なので、運送会社と契約したら差し替える。
+
+### 免許申請用の資料
+
+- `docs/layout/ECサイトレイアウト図.pdf` … 各画面と法定表示の位置をまとめたもの
+- `docs/layout/screens/` … 各画面のスクリーンショット
+- `/documents/delivery-note`・`/documents/receipt` … 納品書・領収書のフォーマット案（ブラウザで開いて印刷・PDF保存できる）

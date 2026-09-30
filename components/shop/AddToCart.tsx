@@ -3,14 +3,19 @@
 import Link from "next/link";
 import { useState } from "react";
 import { addToCart, useCart } from "@/lib/cart";
-import { shop } from "@/lib/shop";
+import { findProduct, qtyRange } from "@/lib/shop";
 
 export function AddToCart({ id }: { id: string }) {
+  const p = findProduct(id)!;
+  const { min, max } = qtyRange(p);
   const { cart } = useCart();
-  const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
   const inCart = cart[id] ?? 0;
-  const room = shop.maxQty - inCart;
+  // 既にカートにある本数を差し引いた、追加できる範囲
+  const addMin = inCart ? 1 : min;
+  const addMax = max - inCart;
+  const [qty, setQty] = useState(min);
+  const [added, setAdded] = useState(false);
+  const value = Math.min(Math.max(qty, addMin), Math.max(addMax, addMin));
 
   return (
     <div>
@@ -20,12 +25,12 @@ export function AddToCart({ id }: { id: string }) {
         </label>
         <select
           id="qty"
-          value={Math.min(qty, Math.max(room, 1))}
+          value={value}
           onChange={(e) => setQty(Number(e.target.value))}
-          disabled={room <= 0}
-          className="border border-line bg-transparent px-4 py-4 text-sm"
+          disabled={addMax <= 0}
+          className="border border-line bg-white px-4 py-4 text-sm"
         >
-          {Array.from({ length: Math.max(room, 1) }, (_, i) => i + 1).map((n) => (
+          {Array.from({ length: Math.max(addMax - addMin + 1, 1) }, (_, i) => addMin + i).map((n) => (
             <option key={n} value={n}>
               {n}本
             </option>
@@ -33,18 +38,18 @@ export function AddToCart({ id }: { id: string }) {
         </select>
         <button
           type="button"
-          disabled={room <= 0}
+          disabled={addMax <= 0}
           onClick={() => {
-            addToCart(id, Math.min(qty, room));
+            addToCart(id, value);
             setAdded(true);
           }}
-          className="flex-1 bg-ink px-6 py-4 text-sm text-washi transition-opacity hover:opacity-85 disabled:opacity-40"
+          className="flex-1 bg-ink px-6 py-4 text-sm font-bold text-white transition-opacity hover:opacity-85 disabled:opacity-40"
         >
-          {room <= 0 ? "上限までカートに入っています" : "カートに入れる"}
+          {addMax <= 0 ? "上限までカートに入っています" : "カートに入れる"}
         </button>
       </div>
       {added && inCart > 0 && (
-        <p className="mt-3 text-sm text-ink" role="status">
+        <p className="mt-3 text-sm" role="status">
           カートに{inCart}本入っています。
           <Link href="/shop/cart" className="ml-2 underline underline-offset-4">
             カートを見る
