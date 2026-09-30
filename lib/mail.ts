@@ -31,3 +31,27 @@ export async function sendInquiryMail(subject: string, body: string, replyTo?: s
   }
   return { sent: true as const };
 }
+
+/**
+ * お客様への控えのメール（ご注文確認など）。送信元は INQUIRY_MAIL_FROM を使う。
+ * 未設定のあいだはログに出すだけ。
+ */
+export async function sendCustomerMail(to: string, subject: string, body: string) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.INQUIRY_MAIL_FROM;
+  const replyTo = process.env.INQUIRY_MAIL_TO?.split(",")[0]?.trim();
+
+  if (!key || !from) {
+    console.info(`[customer] メール未設定のため送信しませんでした（宛先 ${to}）\n${subject}`);
+    return { sent: false as const };
+  }
+
+  const { Resend } = await import("resend");
+  const resend = new Resend(key);
+  const { error } = await resend.emails.send({ from, to, subject, text: body, replyTo });
+  if (error) {
+    console.error("[customer] メール送信に失敗しました", error);
+    return { sent: false as const, failed: true as const };
+  }
+  return { sent: true as const };
+}

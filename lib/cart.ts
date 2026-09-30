@@ -1,79 +1,47 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { findProduct, shop } from "@/lib/shop";
+import { findProduct, qtyRange } from "@/lib/shop";
+import { createStore } from "@/lib/store";
 
 /** 商品ID → 本数 */
 export type Cart = Record<string, number>;
 
-const KEY = "sayozuki-cart";
-const EMPTY: Cart = {};
-const listeners = new Set<() => void>();
-let cache: Cart | null = null;
+const clamp = (id: string, n: number) => {
+  const p = findProduct(id);
+  if (!p) return 0;
+  const { min, max } = qtyRange(p);
+  const q = Math.floor(n);
+  return q <= 0 ? 0 : Math.min(Math.max(q, min), max);
+};
 
-function read(): Cart {
-  if (cache) return cache;
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Cart;
-    // 商品が消えた・上限が変わった場合に備えて読み込み時に整える
-    cache = Object.fromEntries(
-      Object.entries(raw)
-        .filter(([id, n]) => findProduct(id) && Number.isInteger(n) && n > 0)
-        .map(([id, n]) => [id, Math.min(n, shop.maxQty)]),
-    );
-  } catch {
-    cache = {};
-  }
-  return cache;
-}
-
-function write(next: Cart) {
-  cache = next;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // 保存できない環境（プライベートブラウズなど）でも、開いているあいだは使える
-  }
-  listeners.forEach((l) => l());
-}
-
-function subscribe(l: () => void) {
-  listeners.add(l);
-  const onStorage = (e: StorageEvent) => {
-    if (e.key === KEY) {
-      cache = null;
-      l();
-    }
-  };
-  window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(l);
-    window.removeEventListener("storage", onStorage);
-  };
-}
+const store = createStore<Cart>("sayozuki-cart", "local", {}, (raw) =>
+  // 商品が消えた・本数の範囲が変わった場合に備えて読み込み時に整える
+  Object.fromEntries(
+    Object.entries((raw ?? {}) as Cart)
+      .map(([id, n]) => [id, clamp(id, Number(n))] as const)
+      .filter(([, n]) => n > 0),
+  ),
+);
 
 export function useCart() {
-  const cart = useSyncExternalStore(subscribe, read, () => EMPTY);
+  const cart = store.useValue();
   const count = Object.values(cart).reduce((a, b) => a + b, 0);
-  const total = Object.entries(cart).reduce(
-    (sum, [id, n]) => sum + (findProduct(id)?.price ?? 0) * n,
-    0,
-  );
+  const total = Object.entries(cart).reduce((sum, [id, n]) => sum + (findProduct(id)?.price ?? 0) * n, 0);
   return { cart, count, total };
 }
 
 export function setQty(id: string, qty: number) {
-  const next = { ...read() };
-  const n = Math.max(0, Math.min(Math.floor(qty), shop.maxQty));
+  const next = { ...store.get() };
+  const n = clamp(id, qty);
   if (n === 0) delete next[id];
   else next[id] = n;
-  write(next);
+  store.set(next);
 }
 
 export function addToCart(id: string, qty = 1) {
-  setQty(id, (read()[id] ?? 0) + qty);
+  setQty(id, (store.get()[id] ?? 0) + qty);
 }
 
 export function clearCart() {
-  write({});
+  store.set({});
 }
