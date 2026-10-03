@@ -254,18 +254,20 @@ export function InnPage({ lang }: { lang: Locale }) {
           </div>
         </section>
 
-        {/* お取り寄せ */}
-        <section className="pb-20 md:pb-24">
-          <SectionHeading en={t.sake.en} ja={t.nav.shop} />
-          <PhotoBand image={photos.room} alt={t.rooms.altRoom} title={t.sake.title} lead={t.sake.lead}>
-            <div lang="ja">
-              <ProductGrid items={products} className="mt-12" />
+        {/* お取り寄せ（site.showSakeSection で出し入れ） */}
+        {site.showSakeSection && (
+          <section className="pb-20 md:pb-24">
+            <SectionHeading en={t.sake.en} ja={t.nav.shop} />
+            <PhotoBand image={photos.room} alt={t.rooms.altRoom} title={t.sake.title} lead={t.sake.lead}>
+              <div lang="ja">
+                <ProductGrid items={products} className="mt-12" />
+              </div>
+            </PhotoBand>
+            <div className="mx-auto mt-10 flex max-w-6xl justify-end px-4 md:px-5">
+              <MoreLink href={shopUrl("/")}>{t.sake.more}</MoreLink>
             </div>
-          </PhotoBand>
-          <div className="mx-auto mt-10 flex max-w-6xl justify-end px-4 md:px-5">
-            <MoreLink href={shopUrl("/")}>{t.sake.more}</MoreLink>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* ご予約 */}
         <section id="reserve" className="bg-surface px-4 py-20 md:px-5 md:py-24">

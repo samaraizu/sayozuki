@@ -16,6 +16,8 @@ export const site = {
   openDays: "水曜日〜日曜日を中心に営業しております",
   // Google ビジネスプロフィール（現在の登録名は「旅館 静山荘 次元ブレッド」）
   gbpUrl: "https://share.google/ZoLhpDujEC7RIG0Xq",
+  /** 宿のページの「SAKE（お取り寄せ）」の紹介ブロック。再開するときは true に戻す */
+  showSakeSection: false,
 } as const;
 
 /**
