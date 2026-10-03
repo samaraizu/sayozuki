@@ -11,7 +11,7 @@ export const site = {
   company: "小夜月株式会社",
   postalCode: "〒999-3242",
   address: "山形県上山市葉山5-63",
-  url: "https://kaminoyama-sayoduki.com",
+  url: "https://sayozuki.com",
   // Notion では「営業日数22日・水〜日あたり」。確定したら書き換える
   openDays: "水曜日〜日曜日を中心に営業しております",
   // Google ビジネスプロフィール（現在の登録名は「旅館 静山荘 次元ブレッド」）
