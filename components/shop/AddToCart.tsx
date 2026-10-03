@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { addToCart, useCart } from "@/lib/cart";
 import { findProduct, qtyRange } from "@/lib/shop";
+import { shopPath } from "@/lib/urls";
 
 export function AddToCart({ id }: { id: string }) {
   const p = findProduct(id)!;
@@ -51,7 +52,7 @@ export function AddToCart({ id }: { id: string }) {
       {added && inCart > 0 && (
         <p className="mt-3 text-sm" role="status">
           カートに{inCart}本入っています。
-          <Link href="/shop/cart" className="ml-2 underline underline-offset-4">
+          <Link href={shopPath("/cart")} className="ml-2 underline underline-offset-4">
             カートを見る
           </Link>
         </p>

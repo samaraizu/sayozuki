@@ -4,6 +4,7 @@ import { TasteMap } from "@/components/shop/TasteMap";
 import { Chip, Crest, MoreLink, PhotoBand, SectionHeading } from "@/components/ui";
 import { allTags, delivery, products, shop, tagsOf, type Product } from "@/lib/shop";
 import { photos } from "@/lib/site";
+import { shopPath } from "@/lib/urls";
 
 const promises = [
   {
@@ -44,7 +45,7 @@ function Band({
       <PhotoBand image={image} alt={alt} title={title} lead={lead}>
         <div className="relative mt-8 flex flex-wrap justify-center gap-2 px-4">
           {tags.map((t) => (
-            <Chip key={t} href={`/shop?tag=${encodeURIComponent(t)}#lineup`}>
+            <Chip key={t} href={shopPath(`/?tag=${encodeURIComponent(t)}#lineup`)}>
               #{t}
             </Chip>
           ))}
@@ -99,7 +100,7 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
         {tag && (
           <p className="mb-8 text-center text-sm">
             <span className="font-bold text-green">#{tag}</span> のお酒（{lineup.length}件）
-            <Link href="/shop#lineup" scroll={false} className="ml-4 text-sub underline underline-offset-4">
+            <Link href={shopPath("/#lineup")} scroll={false} className="ml-4 text-sub underline underline-offset-4">
               すべて表示
             </Link>
           </p>
@@ -121,7 +122,7 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
               lead="大切な方へ、山形の旅の便りを"
               tags={["純米大吟醸", "純米吟醸", "贈りもの"].filter((t) => allTags.includes(t))}
               items={gifts}
-              more={{ href: "/shop?tag=贈りもの#lineup", label: "贈りものにおすすめのお酒" }}
+              more={{ href: shopPath("/?tag=贈りもの#lineup"), label: "贈りものにおすすめのお酒" }}
             />
             <Band
               image={photos.onsen}
@@ -130,7 +131,7 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
               lead="毎日の食卓に寄り添う、いつもの一杯"
               tags={["辛口", "本醸造", "特別純米", "一升瓶"].filter((t) => allTags.includes(t))}
               items={everyday}
-              more={{ href: "/shop?tag=辛口#lineup", label: "辛口のお酒" }}
+              more={{ href: shopPath("/?tag=辛口#lineup"), label: "辛口のお酒" }}
             />
           </>
         )}

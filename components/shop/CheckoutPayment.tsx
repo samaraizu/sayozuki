@@ -9,6 +9,7 @@ import { updateCheckout, useCheckout } from "@/lib/checkout";
 import { quote, validateInfo, validatePayment } from "@/lib/order";
 import { payments } from "@/lib/shop";
 import { yen } from "@/lib/site";
+import { shopPath } from "@/lib/urls";
 
 export function CheckoutPayment() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export function CheckoutPayment() {
 
   // お届け先が未入力のまま直接開かれたら手順1へ戻す
   useEffect(() => {
-    if (count && !infoOk) router.replace("/shop/checkout");
+    if (count && !infoOk) router.replace(shopPath("/checkout"));
   }, [count, infoOk, router]);
 
   if (!count || !infoOk) return null;
@@ -33,7 +34,7 @@ export function CheckoutPayment() {
           e.preventDefault();
           const found = validatePayment(c);
           if (found.payment) return setError(found.payment);
-          router.push("/shop/checkout/confirm");
+          router.push(shopPath("/checkout/confirm"));
         }}
       >
         <fieldset>
@@ -72,7 +73,7 @@ export function CheckoutPayment() {
           )}
         </fieldset>
         <div className="mt-10 flex flex-col-reverse items-center justify-between gap-4 border-t border-line pt-8 sm:flex-row">
-          <Link href="/shop/checkout" className="text-sm text-sub underline underline-offset-4">
+          <Link href={shopPath("/checkout")} className="text-sm text-sub underline underline-offset-4">
             ← お届け先の入力に戻る
           </Link>
           <button type="submit" className="w-full bg-green px-12 py-4 text-sm font-bold text-white hover:opacity-90 sm:w-auto">

@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
+import { shopPath } from "@/lib/urls";
 
 /** ヘッダーのカートアイコン。入っている本数を右上に出す */
 export function CartLink() {
   const { count } = useCart();
   return (
-    <Link href="/shop/cart" className="relative flex flex-col items-center gap-0.5 px-2 text-[10px] text-ink" aria-label={`カート（${count}本）`}>
+    <Link href={shopPath("/cart")} className="relative flex flex-col items-center gap-0.5 px-2 text-[10px] text-ink" aria-label={`カート（${count}本）`}>
       <svg viewBox="0 0 32 28" className="h-7 w-8" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden>
         <path d="M1 2h4l3.5 16h17L29 7H8" />
         <circle cx="11" cy="23.5" r="2" />

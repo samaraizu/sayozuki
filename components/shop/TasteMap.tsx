@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bottle } from "@/components/shop/Bottle";
 import { products } from "@/lib/shop";
+import { shopPath } from "@/lib/urls";
 
 /**
  * 日本酒テイストマップ。縦が辛口↔甘口、横が濃醇↔淡麗。
@@ -28,7 +29,7 @@ export function TasteMap() {
             return (
               <Link
                 key={p.id}
-                href={`/shop/${p.id}`}
+                href={shopPath(`/${p.id}`)}
                 className="group absolute flex w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center md:w-24"
                 style={{ left: `${left}%`, top: `${top}%` }}
               >

@@ -26,6 +26,14 @@ npm run dev   # http://localhost:3000
 直接のお問い合わせは Resend でメール通知します。`.env.local.example` を `.env.local` にコピーして値を入れてください。
 未設定のあいだは送信せず、内容をサーバーのログに出します。
 
+## ドメイン
+
+- 宿：https://sayozuki.com（6言語）
+- お取り寄せ：https://shop.sayozuki.com（中身は `/shop` 以下。`proxy.ts` で振り分ける）
+
+Vercel の本番の環境変数に `NEXT_PUBLIC_SPLIT_DOMAINS=true` を入れると、宿とお取り寄せのリンクがそれぞれのドメインを向き、sayozuki.com/shop は shop.sayozuki.com へ転送される。
+**DNS がつながってから入れること**（先に入れると本番のアクセスが仮ページへ飛ぶ）。未設定のあいだ・プレビュー・ローカルでは今までどおり `/shop` で動く。
+
 ## 多言語
 
 日本語は `/`、英語 `/en`、中国語（簡体字）`/zh`、ベトナム語 `/vi`、タイ語 `/th`、韓国語 `/ko`。

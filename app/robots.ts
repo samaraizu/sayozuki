@@ -7,7 +7,8 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       // 注文手続きと帳票のフォーマット案は検索結果に出さない
-      disallow: ["/shop/cart", "/shop/checkout", "/shop/complete", "/documents"],
+      // shop.sayozuki.com では /shop を付けないパスになるので両方書く
+      disallow: ["/shop/cart", "/shop/checkout", "/shop/complete", "/cart", "/checkout", "/complete", "/documents"],
     },
     sitemap: `${site.url}/sitemap.xml`,
   };

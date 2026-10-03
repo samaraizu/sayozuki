@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ClearCart } from "@/components/shop/ClearCart";
 import { StepBar } from "@/components/shop/StepBar";
 import { delivery, payments } from "@/lib/shop";
+import { shopPath } from "@/lib/urls";
 
 export const metadata: Metadata = { title: "ご注文完了", robots: { index: false } };
 
@@ -41,7 +42,7 @@ export default async function CompletePage({ searchParams }: PageProps<"/shop/co
           <br />
           20歳未満の者の飲酒は法律で禁止されています。
         </p>
-        <Link href="/shop" className="mt-10 inline-block bg-ink px-10 py-4 text-sm text-white">
+        <Link href={shopPath("/")} className="mt-10 inline-block bg-ink px-10 py-4 text-sm text-white">
           お取り寄せトップへ
         </Link>
       </div>

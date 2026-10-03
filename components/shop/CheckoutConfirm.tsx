@@ -12,6 +12,7 @@ import { updateCheckout, useCheckout } from "@/lib/checkout";
 import { quote, validateInfo, validatePayment } from "@/lib/order";
 import { delivery, findProduct, payments, shop } from "@/lib/shop";
 import { yen } from "@/lib/site";
+import { shopPath } from "@/lib/urls";
 
 function Block({ title, edit, children }: { title: string; edit: string; children: React.ReactNode }) {
   return (
@@ -36,7 +37,7 @@ export function CheckoutConfirm() {
   const ready = count > 0 && !Object.keys(validateInfo(c)).length && !Object.keys(validatePayment(c)).length;
 
   useEffect(() => {
-    if (count && !ready) router.replace(Object.keys(validateInfo(c)).length ? "/shop/checkout" : "/shop/checkout/payment");
+    if (count && !ready) router.replace(Object.keys(validateInfo(c)).length ? shopPath("/checkout") : shopPath("/checkout/payment"));
   }, [count, ready, c, router]);
 
   if (!ready) return null;
@@ -53,7 +54,7 @@ export function CheckoutConfirm() {
       <div>
         <AgeNotice className="mb-8" />
 
-        <Block title="ご注文商品" edit="/shop/cart">
+        <Block title="ご注文商品" edit={shopPath("/cart")}>
           <ul className="divide-y divide-line">
             {q.lines.map((l) => {
               const p = findProduct(l.id)!;
@@ -73,7 +74,7 @@ export function CheckoutConfirm() {
           </ul>
         </Block>
 
-        <Block title="お届け先・ご注文者" edit="/shop/checkout">
+        <Block title="お届け先・ご注文者" edit={shopPath("/checkout")}>
           <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
             <dt className="text-sub">お名前</dt>
             <dd>
@@ -93,7 +94,7 @@ export function CheckoutConfirm() {
           </dl>
         </Block>
 
-        <Block title="お届け方法" edit="/shop/checkout">
+        <Block title="お届け方法" edit={shopPath("/checkout")}>
           <dl className="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
             <dt className="text-sub">受け取り方法</dt>
             <dd>{delivery.method}</dd>
@@ -108,7 +109,7 @@ export function CheckoutConfirm() {
           </dl>
         </Block>
 
-        <Block title="お支払い方法" edit="/shop/checkout/payment">
+        <Block title="お支払い方法" edit={shopPath("/checkout/payment")}>
           <p className="text-sm font-bold">{pay.label}</p>
           <p className="mt-1 text-xs leading-6 text-sub">
             {pay.note}　お支払い時期：{pay.timing}
@@ -128,7 +129,7 @@ export function CheckoutConfirm() {
           />
           <span>
             ご注文内容と
-            <Link href="/shop/legal" target="_blank" className="underline underline-offset-4">
+            <Link href={shopPath("/legal")} target="_blank" className="underline underline-offset-4">
               特定商取引法に基づく表記
             </Link>
             （返品・キャンセル条件を含む）を確認し、同意します。
@@ -149,7 +150,7 @@ export function CheckoutConfirm() {
         >
           {!shop.open ? "販売準備中です" : pending ? "送信しています…" : "注文を確定する"}
         </button>
-        <Link href="/shop/checkout/payment" className="mt-4 block text-center text-xs text-sub underline underline-offset-4">
+        <Link href={shopPath("/checkout/payment")} className="mt-4 block text-center text-xs text-sub underline underline-offset-4">
           ← お支払い方法の選択に戻る
         </Link>
       </aside>

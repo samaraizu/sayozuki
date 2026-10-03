@@ -7,6 +7,7 @@ import { AgeNotice } from "@/components/shop/Notice";
 import { TasteChart } from "@/components/shop/TasteChart";
 import { findProduct, products, shop } from "@/lib/shop";
 import { yen } from "@/lib/site";
+import { shopPath } from "@/lib/urls";
 
 export function generateStaticParams() {
   return products.map((p) => ({ id: p.id }));
@@ -37,11 +38,11 @@ export default async function ProductPage({ params }: PageProps<"/shop/[id]">) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:px-5 md:py-16">
       <nav className="text-xs text-sub" aria-label="パンくず">
-        <Link href="/shop" className="hover:underline">
+        <Link href={shopPath("/")} className="hover:underline">
           お取り寄せ
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/shop#sake" className="hover:underline">
+        <Link href={shopPath("/#lineup")} className="hover:underline">
           日本酒
         </Link>
         <span className="mx-2">/</span>
