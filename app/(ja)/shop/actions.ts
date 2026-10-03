@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { sendCustomerMail, sendInquiryMail } from "@/lib/mail";
 import { emptyCheckout, newOrderNo, orderSummaryText, validateAll, type Checkout, type CheckoutErrors } from "@/lib/order";
+import { shopPath } from "@/lib/urls";
 
 export type OrderState = { errors: CheckoutErrors } | null;
 
@@ -47,5 +48,5 @@ export async function submitOrder(_prev: OrderState, data: FormData): Promise<Or
   );
 
   // 注文の控えは現状メールのみ。受注管理をつなぐときはここで保存する
-  redirect(`/shop/complete?no=${encodeURIComponent(orderNo)}&pay=${checkout.payment}`);
+  redirect(shopPath(`/complete?no=${encodeURIComponent(orderNo)}&pay=${checkout.payment}`));
 }

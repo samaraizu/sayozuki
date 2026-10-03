@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { innUrl } from "@/lib/urls";
 
 const KEY = "sayozuki-age-ok";
 
@@ -38,7 +39,7 @@ export function AgeGate() {
           20歳未満の方への販売はいたしません。
         </p>
         <div className="mt-8 grid grid-cols-2 gap-3">
-          <Link href="/" className="border border-line py-3 text-sm">
+          <Link href={innUrl("/")} className="border border-line py-3 text-sm">
             いいえ
           </Link>
           <button

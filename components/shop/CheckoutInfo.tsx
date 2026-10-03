@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart";
 import { updateCheckout, useCheckout } from "@/lib/checkout";
 import { deliveryDateRange, validateInfo, type CheckoutErrors } from "@/lib/order";
 import { delivery, prefectures } from "@/lib/shop";
+import { shopPath } from "@/lib/urls";
 
 export function CheckoutInfo() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export function CheckoutInfo() {
     return (
       <p className="py-16 text-center">
         カートに商品がありません。
-        <Link href="/shop#lineup" className="ml-2 underline underline-offset-4">
+        <Link href={shopPath("/#lineup")} className="ml-2 underline underline-offset-4">
           日本酒を見る
         </Link>
       </p>
@@ -53,7 +54,7 @@ export function CheckoutInfo() {
           document.getElementById(Object.keys(found)[0])?.focus();
           return;
         }
-        router.push("/shop/checkout/payment");
+        router.push(shopPath("/checkout/payment"));
       }}
       className="mx-auto max-w-3xl space-y-12"
     >
@@ -158,7 +159,7 @@ export function CheckoutInfo() {
       </fieldset>
 
       <div className="flex flex-col-reverse items-center justify-between gap-4 border-t border-line pt-8 sm:flex-row">
-        <Link href="/shop/cart" className="text-sm text-sub underline underline-offset-4">
+        <Link href={shopPath("/cart")} className="text-sm text-sub underline underline-offset-4">
           ← カートに戻る
         </Link>
         <button type="submit" className="w-full bg-green px-12 py-4 text-sm font-bold text-white hover:opacity-90 sm:w-auto">

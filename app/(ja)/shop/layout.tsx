@@ -5,19 +5,22 @@ import { CartLink } from "@/components/shop/CartLink";
 import { Crest } from "@/components/ui";
 import { shop } from "@/lib/shop";
 import { site } from "@/lib/site";
+import { innUrl, shopOrigin, shopPath, splitDomains } from "@/lib/urls";
 
 export const metadata: Metadata = {
+  // サブドメインに分けたときは shop.sayozuki.com を基準のURLにする
+  metadataBase: new URL(splitDomains ? shopOrigin : site.url),
   title: { default: `${shop.name}｜山形の地酒`, template: `%s｜${shop.name}` },
   description:
     "かみのやま温泉の宿「小夜月」でお出ししている厳選した山形の地酒を、ご自宅へお届けします。山形の米と水で醸した、地産地消の日本酒。",
 };
 
 const nav = [
-  ["/shop#lineup", "日本酒"],
-  ["/shop#taste", "テイストマップ"],
-  ["/shop#local", "山形の地酒について"],
-  ["/shop#guide", "ご購入について"],
-  ["/", "宿のご案内"],
+  [shopPath("/#lineup"), "日本酒"],
+  [shopPath("/#taste"), "テイストマップ"],
+  [shopPath("/#local"), "山形の地酒について"],
+  [shopPath("/#guide"), "ご購入について"],
+  [innUrl("/"), "宿のご案内"],
 ] as const;
 
 export default function ShopLayout({ children }: LayoutProps<"/shop">) {
@@ -30,7 +33,7 @@ export default function ShopLayout({ children }: LayoutProps<"/shop">) {
 
       <header className="relative z-40 bg-white">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 md:h-20 md:px-5">
-          <Link href="/shop" className="flex items-center gap-3">
+          <Link href={shopPath("/")} className="flex items-center gap-3">
             <Crest className="size-11 md:size-14" />
             <span className="leading-tight">
               <span className="block font-serif-ja text-lg tracking-[0.2em]">{site.name}</span>
@@ -38,7 +41,7 @@ export default function ShopLayout({ children }: LayoutProps<"/shop">) {
             </span>
           </Link>
           <div className="flex items-end gap-2">
-            <Link href="/" className="flex flex-col items-center gap-0.5 px-2 text-[10px]" aria-label="宿のご案内">
+            <Link href={innUrl("/")} className="flex flex-col items-center gap-0.5 px-2 text-[10px]" aria-label="宿のご案内">
               <svg viewBox="0 0 28 28" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden>
                 <path d="M3 13L14 4l11 9M6 11v13h16V11M11 24v-7h6v7" />
               </svg>
@@ -68,17 +71,17 @@ export default function ShopLayout({ children }: LayoutProps<"/shop">) {
       <footer className="bg-surface px-4 pt-14 pb-10 md:px-5">
         <div className="mx-auto max-w-6xl text-[13px] leading-7">
           <div className="flex flex-col gap-10 md:flex-row md:justify-between">
-            <Link href="/shop" className="flex items-center gap-3">
+            <Link href={shopPath("/")} className="flex items-center gap-3">
               <Crest className="size-12" />
               <span className="font-serif-ja text-lg tracking-[0.2em]">{site.name}</span>
             </Link>
             <nav className="grid grid-cols-2 gap-x-10 gap-y-2 md:grid-cols-3">
-              <Link href="/shop#lineup" className="hover:text-green">日本酒ラインナップ</Link>
-              <Link href="/shop#taste" className="hover:text-green">テイストマップ</Link>
-              <Link href="/shop/cart" className="hover:text-green">カート</Link>
-              <Link href="/shop/legal" className="hover:text-green">特定商取引法に基づく表記</Link>
-              <Link href="/shop/legal#manager" className="hover:text-green">酒類販売管理者標識</Link>
-              <Link href="/" className="hover:text-green">宿のご案内</Link>
+              <Link href={shopPath("/#lineup")} className="hover:text-green">日本酒ラインナップ</Link>
+              <Link href={shopPath("/#taste")} className="hover:text-green">テイストマップ</Link>
+              <Link href={shopPath("/cart")} className="hover:text-green">カート</Link>
+              <Link href={shopPath("/legal")} className="hover:text-green">特定商取引法に基づく表記</Link>
+              <Link href={shopPath("/legal#manager")} className="hover:text-green">酒類販売管理者標識</Link>
+              <Link href={innUrl("/")} className="hover:text-green">宿のご案内</Link>
             </nav>
           </div>
           <p className="mt-12 border-t border-line pt-8 text-xs leading-6 text-sub">

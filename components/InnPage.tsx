@@ -7,6 +7,7 @@ import { Chip, Crest, MoreLink, PhotoBand, SectionHeading } from "@/components/u
 import { dictionaries, fmt, formatYen, type Locale } from "@/lib/i18n";
 import { products } from "@/lib/shop";
 import { meals, otaLinks, photos, rooms, site } from "@/lib/site";
+import { shopUrl } from "@/lib/urls";
 
 /** 宿のトップページ。言語ごとに文言だけ差し替える */
 export function InnPage({ lang }: { lang: Locale }) {
@@ -69,7 +70,7 @@ export function InnPage({ lang }: { lang: Locale }) {
           </a>
           <div className="flex items-end gap-1 md:gap-2">
             <LanguageSwitcher lang={lang} />
-            <Link href="/shop" hrefLang="ja" className="flex flex-col items-center gap-0.5 px-2 text-[10px] hover:text-green" aria-label={t.nav.shop}>
+            <Link href={shopUrl("/")} hrefLang="ja" className="flex flex-col items-center gap-0.5 px-2 text-[10px] hover:text-green" aria-label={t.nav.shop}>
               <svg viewBox="0 0 28 28" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
                 <path d="M12 2h4v6c0 1.5 3 3 3 6.5V25a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V14.5C9 11 12 9.5 12 8z" />
                 <path d="M9 16h10v6H9z" />
@@ -94,7 +95,7 @@ export function InnPage({ lang }: { lang: Locale }) {
               </li>
             ))}
             <li>
-              <Link href="/shop" hrefLang="ja" className="block py-3.5 text-green hover:opacity-80 md:py-4">
+              <Link href={shopUrl("/")} hrefLang="ja" className="block py-3.5 text-green hover:opacity-80 md:py-4">
                 {t.nav.shop}
               </Link>
             </li>
@@ -262,7 +263,7 @@ export function InnPage({ lang }: { lang: Locale }) {
             </div>
           </PhotoBand>
           <div className="mx-auto mt-10 flex max-w-6xl justify-end px-4 md:px-5">
-            <MoreLink href="/shop">{t.sake.more}</MoreLink>
+            <MoreLink href={shopUrl("/")}>{t.sake.more}</MoreLink>
           </div>
         </section>
 

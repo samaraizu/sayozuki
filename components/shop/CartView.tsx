@@ -9,6 +9,7 @@ import { useCheckout } from "@/lib/checkout";
 import { quote } from "@/lib/order";
 import { findProduct, qtyRange, shop } from "@/lib/shop";
 import { yen } from "@/lib/site";
+import { shopPath } from "@/lib/urls";
 
 export function CartView() {
   const { cart, count } = useCart();
@@ -19,7 +20,7 @@ export function CartView() {
     return (
       <div className="py-16 text-center">
         <p>カートに商品が入っていません。</p>
-        <Link href="/shop#lineup" className="mt-8 inline-block bg-ink px-10 py-4 text-sm text-white">
+        <Link href={shopPath("/#lineup")} className="mt-8 inline-block bg-ink px-10 py-4 text-sm text-white">
           日本酒を見る
         </Link>
       </div>
@@ -51,7 +52,7 @@ export function CartView() {
                     <div className="flex items-center gap-4">
                       <Bottle product={p} className="size-20 shrink-0 bg-surface" />
                       <div className="hidden md:block">
-                        <Link href={`/shop/${p.id}`} className="font-brush text-base hover:underline">
+                        <Link href={shopPath(`/${p.id}`)} className="font-brush text-base hover:underline">
                           {p.name}
                         </Link>
                         <p className="text-xs text-sub">{p.volume}</p>
@@ -60,7 +61,7 @@ export function CartView() {
                     </div>
                   </td>
                   <td className="md:hidden">
-                    <Link href={`/shop/${p.id}`} className="font-brush text-base">
+                    <Link href={shopPath(`/${p.id}`)} className="font-brush text-base">
                       {p.name}
                     </Link>
                     <p className="text-xs text-sub">
@@ -94,7 +95,7 @@ export function CartView() {
             })}
           </tbody>
         </table>
-        <Link href="/shop#lineup" className="mt-6 inline-block text-sm text-sub underline underline-offset-4">
+        <Link href={shopPath("/#lineup")} className="mt-6 inline-block text-sm text-sub underline underline-offset-4">
           ← 買い物を続ける
         </Link>
       </section>
@@ -103,7 +104,7 @@ export function CartView() {
         <OrderSummary q={q} />
         <p className="mt-4 text-xs leading-6 text-sub">{shop.shippingNote}</p>
         <AgeNotice className="mt-6" />
-        <Link href="/shop/checkout" className="mt-6 block bg-green py-4 text-center text-sm font-bold text-white hover:opacity-90">
+        <Link href={shopPath("/checkout")} className="mt-6 block bg-green py-4 text-center text-sm font-bold text-white hover:opacity-90">
           ご購入手続きへ進む
         </Link>
       </aside>
