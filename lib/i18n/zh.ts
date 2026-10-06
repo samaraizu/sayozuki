@@ -134,8 +134,6 @@ export const zh: Dict = {
     aroundLabel: "周边",
     around: "藏王温泉・上山城・武家屋敷街",
   },
-  topbar: "本馆主要于周三至周日营业",
-  bar: "预订・咨询请点击这里",
   sake: {
     en: "SAKE",
     title: "旅馆精选的日本酒",

@@ -134,8 +134,6 @@ export const ko: Dict = {
     aroundLabel: "주변",
     around: "자오 온천・가미노야마성・무가야시키 거리",
   },
-  topbar: "주로 수요일부터 일요일까지 영업합니다",
-  bar: "예약・문의는 이쪽",
   sake: {
     en: "SAKE",
     title: "료칸에서 제공하는 엄선된 사케",

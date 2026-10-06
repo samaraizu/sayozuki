@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { InquiryForm } from "@/components/InquiryForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { OtaIcon } from "@/components/OtaIcon";
 import { Photo } from "@/components/Photo";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { Chip, Crest, MoreLink, PhotoBand, SectionHeading } from "@/components/ui";
@@ -53,10 +54,6 @@ export function InnPage({ lang }: { lang: Locale }) {
         />
       )}
 
-      <p className="bg-green-soft px-4 py-1.5 text-center text-[12px] font-bold text-green md:text-[13px]">
-        {t.topbar}
-      </p>
-
       <header className="relative z-40 bg-white">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-3 px-4 md:h-20 md:px-5">
           <a href="#top" className="flex items-center gap-3">
@@ -70,13 +67,15 @@ export function InnPage({ lang }: { lang: Locale }) {
           </a>
           <div className="flex items-end gap-1 md:gap-2">
             <LanguageSwitcher lang={lang} />
-            <Link href={shopUrl("/")} hrefLang="ja" className="flex flex-col items-center gap-0.5 px-2 text-[10px] hover:text-green" aria-label={t.nav.shop}>
-              <svg viewBox="0 0 28 28" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
-                <path d="M12 2h4v6c0 1.5 3 3 3 6.5V25a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V14.5C9 11 12 9.5 12 8z" />
-                <path d="M9 16h10v6H9z" />
-              </svg>
-              <span className="hidden md:block">SAKE</span>
-            </Link>
+            {site.showSakeSection && (
+              <Link href={shopUrl("/")} hrefLang="ja" className="flex flex-col items-center gap-0.5 px-2 text-[10px] hover:text-green" aria-label={t.nav.shop}>
+                <svg viewBox="0 0 28 28" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden>
+                  <path d="M12 2h4v6c0 1.5 3 3 3 6.5V25a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1V14.5C9 11 12 9.5 12 8z" />
+                  <path d="M9 16h10v6H9z" />
+                </svg>
+                <span className="hidden md:block">SAKE</span>
+              </Link>
+            )}
             <a
               href="#reserve"
               className="ml-1 self-center bg-green px-4 py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-85"
@@ -94,16 +93,15 @@ export function InnPage({ lang }: { lang: Locale }) {
                 </a>
               </li>
             ))}
-            <li>
-              <Link href={shopUrl("/")} hrefLang="ja" className="block py-3.5 text-green hover:opacity-80 md:py-4">
-                {t.nav.shop}
-              </Link>
-            </li>
+            {site.showSakeSection && (
+              <li>
+                <Link href={shopUrl("/")} hrefLang="ja" className="block py-3.5 text-green hover:opacity-80 md:py-4">
+                  {t.nav.shop}
+                </Link>
+              </li>
+            )}
           </ul>
         </nav>
-        <a href="#reserve" className="block bg-green px-4 py-2 text-center text-[12px] font-bold text-white hover:opacity-90 md:text-[13px]">
-          {t.bar} →
-        </a>
       </header>
 
       <main id="top">
@@ -278,11 +276,17 @@ export function InnPage({ lang }: { lang: Locale }) {
                 const name = t.reserve.otaNames[o.name] ?? o.name;
                 return o.url ? (
                   <MoreLink key={o.name} href={o.url} className="w-full">
-                    {fmt(t.reserve.otaBook, { name })}
+                    <span className="flex items-center gap-3">
+                      <OtaIcon name={o.icon} className="text-green transition-colors group-hover:text-white" />
+                      {fmt(t.reserve.otaBook, { name })}
+                    </span>
                   </MoreLink>
                 ) : (
                   <span key={o.name} className="flex items-center justify-between border border-line bg-white px-6 py-4 text-sm text-sub">
-                    {name}
+                    <span className="flex items-center gap-3">
+                      <OtaIcon name={o.icon} className="text-sub/60" />
+                      {name}
+                    </span>
                     <span className="text-xs">{t.reserve.otaSoon}</span>
                   </span>
                 );

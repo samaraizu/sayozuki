@@ -136,8 +136,6 @@ export const en: Dict = {
     aroundLabel: "Nearby",
     around: "Zao Onsen, Kaminoyama Castle, Bukeyashiki-dori (samurai residence street)",
   },
-  topbar: "Open mainly from Wednesday to Sunday",
-  bar: "Reservations & inquiries",
   sake: {
     en: "SAKE",
     title: "Carefully selected sake served at the inn",
