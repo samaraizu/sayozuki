@@ -16,7 +16,7 @@ export const site = {
   openDays: "水曜日〜日曜日を中心に営業しております",
   // Google ビジネスプロフィール（現在の登録名は「旅館 静山荘 次元ブレッド」）
   gbpUrl: "https://share.google/ZoLhpDujEC7RIG0Xq",
-  /** 宿のページの「SAKE（お取り寄せ）」の紹介ブロック。再開するときは true に戻す */
+  /** 宿のページの「SAKE（お取り寄せ）」の表示（紹介ブロックとヘッダーのリンク）。再開するときは true に戻す */
   showSakeSection: false,
 } as const;
 
@@ -26,9 +26,9 @@ export const site = {
  */
 export const otaLinks = [
   // airbnb.com にしておくと、見る人の言語・地域に合わせて Airbnb 側で表示が切り替わる
-  { name: "Airbnb", url: "https://www.airbnb.com/rooms/1783038141289534759" },
-  { name: "楽天トラベル", url: "" },
-  { name: "じゃらん", url: "" },
+  { name: "Airbnb", url: "https://www.airbnb.com/rooms/1783038141289534759", icon: "home" },
+  { name: "楽天トラベル", url: "", icon: "suitcase" },
+  { name: "じゃらん", url: "", icon: "pin" },
 ] as const;
 
 /**
