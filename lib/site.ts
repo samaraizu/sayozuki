@@ -25,6 +25,8 @@ export const site = {
  * 空文字のあいだはボタンを「準備中」として表示する。
  */
 export const otaLinks = [
+  // airbnb.com にしておくと、見る人の言語・地域に合わせて Airbnb 側で表示が切り替わる
+  { name: "Airbnb", url: "https://www.airbnb.com/rooms/1783038141289534759" },
   { name: "楽天トラベル", url: "" },
   { name: "じゃらん", url: "" },
 ] as const;

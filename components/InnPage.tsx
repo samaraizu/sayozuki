@@ -273,7 +273,7 @@ export function InnPage({ lang }: { lang: Locale }) {
         <section id="reserve" className="bg-surface px-4 py-20 md:px-5 md:py-24">
           <SectionHeading en="RESERVATION" ja={t.reserve.title} />
           <div className="mx-auto max-w-4xl">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               {otaLinks.map((o) => {
                 const name = t.reserve.otaNames[o.name] ?? o.name;
                 return o.url ? (
