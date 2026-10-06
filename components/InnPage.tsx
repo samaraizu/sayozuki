@@ -85,7 +85,7 @@ export function InnPage({ lang }: { lang: Locale }) {
           </div>
         </div>
         <nav className="border-y border-line">
-          <ul className="mx-auto flex max-w-6xl justify-between gap-6 overflow-x-auto px-4 text-[13px] whitespace-nowrap md:px-5 md:text-[15px]">
+          <ul className="mx-auto flex max-w-6xl justify-start gap-6 overflow-x-auto px-4 text-[13px] whitespace-nowrap md:justify-center md:gap-12 md:px-5 md:text-[15px]">
             {nav.map(([href, label]) => (
               <li key={href}>
                 <a href={href} className="block py-3.5 hover:text-green md:py-4">
