@@ -16,6 +16,8 @@ export const site = {
   openDays: "水曜日〜日曜日を中心に営業しております",
   // Google ビジネスプロフィール（現在の登録名は「旅館 静山荘 次元ブレッド」）
   gbpUrl: "https://share.google/ZoLhpDujEC7RIG0Xq",
+  tel: "023-679-5511",
+  fax: "023-679-5514",
   /** 宿のページの「SAKE（お取り寄せ）」の表示（紹介ブロックとヘッダーのリンク）。再開するときは true に戻す */
   showSakeSection: false,
 } as const;
@@ -94,5 +96,9 @@ export const pricingNotes = [
   "3名様以上でのご利用は、1名様分の素泊まり料金を加算いたします。",
   "繁忙期は1室3,000円〜の加算となります。",
 ];
+
+/** 国内表記の番号を国際表記（+81-23-…）にする。外国語のページと tel: リンク用 */
+export const intlPhone = (n: string) => `+81-${n.replace(/^0/, "")}`;
+export const telHref = (n: string) => `tel:+81${n.replace(/^0/, "").replace(/-/g, "")}`;
 
 export const yen = (n: number) => `${n.toLocaleString("ja-JP")}円`;

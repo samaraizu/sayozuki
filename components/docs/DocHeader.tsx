@@ -9,7 +9,10 @@ export function Issuer() {
       <div>
         <p className="text-sm font-bold">{legal.seller}</p>
         <p>{legal.address}</p>
-        <p>TEL {legal.tel}　{legal.email}</p>
+        <p>
+          TEL {legal.tel}　FAX {legal.fax}
+        </p>
+        <p>{legal.email}</p>
         <p>登録番号 {legal.invoiceNo}</p>
         <p>{legal.license}</p>
       </div>

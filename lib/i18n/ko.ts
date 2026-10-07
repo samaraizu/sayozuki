@@ -129,6 +129,8 @@ export const ko: Dict = {
     address: ["우편번호 999-3242", "일본 야마가타현 가미노야마시 하야마 5-63"],
     map: "Google 지도에서 보기",
     mapTitle: "사요즈키 지도",
+    telLabel: "전화",
+    faxLabel: "팩스",
     nearestLabel: "가까운 역",
     nearest: "가미노야마온센역 (JR 야마가타 신칸센・오우 본선)",
     aroundLabel: "주변",

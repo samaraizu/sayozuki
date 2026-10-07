@@ -129,6 +129,8 @@ export const zh: Dict = {
     address: ["邮编 999-3242", "日本山形县上山市叶山5-63"],
     map: "在 Google 地图中查看",
     mapTitle: "小夜月地图",
+    telLabel: "电话",
+    faxLabel: "传真",
     nearestLabel: "最近车站",
     nearest: "上山温泉站（JR山形新干线・奥羽本线）",
     aroundLabel: "周边",

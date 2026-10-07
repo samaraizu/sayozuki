@@ -7,7 +7,7 @@ import { ProductGrid } from "@/components/shop/ProductGrid";
 import { Chip, Crest, MoreLink, PhotoBand, SectionHeading } from "@/components/ui";
 import { dictionaries, fmt, formatYen, type Locale } from "@/lib/i18n";
 import { products } from "@/lib/shop";
-import { meals, otaLinks, photos, rooms, site } from "@/lib/site";
+import { intlPhone, meals, otaLinks, photos, rooms, site, telHref } from "@/lib/site";
 import { shopUrl } from "@/lib/urls";
 
 /** 宿のトップページ。言語ごとに文言だけ差し替える */
@@ -15,6 +15,8 @@ export function InnPage({ lang }: { lang: Locale }) {
   const t = dictionaries[lang];
   const yen = (n: number) => formatYen(lang, n);
   const roomName = (name: string) => t.rooms.names[name] ?? name;
+  // 外国語のページでは国際表記にする（海外からかける人向け）
+  const phone = (n: string) => (lang === "ja" ? n : intlPhone(n));
   const mapQuery = encodeURIComponent(`${site.address} ${site.name}`);
 
   const nav = [
@@ -42,6 +44,8 @@ export function InnPage({ lang }: { lang: Locale }) {
       addressCountry: "JP",
     },
     priceRange: `${formatYen("ja", Math.min(...rooms.map((r) => r.price)))}〜`,
+    telephone: intlPhone(site.tel),
+    faxNumber: intlPhone(site.fax),
     sameAs: [site.gbpUrl],
   };
 
@@ -315,6 +319,14 @@ export function InnPage({ lang }: { lang: Locale }) {
                   <MoreLink href={site.gbpUrl}>{t.access.map}</MoreLink>
                 </div>
               </dd>
+              <dt className="font-bold">{t.access.telLabel}</dt>
+              <dd className="leading-7">
+                <a href={telHref(site.tel)} className="underline-offset-4 hover:underline">
+                  {phone(site.tel)}
+                </a>
+              </dd>
+              <dt className="font-bold">{t.access.faxLabel}</dt>
+              <dd className="leading-7">{phone(site.fax)}</dd>
               <dt className="font-bold">{t.access.nearestLabel}</dt>
               <dd className="leading-7">{t.access.nearest}</dd>
               <dt className="font-bold">{t.access.aroundLabel}</dt>
@@ -341,6 +353,9 @@ export function InnPage({ lang }: { lang: Locale }) {
               </p>
               <p className="mt-1 text-xs text-sub">
                 {t.access.address[0]} {t.access.address[1]}
+              </p>
+              <p className="mt-1 text-xs text-sub">
+                TEL <a href={telHref(site.tel)} className="hover:underline">{phone(site.tel)}</a>　FAX {phone(site.fax)}
               </p>
             </div>
           </div>
