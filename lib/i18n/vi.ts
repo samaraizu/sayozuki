@@ -131,6 +131,8 @@ export const vi: Dict = {
     address: ["5-63 Hayama, thành phố Kaminoyama", "tỉnh Yamagata 999-3242, Nhật Bản"],
     map: "Xem trên Google Maps",
     mapTitle: "Bản đồ Sayozuki",
+    telLabel: "Điện thoại",
+    faxLabel: "Fax",
     nearestLabel: "Ga gần nhất",
     nearest: "Ga Kaminoyama-Onsen (JR Yamagata Shinkansen / tuyến Ou)",
     aroundLabel: "Lân cận",

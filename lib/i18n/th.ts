@@ -130,6 +130,8 @@ export const th: Dict = {
     address: ["5-63 Hayama, Kaminoyama", "Yamagata 999-3242 ประเทศญี่ปุ่น"],
     map: "ดูใน Google Maps",
     mapTitle: "แผนที่ซาโยซึกิ",
+    telLabel: "โทรศัพท์",
+    faxLabel: "แฟกซ์",
     nearestLabel: "สถานีที่ใกล้ที่สุด",
     nearest: "สถานีคามิโนยามะออนเซ็น (JR ยามากาตะชินคันเซ็น / สายโออุ)",
     aroundLabel: "สถานที่ใกล้เคียง",

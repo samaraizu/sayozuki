@@ -132,6 +132,8 @@ export const ja = {
     address: ["〒999-3242", "山形県上山市葉山5-63"],
     map: "Google マップで見る",
     mapTitle: "小夜月の地図",
+    telLabel: "電話番号",
+    faxLabel: "FAX",
     nearestLabel: "最寄り",
     nearest: "かみのやま温泉駅（JR山形新幹線・奥羽本線）",
     aroundLabel: "周辺",

@@ -131,6 +131,8 @@ export const en: Dict = {
     address: ["5-63 Hayama, Kaminoyama", "Yamagata 999-3242, Japan"],
     map: "View on Google Maps",
     mapTitle: "Map of Sayozuki",
+    telLabel: "Phone",
+    faxLabel: "Fax",
     nearestLabel: "Nearest station",
     nearest: "Kaminoyama-Onsen Station (JR Yamagata Shinkansen / Ou Line)",
     aroundLabel: "Nearby",
