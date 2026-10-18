@@ -1,6 +1,7 @@
 # ローカル開発用（.dev.vars にコピーして使う。本番は wrangler secret put で登録）
 STAFF_PIN=change-me-long-pin
-# 空のままならモック（Square未接続）で動く
+# 1 ならSquare未接続のモックで動く（ローカル専用。本番では必ず 0）
+MOCK_SQUARE=1
 SQUARE_ACCESS_TOKEN=
 SQUARE_WEBHOOK_SIGNATURE_KEY=
 # Slack互換のIncoming Webhook（任意）

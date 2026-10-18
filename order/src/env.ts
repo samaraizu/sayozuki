@@ -22,4 +22,5 @@ export interface Env {
   COMPANY_TEL: string;
 }
 
-export const isMock = (env: Env) => env.MOCK_SQUARE === '1' || !env.SQUARE_ACCESS_TOKEN;
+/** モックは明示的に MOCK_SQUARE=1 のときだけ（本番でSquare未設定のまま「支払ったことにする」が動かないように） */
+export const isMock = (env: Env) => env.MOCK_SQUARE === '1';

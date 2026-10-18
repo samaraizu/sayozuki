@@ -66,7 +66,7 @@ npm run deploy
 ## ローカルで試す（Square未接続のモック）
 
 ```bash
-cp .dev.vars.example .dev.vars   # STAFF_PIN を設定。SQUARE_ACCESS_TOKEN を空のままにするとモックで動く
+cp .dev.vars.example .dev.vars   # STAFF_PIN を設定。MOCK_SQUARE=1 でSquare未接続のモックになる
 npm run db:local
 npm run dev                      # http://127.0.0.1:8787/staff/ でチェックイン → 出てきたURLを開く
 npm test

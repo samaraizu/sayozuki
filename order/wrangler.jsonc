@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "sayozuki-order",
-      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "database_id": "e5ab434a-8933-4340-ab9b-05375be371a1",
       "migrations_dir": "migrations"
     }
   ],
