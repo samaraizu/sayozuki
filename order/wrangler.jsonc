@@ -28,7 +28,7 @@
     "ORDER_OPEN": "06:00",
     "LAST_ORDER": "22:30",
     "PUBLIC_ORIGIN": "https://order.sayozuki.com",
-    "GUIDE_BASE_URL": "https://sayozuki.com/guide",
+    "GUIDE_BASE_URL": "https://sayozuki.vercel.app/guide", // sayozuki.com を繋いだら https://sayozuki.com/guide に戻す
     "COMPANY_NAME": "小夜月株式会社",
     "COMPANY_ADDRESS": "山形県上山市葉山5-63",
     "COMPANY_TEL": "023-679-5511"
