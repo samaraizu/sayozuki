@@ -22,8 +22,8 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["OrderDesk"] }],
   "vars": {
-    "SQUARE_ENV": "sandbox",
-    "SQUARE_LOCATION_ID": "REPLACE_WITH_LOCATION_ID",
+    "SQUARE_ENV": "production",
+    "SQUARE_LOCATION_ID": "LYGCPWEQ5KEG0",
     "MOCK_SQUARE": "0",
     "BATH_TAX_YEN": "150",
     "ORDER_OPEN": "06:00",
