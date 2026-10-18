@@ -68,7 +68,8 @@ function chime() {
 
 function renderLogin(msg = '') {
   root.innerHTML = `<div class="login"><div class="logo">小夜月<small>スタッフ</small></div>
-    <input id="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="PIN" aria-label="PIN">
+    <input id="pin" type="text" class="masked" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" lang="en" placeholder="PIN" aria-label="PIN">
+    <label class="muted" style="display:flex;align-items:center;gap:8px"><input id="showpin" type="checkbox"> PINを表示する</label>
     <button class="b p" id="go">ログイン</button><div class="muted">${esc(msg)}</div></div>`;
   const go = () => {
     pin = document.getElementById('pin').value.trim();
@@ -78,6 +79,7 @@ function renderLogin(msg = '') {
   };
   document.getElementById('go').onclick = go;
   document.getElementById('pin').onkeydown = (e) => e.key === 'Enter' && go();
+  document.getElementById('showpin').onchange = (e) => document.getElementById('pin').classList.toggle('masked', !e.target.checked);
 }
 
 async function load() {
