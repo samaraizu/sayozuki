@@ -1,5 +1,4 @@
 import type { Env } from '../env';
-import { BATH_TAX_LABEL } from '../config/i18n-menu';
 import { sq } from './client';
 
 export interface CheckoutLine {
@@ -7,26 +6,19 @@ export interface CheckoutLine {
   qty: number;
 }
 
-/**
- * 精算用の支払いリンクを作る。
- * 客室注文はSquareの商品として明細化し（在庫と売上レポートに反映）、入湯税は非課税の個別明細で足す。
- */
-export async function createCheckoutLink(env: Env, p: { stayId: string; room: string; lines: CheckoutLine[]; bathTax: number; redirectUrl: string }) {
-  const line_items: any[] = p.lines.map((l) => ({ catalog_object_id: l.variation_id, quantity: String(l.qty) }));
-  if (p.bathTax > 0) {
-    line_items.push({ name: BATH_TAX_LABEL, quantity: '1', base_price_money: { amount: p.bathTax, currency: 'JPY' } });
-  }
+/** 精算用の支払いリンク。客室注文はSquareの商品として明細化する（在庫と売上レポートに反映） */
+export async function createCheckoutLink(env: Env, p: { refId: string; room: string; lines: CheckoutLine[]; redirectUrl: string }) {
   const r = await sq<{ payment_link: { id: string; url: string; order_id: string } }>(env, '/v2/online-checkout/payment-links', {
     body: {
-      idempotency_key: `${p.stayId}-${line_items.length}-${p.bathTax}-${Date.now()}`,
+      idempotency_key: p.refId,
       order: {
         location_id: env.SQUARE_LOCATION_ID,
-        reference_id: p.stayId,
-        line_items,
-        metadata: { room: p.room, stay: p.stayId }
+        reference_id: p.refId,
+        line_items: p.lines.map((l) => ({ catalog_object_id: l.variation_id, quantity: String(l.qty) })),
+        metadata: { room: p.room }
       },
       checkout_options: { redirect_url: p.redirectUrl },
-      payment_note: `${p.room}号室`
+      payment_note: p.room
     }
   });
   return { id: r.payment_link.id, url: r.payment_link.url, orderId: r.payment_link.order_id };

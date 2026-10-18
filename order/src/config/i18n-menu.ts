@@ -64,5 +64,3 @@ export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
     desc: { en: 'Until 12 noon', zht: '延長至中午12點', zhs: '延长至中午12点', ko: '낮 12시까지 연장' }
   }
 };
-
-export const BATH_TAX_LABEL = '入湯税';

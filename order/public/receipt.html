@@ -49,22 +49,20 @@
     const to = toInput.value.trim();
     localStorage.setItem('syz_receipt_to', to);
     const date = new Date(data.settledAt || Date.now()).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' });
-    const rows = data.orders
-      .filter((o) => o.status !== 'canceled')
-      .flatMap((o) => o.lines)
+    const rows = data.lines
       .map((l) => `<tr><td>${esc(l.name)} × ${l.qty}</td><td class="r">${yen(l.price * l.qty)}</td></tr>`)
       .join('');
     paper.innerHTML = `<h1>領収書</h1>
       <div class="to">${esc(to)} 様</div>
       <div class="amount">${yen(data.total)}</div>
-      <div class="meta">上記正に領収いたしました（${esc(data.room)}号室・客室でのご飲食代および入湯税として）</div>
-      <table>${rows}<tr><td>入湯税</td><td class="r">${yen(data.bathTax)}</td></tr>
+      <div class="meta">上記正に領収いたしました（${esc(data.room)}・客室でのご飲食代として）</div>
+      <table>${rows}
       <tr><td><b>合計</b></td><td class="r"><b>${yen(data.total)}</b></td></tr></table>
       <div class="issuer">${esc(date)}<br><b>${esc(data.company.name)}</b>（小夜月）<br>${esc(data.company.address)}<br>TEL ${esc(data.company.tel)}</div>`;
   }
 
   try {
-    const res = await fetch('/api/receipt', { headers: { 'x-stay-token': localStorage.getItem('syz_t') || '' } });
+    const res = await fetch('/api/receipt', { headers: { 'x-room': localStorage.getItem('syz_r') || '' } });
     if (!res.ok) throw new Error(String(res.status));
     data = await res.json();
     draw();

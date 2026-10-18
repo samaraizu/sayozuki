@@ -11,7 +11,7 @@ import type { Menu } from './square/types';
 const MENU_TTL_MS = 60_000;
 
 export interface PlaceOrderInput {
-  stayId: string;
+  roomId: string;
   lines: { id: string; qty: number }[];
   delivery: 'door' | 'hand';
 }
@@ -40,8 +40,8 @@ export class OrderDesk extends DurableObject<Env> {
       `SELECT l.variation_id AS id, SUM(l.qty) AS qty
          FROM order_lines l
          JOIN orders o ON o.id = l.order_id
-         JOIN stays s ON s.id = o.stay_id
-        WHERE l.tracked = 1 AND o.status != 'canceled' AND s.status != 'settled'
+         LEFT JOIN settlements st ON st.id = o.settlement_id
+        WHERE l.tracked = 1 AND o.status != 'canceled' AND (o.settlement_id IS NULL OR st.status = 'pending')
         GROUP BY l.variation_id`
     ).all<{ id: string; qty: number }>();
     return new Map((r.results ?? []).map((x) => [x.id, Number(x.qty)]));
@@ -94,9 +94,9 @@ export class OrderDesk extends DurableObject<Env> {
     return out;
   }
 
-  private async placeOrderLocked({ stayId, lines, delivery }: PlaceOrderInput) {
-    const stay = await this.env.DB.prepare('SELECT id, room, status FROM stays WHERE id = ?').bind(stayId).first<{ id: string; room: string; status: string }>();
-    if (!stay || stay.status !== 'active') throw new HttpError(409, 'stay_closed');
+  private async placeOrderLocked({ roomId, lines, delivery }: PlaceOrderInput) {
+    const room = await this.env.DB.prepare('SELECT id, name FROM rooms WHERE id = ?').bind(roomId).first<{ id: string; name: string }>();
+    if (!room) throw new HttpError(404, 'room_not_found');
     if (!withinWindow(this.env.ORDER_OPEN, this.env.LAST_ORDER)) throw new HttpError(409, 'ordering_closed');
 
     const merged = new Map<string, number>();
@@ -130,9 +130,9 @@ export class OrderDesk extends DurableObject<Env> {
     }
 
     const stmts = [
-      this.env.DB.prepare('INSERT INTO orders (id, stay_id, delivery, status, total, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(
+      this.env.DB.prepare('INSERT INTO orders (id, room_id, delivery, status, total, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(
         orderId,
-        stayId,
+        roomId,
         delivery === 'hand' ? 'hand' : 'door',
         'new',
         total,
@@ -150,6 +150,6 @@ export class OrderDesk extends DurableObject<Env> {
       )
     ];
     await this.env.DB.batch(stmts);
-    return { id: orderId, total, room: stay.room, lines: rows.map((r) => ({ name: r.name, qty: r.qty })) };
+    return { id: orderId, total, room: room.name, lines: rows.map((r) => ({ name: r.name, qty: r.qty })) };
   }
 }

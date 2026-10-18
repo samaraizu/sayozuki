@@ -25,7 +25,6 @@
     "SQUARE_ENV": "production",
     "SQUARE_LOCATION_ID": "LYGCPWEQ5KEG0",
     "MOCK_SQUARE": "0",
-    "BATH_TAX_YEN": "150",
     "ORDER_OPEN": "06:00",
     "LAST_ORDER": "22:30",
     "PUBLIC_ORIGIN": "https://order.sayozuki.com",

@@ -18,11 +18,11 @@
   <button id="pay">支払ったことにする</button>
 </div>
 <script type="module">
-  const token = new URLSearchParams(location.hash.slice(1)).get('t') || localStorage.getItem('syz_t');
-  if (token) localStorage.setItem('syz_t', token);
+  const room = new URLSearchParams(location.hash.slice(1)).get('r') || localStorage.getItem('syz_r');
+  if (room) localStorage.setItem('syz_r', room);
   document.getElementById('pay').onclick = async () => {
-    await fetch('/api/mock/pay', { method: 'POST', headers: { 'x-stay-token': token } });
-    location.href = '/?paid=1';
+    await fetch('/api/mock/pay', { method: 'POST', headers: { 'x-room': room } });
+    location.href = '/?r=' + encodeURIComponent(room) + '&paid=1';
   };
 </script>
 </body>

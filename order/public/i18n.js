@@ -27,7 +27,7 @@ export const REQUESTS = [
 ];
 
 const T = {
-  room: { ja: '{r}号室', en: 'Room {r}', zht: '{r}號房', zhs: '{r}号房', ko: '{r}호' },
+  room: { ja: '{r}' }, // 部屋名はスタッフ画面で登録した名前をそのまま出す（例：203号室、蔵王の間）
   lastOrder: { ja: 'ラストオーダー {t}', en: 'Last order {t}', zht: '最後點餐 {t}', zhs: '最后点餐 {t}', ko: '라스트 오더 {t}' },
   orderingClosed: { ja: '本日のご注文は終了しました', en: 'Ordering has closed for today', zht: '今日點餐已結束', zhs: '今日点餐已结束', ko: '오늘 주문은 마감되었습니다' },
   deliveryNote: { ja: 'お届けは扉前・ノックなし', en: 'Left at your door, no knock', zht: '放置門前・不敲門', zhs: '放在门前・不敲门', ko: '문 앞 배달・노크 없음' },
@@ -57,8 +57,6 @@ const T = {
   delivered: { ja: 'お届け済み', en: 'Delivered', zht: '已送達', zhs: '已送达', ko: '배달 완료' },
   preparing: { ja: '準備中', en: 'Preparing', zht: '準備中', zhs: '准备中', ko: '준비 중' },
   canceled: { ja: '取消', en: 'Canceled', zht: '已取消', zhs: '已取消', ko: '취소됨' },
-  bathTax: { ja: '入湯税', en: 'Bathing tax', zht: '入湯稅', zhs: '入汤税', ko: '입탕세' },
-  bathTaxSub: { ja: '{g}名 × {n}泊・自動加算', en: '{g} guests × {n} nights · added automatically', zht: '{g}位 × {n}晚・自動加計', zhs: '{g}位 × {n}晚・自动加计', ko: '{g}명 × {n}박・자동 추가' },
   total: { ja: '合計（税込）', en: 'Total (tax incl.)', zht: '合計（含稅）', zhs: '合计（含税）', ko: '합계(세금 포함)' },
   payNow: { ja: 'お支払いへ進む', en: 'Pay now', zht: '前往付款', zhs: '前往付款', ko: '결제하기' },
   payLead: { ja: 'お会計の準備ができました。このスマホでお支払いいただけます。', en: 'Your bill is ready. You can pay on this phone.', zht: '帳單已準備好，可直接用這支手機付款。', zhs: '账单已准备好，可直接用这部手机付款。', ko: '계산 준비가 되었습니다. 이 휴대폰으로 결제하실 수 있습니다.' },

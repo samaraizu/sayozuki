@@ -12,7 +12,6 @@ export interface Env {
   STAFF_PIN?: string;
   NOTIFY_SLACK_WEBHOOK?: string;
 
-  BATH_TAX_YEN: string;
   ORDER_OPEN: string;
   LAST_ORDER: string;
   PUBLIC_ORIGIN: string;

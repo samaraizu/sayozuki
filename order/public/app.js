@@ -2,14 +2,15 @@ import { LANGS, ABOUT, REQUESTS, STAY_INFO, makeT, pick } from './i18n.js';
 
 // ---------- 状態 ----------
 const qs = new URLSearchParams(location.search);
-const TOKEN_KEY = 'syz_t';
-const urlToken = qs.get('t');
-if (urlToken) localStorage.setItem(TOKEN_KEY, urlToken);
+const ROOM_KEY = 'syz_r';
+const urlRoom = qs.get('r');
+if (urlRoom) localStorage.setItem(ROOM_KEY, urlRoom);
 const justPaid = qs.get('paid') === '1';
-if (urlToken || justPaid) history.replaceState(null, '', location.pathname); // QRのトークンをアドレスバーに残さない
+if (justPaid) history.replaceState(null, '', location.pathname + (urlRoom ? '?r=' + encodeURIComponent(urlRoom) : ''));
 
 const S = {
-  token: localStorage.getItem(TOKEN_KEY),
+  room: urlRoom || localStorage.getItem(ROOM_KEY),
+  paidRecently: justPaid,
   lang: localStorage.getItem('syz_lang') || detectLang(),
   tab: 'menu',
   cat: 'all',
@@ -40,7 +41,7 @@ function detectLang() {
 async function api(path, opts = {}) {
   const res = await fetch(path, {
     method: opts.method || 'GET',
-    headers: { 'x-stay-token': S.token || '', ...(opts.body ? { 'content-type': 'application/json' } : {}) },
+    headers: { 'x-room': S.room || '', ...(opts.body ? { 'content-type': 'application/json' } : {}) },
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   const data = await res.json().catch(() => ({}));
@@ -56,22 +57,21 @@ async function loadAll() {
     S.bill = bill;
     S.requested = new Set(session.requested || []);
     markSeenDelivered(true);
-    if (session.status === 'settled') S.tab = 'bill';
   } catch (e) {
-    S.fatal = e.status === 401 ? 'noToken' : e.status === 410 ? 'stayEnded' : 'errNetwork';
+    S.fatal = e.status === 401 ? 'noToken' : 'errNetwork';
   }
   render();
 }
 
 async function refresh() {
-  if (!S.token || S.fatal) return;
+  if (!S.room || S.fatal) return;
   try {
     const [session, bill] = await Promise.all([api('/api/session'), api('/api/orders')]);
-    const wasPending = S.session && S.session.status;
+    const hadPay = Boolean(S.bill && S.bill.payUrl);
     S.session = session;
     S.bill = bill;
     if (markSeenDelivered(false)) toast(t('arrived'));
-    if (wasPending !== session.status && session.status === 'settled') toast(t('thanksPaid'));
+    if (hadPay && !bill.payUrl) { S.paidRecently = true; toast(t('thanksPaid')); }
     render();
   } catch {}
 }
@@ -108,8 +108,7 @@ const itemDesc = (i) => pick(i.descs, S.lang, i.desc);
 const catName = (c) => pick(c.names, S.lang, c.name);
 const byId = (id) => S.menu && S.menu.items.find((i) => i.id === id);
 const catOf = (i) => S.menu && S.menu.categories.find((c) => c.name === i.category);
-const isPending = () => S.session && S.session.status !== 'active';
-const orderable = (i) => S.menu && S.menu.open && !isPending() && !i.soldOut && !(catOf(i) || {}).closed;
+const orderable = (i) => S.menu && S.menu.open && !i.soldOut && !(catOf(i) || {}).closed;
 const maxQty = (i) => (i.left == null ? 20 : i.left);
 const cartCount = () => Object.values(S.cart).reduce((a, b) => a + b, 0);
 const cartTotal = () => Object.entries(S.cart).reduce((a, [id, q]) => a + (byId(id)?.price || 0) * q, 0);
@@ -182,7 +181,7 @@ function render() {
   loadLangFont();
   const chipsScroll = app.querySelector('.chips')?.scrollLeft || 0;
 
-  if (!S.token || S.fatal) {
+  if (!S.room || S.fatal) {
     app.innerHTML = header(false) + `<div class="center-msg">${esc(t(S.fatal || 'noToken'))}</div>` + overlays();
     return;
   }
@@ -227,7 +226,7 @@ function itemCard(i) {
     : `<span style="color:var(--dim)">${I.photo()}</span>`;
   let action;
   if (i.soldOut) action = `<span class="tag-sold">${esc(t('soldOut'))}</span>`;
-  else if (cat.closed || !S.menu.open || isPending()) action = `<span class="tag-sold">${esc(t('closedCat'))}</span>`;
+  else if (cat.closed || !S.menu.open) action = `<span class="tag-sold">${esc(t('closedCat'))}</span>`;
   else if (!q) action = `<button class="add" data-act="inc" data-id="${esc(i.id)}" aria-label="${esc(t('add', { n: name }))}">${I.plus()}</button>`;
   else
     action = `<div class="stepper"><button data-act="dec" data-id="${esc(i.id)}" aria-label="${esc(t('dec'))}">${I.minus}</button><span class="q">${q}</span><button class="plus" data-act="inc" data-id="${esc(i.id)}" aria-label="${esc(t('inc'))}">${I.plus()}</button></div>`;
@@ -263,7 +262,7 @@ function viewRequest() {
   const rows = REQUESTS.map((r) => {
     const sent = S.requested.has(r.kind);
     return `<div class="row-card"><span><span class="t">${esc(pick(r.name, S.lang))}</span><span class="s">${esc(pick(r.sub, S.lang))}</span></span>
-      <button class="req-btn" data-act="req" data-id="${r.kind}" aria-pressed="${sent}" ${sent || isPending() ? 'disabled' : ''}>${esc(t(sent ? 'reqDone' : 'reqDo'))}</button></div>`;
+      <button class="req-btn" data-act="req" data-id="${r.kind}" aria-pressed="${sent}" ${sent ? 'disabled' : ''}>${esc(t(sent ? 'reqDone' : 'reqDo'))}</button></div>`;
   }).join('');
   return `<main><h2 class="h2">${esc(t('reqTitle'))}</h2><p class="lead">${esc(t('reqLead'))}</p>
     <div class="row-card"><span><span class="t">${esc(t('dndTitle'))}</span><span class="s">${esc(t('dndSub'))}</span></span>
@@ -286,14 +285,13 @@ function viewBill() {
     )
     .join('');
   let action = '';
-  if (s.status === 'checkout_pending' && s.payUrl)
-    action = `<div class="notice">${esc(t('payLead'))}</div><a class="btn-primary" href="${esc(s.payUrl)}" rel="noopener">${esc(t('payNow'))}・${yen(b.total)}</a>`;
-  if (s.status === 'settled')
+  if (b.payUrl)
+    action = `<div class="notice">${esc(t('payLead'))}</div><a class="btn-primary" href="${esc(b.payUrl)}" rel="noopener">${esc(t('payNow'))}・${yen(b.pendingTotal)}</a>`;
+  else if (S.paidRecently)
     action = `<div class="notice">${esc(t('paid'))}</div><a class="btn-ghost" href="/receipt">${esc(t('receipt'))}</a>`;
   return `<main><h2 class="h2">${esc(t('billTitle'))}</h2><p class="lead">${esc(t('billLead'))}</p>
     <div class="bill">
       ${lines || `<div class="lead" style="padding:8px 0">${esc(t('noOrders'))}</div>`}
-      <div class="bill-line bill-sep"><span>${esc(t('bathTax'))}<span class="st">${esc(t('bathTaxSub', { g: s.bathTax.taxable, n: s.bathTax.nights }))}</span></span><span class="amt">${yen(b.bathTax)}</span></div>
       <div class="bill-total"><span style="font-weight:700">${esc(t('total'))}</span><span class="v">${yen(b.total)}</span></div>
     </div>${action}</main>`;
 }
@@ -321,7 +319,7 @@ function nav() {
     ['bill', 'navBill', I.navBill],
     ['about', 'navAbout', I.navAbout]
   ];
-  const payDot = S.session.status === 'checkout_pending';
+  const payDot = Boolean(S.bill && S.bill.payUrl);
   return `<nav class="nav" aria-label="main">${tabs
     .map(([id, k, icon]) => `<button data-act="tab" data-id="${id}" ${S.tab === id ? 'aria-current="page"' : ''}>${icon}${esc(t(k))}${id === 'bill' && payDot ? '<span class="dot"></span>' : ''}</button>`)
     .join('')}</nav>`;
@@ -425,7 +423,7 @@ function bindViewerDrag() {
 }
 
 // ---------- 操作 ----------
-const ERR = { sold_out: 'errSoldOut', category_closed: 'errCatClosed', stay_closed: 'errPending', ordering_closed: 'orderingClosed' };
+const ERR = { sold_out: 'errSoldOut', category_closed: 'errCatClosed', ordering_closed: 'orderingClosed' };
 
 async function placeOrder() {
   if (S.sending) return;
@@ -443,7 +441,6 @@ async function placeOrder() {
     const key = ERR[e.code];
     toast(key ? t(key, { n: e.detail || '' }) : t('errNetwork'));
     if (e.code === 'sold_out' || e.code === 'category_closed') await refreshMenu();
-    if (e.code === 'stay_closed') await refresh();
   } finally {
     S.sending = false;
     render();
@@ -498,7 +495,7 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- 起動 ----------
 render();
-if (S.token) {
+if (S.room) {
   loadAll().then(() => { if (justPaid) toast(t('thanksPaid')); });
   setInterval(refresh, 20_000);
   setInterval(refreshMenu, 60_000);

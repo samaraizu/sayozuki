@@ -1,30 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bathTaxAmount, buildLedger, ledgerCsv } from '../src/lib/bathtax';
 import { addDays, jstParts, withinWindow } from '../src/lib/time';
 import { verifySquareSignature } from '../src/lib/webhook';
-
-describe('入湯税', () => {
-  it('課税対象人数 × 泊数 × 税率', () => {
-    expect(bathTaxAmount(2, 1, 150)).toBe(300);
-    expect(bathTaxAmount(3, 2, 150)).toBe(900);
-    expect(bathTaxAmount(0, 2, 150)).toBe(0);
-  });
-
-  it('帳簿は1泊ごとに日別計上し、月をまたぐ連泊は月で切る', () => {
-    const rows = buildLedger(
-      [
-        { room: '201', checkin_date: '2026-11-30', nights: 2, guests_taxable: 2, guests_exempt: 1 },
-        { room: '202', checkin_date: '2026-12-01', nights: 1, guests_taxable: 1, guests_exempt: 0 }
-      ],
-      '2026-12',
-      150
-    );
-    expect(rows).toEqual([{ date: '2026-12-01', rooms: 2, taxable: 3, exempt: 1, tax: 450 }]);
-    const csv = ledgerCsv(rows);
-    expect(csv).toContain('2026-12-01,2,3,1,450');
-    expect(csv).toContain('合計,,3,1,450');
-  });
-});
 
 describe('時刻（日本時間）', () => {
   it('UTCから日本時間の日付と分を出す', () => {

@@ -21,17 +21,22 @@ export async function handleSquareWebhook(req: Request, env: Env, url: URL): Pro
     await desk(env).purgeMenu();
   }
 
-  // 支払いリンクの決済完了 → 滞在を精算済みに
+  // 支払いリンクの決済完了 → 精算済みに
   if (type === 'payment.created' || type === 'payment.updated') {
     const pay = evt.data?.object?.payment;
     if (pay?.status === 'COMPLETED' && pay.order_id) {
-      const stay = await env.DB.prepare("SELECT id, room FROM stays WHERE square_order_id = ? AND status = 'checkout_pending'")
+      const s = await env.DB.prepare(
+        "SELECT s.id, s.room_id, r.name FROM settlements s JOIN rooms r ON r.id = s.room_id WHERE s.square_order_id = ? AND s.status = 'pending'"
+      )
         .bind(pay.order_id)
-        .first<{ id: string; room: string }>();
-      if (stay) {
-        await env.DB.prepare("UPDATE stays SET status = 'settled', settled_method = 'square', settled_at = ? WHERE id = ?").bind(nowIso(), stay.id).run();
+        .first<{ id: string; room_id: string; name: string }>();
+      if (s) {
+        await env.DB.batch([
+          env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'square', settled_at = ? WHERE id = ?").bind(nowIso(), s.id),
+          env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(s.room_id)
+        ]);
         await desk(env).purgeMenu();
-        await notifyStaff(env, `✅ ${stay.room}号室 お支払い完了`);
+        await notifyStaff(env, `✅ ${s.name} お支払い完了`);
       }
     }
   }
