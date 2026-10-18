@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 客室オーダー（Cloudflare Workers）は別アプリ
+    "order/**",
   ]),
 ]);
 

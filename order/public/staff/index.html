@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1F1C17">
+<title>小夜月 スタッフ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+  :root { --bg:#F3EEE4; --surface:#FFFCF6; --line:#E2D9C9; --border:#C9BDA8; --text:#1F1C17; --muted:#5F584D; --accent:#24456F; --sel:#E3E9F1; --warn-bg:#F1E2C4; --warn:#6A4A12; --red:#9E2F1E; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; line-height: 1.5; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button:disabled { opacity: .5; cursor: default; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 16px 16px 48px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0 16px; flex-wrap: wrap; }
+  .logo { font-family: 'Shippori Mincho B1', serif; font-size: 20px; letter-spacing: .12em; }
+  .logo small { font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 12px; letter-spacing: 0; color: var(--muted); margin-left: 8px; }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  section { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  h2 { font-size: 15px; margin: 0; display: flex; align-items: center; gap: 8px; }
+  h2 .n { font-size: 12px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+  .item { border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: #fff; }
+  .item.new { border-color: var(--accent); box-shadow: 0 0 0 2px var(--sel); }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .room { font-family: 'Shippori Mincho B1', serif; font-size: 20px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .lines { margin: 0; padding-left: 18px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .b { min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border); background: transparent; font-weight: 500; }
+  .b.p { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .b.d { color: var(--red); border-color: #E3B8AE; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--sel); color: var(--accent); }
+  .tag.w { background: var(--warn-bg); color: var(--warn); }
+  form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; align-items: end; }
+  form label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+  form input { height: 44px; border-radius: 10px; border: 1px solid var(--border); padding: 0 10px; background: #fff; width: 100%; }
+  form .b { grid-column: 1 / -1; }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  .login { max-width: 360px; margin: 18vh auto; display: flex; flex-direction: column; gap: 12px; padding: 0 16px; }
+  .login input { height: 52px; border-radius: 12px; border: 1px solid var(--border); padding: 0 14px; font-size: 18px; letter-spacing: .2em; }
+  dialog { border: none; border-radius: 18px; padding: 24px; max-width: 420px; width: calc(100% - 32px); }
+  dialog::backdrop { background: rgba(20,18,14,.45); }
+  .qr { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+  .qr svg { width: 240px; height: 240px; }
+  .qr .ttl { font-family: 'Shippori Mincho B1', serif; font-size: 22px; letter-spacing: .12em; }
+  .qr .langs { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px; z-index: 50; }
+  @media (max-width: 520px) { form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media print { body * { visibility: hidden; } dialog[open], dialog[open] * { visibility: visible; } dialog[open] { position: fixed; inset: 0; max-width: none; width: 100%; } .noprint { display: none !important; } }
+</style>
+<script src="/staff/vendor/qrcode.js"></script>
+<script type="module" src="/staff/staff.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<dialog id="dlg"></dialog>
+</body>
+</html>

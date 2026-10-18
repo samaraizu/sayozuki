@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sayozuki-order",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/staff/api/*", "/webhooks/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sayozuki-order",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "DESK", "class_name": "OrderDesk" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["OrderDesk"] }],
+  "vars": {
+    "SQUARE_ENV": "sandbox",
+    "SQUARE_LOCATION_ID": "REPLACE_WITH_LOCATION_ID",
+    "MOCK_SQUARE": "0",
+    "BATH_TAX_YEN": "150",
+    "ORDER_OPEN": "06:00",
+    "LAST_ORDER": "22:30",
+    "PUBLIC_ORIGIN": "https://order.sayozuki.com",
+    "GUIDE_BASE_URL": "https://sayozuki.com/guide",
+    "COMPANY_NAME": "小夜月株式会社",
+    "COMPANY_ADDRESS": "山形県上山市葉山5-63",
+    "COMPANY_TEL": "023-679-5511"
+  },
+  "observability": { "enabled": true }
+}

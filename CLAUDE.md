@@ -14,6 +14,8 @@ GitHub は `samaraizu/sayozuki`。**public リポジトリなので、原価・�
 - 宿のドメインは sayozuki.com、お取り寄せは shop.sayozuki.com。`proxy.ts` で振り分ける。
   `NEXT_PUBLIC_SPLIT_DOMAINS=true` は **DNS がつながってから** 入れる
   （先に入れると本番のアクセスが仮ページへ飛ぶ）。
+- `order/` は客室オーダー（Cloudflare Workers + Square）。HPとは別アプリで、`order/` の中だけでビルド・デプロイする。
+  ルートの tsconfig と ESLint の対象から外してある。手順は `order/README.md`。
 - 支給写真は Google Drive の共有リンクで届く。curl で取得して `public/images/` に置き、
   `lib/site.ts` の `photos` にパスを書く。
 

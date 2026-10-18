@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>テスト決済（モック）</title>
+<style>
+  body { margin: 0; font-family: system-ui, sans-serif; background: #F3EEE4; color: #1F1C17; display: flex; min-height: 100vh; align-items: center; justify-content: center; }
+  .box { background: #fff; border-radius: 16px; padding: 28px; max-width: 360px; text-align: center; display: flex; flex-direction: column; gap: 14px; }
+  button { height: 52px; border-radius: 14px; border: none; background: #24456F; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="box">
+  <b>テスト決済（Square未接続のモック）</b>
+  <p>本番ではここがSquareの支払いページになります。</p>
+  <button id="pay">支払ったことにする</button>
+</div>
+<script type="module">
+  const token = new URLSearchParams(location.hash.slice(1)).get('t') || localStorage.getItem('syz_t');
+  if (token) localStorage.setItem('syz_t', token);
+  document.getElementById('pay').onclick = async () => {
+    await fetch('/api/mock/pay', { method: 'POST', headers: { 'x-stay-token': token } });
+    location.href = '/?paid=1';
+  };
+</script>
+</body>
+</html>

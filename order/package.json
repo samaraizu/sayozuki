@@ -1,0 +1,22 @@
+{
+  "name": "sayozuki-order",
+  "version": "1.0.0",
+  "description": "小夜月 客室オーダー（Cloudflare Workers + Square）",
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:local": "wrangler d1 migrations apply sayozuki-order --local",
+    "db:remote": "wrangler d1 migrations apply sayozuki-order --remote",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261018.1",
+    "qrcode-generator": "^1.4.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
+  },
+  "private": true,
+  "type": "module"
+}

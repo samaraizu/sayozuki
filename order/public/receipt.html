@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>領収書 Receipt｜小夜月</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+  body { margin: 0; background: #F3EEE4; color: #1F1C17; font-family: 'Zen Kaku Gothic New', sans-serif; font-size: 14px; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 24px 20px 48px; }
+  .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  label { font-size: 12px; color: #5F584D; }
+  input { height: 48px; border-radius: 12px; border: 1px solid #C9BDA8; padding: 0 14px; font: inherit; font-size: 16px; background: #FFFCF6; }
+  button { height: 52px; border-radius: 14px; border: none; background: #24456F; color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .paper { background: #fff; border: 1px solid #E2D9C9; border-radius: 6px; padding: 32px 28px; }
+  h1 { font-family: 'Shippori Mincho B1', serif; font-size: 26px; letter-spacing: 0.4em; text-align: center; margin: 0 0 24px; }
+  .to { font-size: 18px; border-bottom: 1px solid #1F1C17; padding-bottom: 6px; margin-bottom: 20px; min-height: 28px; }
+  .amount { font-family: 'Shippori Mincho B1', serif; font-size: 28px; font-weight: 700; text-align: center; padding: 12px; border-top: 2px solid #1F1C17; border-bottom: 2px solid #1F1C17; margin-bottom: 8px; }
+  .meta { font-size: 12px; color: #5F584D; text-align: center; margin-bottom: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 6px 0; border-bottom: 1px solid #EEE7DA; }
+  td.r { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .issuer { margin-top: 28px; font-size: 13px; line-height: 1.8; text-align: right; }
+  .issuer b { font-family: 'Shippori Mincho B1', serif; font-size: 16px; }
+  .msg { padding: 40px 0; text-align: center; color: #5F584D; }
+  @media print { body { background: #fff; } .controls, .back { display: none; } .paper { border: none; padding: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="controls">
+    <label for="to">宛名 / Name on receipt</label>
+    <input id="to" autocomplete="name" placeholder="株式会社〇〇 / Your name">
+    <button id="print">印刷・PDFで保存 / Print or save as PDF</button>
+  </div>
+  <div id="paper" class="paper"><div class="msg">読み込み中… / Loading…</div></div>
+</div>
+<script type="module">
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const yen = (n) => '¥' + Number(n || 0).toLocaleString('ja-JP');
+  const paper = document.getElementById('paper');
+  const toInput = document.getElementById('to');
+  toInput.value = localStorage.getItem('syz_receipt_to') || '';
+  let data = null;
+
+  function draw() {
+    if (!data) return;
+    const to = toInput.value.trim();
+    localStorage.setItem('syz_receipt_to', to);
+    const date = new Date(data.settledAt || Date.now()).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' });
+    const rows = data.orders
+      .filter((o) => o.status !== 'canceled')
+      .flatMap((o) => o.lines)
+      .map((l) => `<tr><td>${esc(l.name)} × ${l.qty}</td><td class="r">${yen(l.price * l.qty)}</td></tr>`)
+      .join('');
+    paper.innerHTML = `<h1>領収書</h1>
+      <div class="to">${esc(to)} 様</div>
+      <div class="amount">${yen(data.total)}</div>
+      <div class="meta">上記正に領収いたしました（${esc(data.room)}号室・客室でのご飲食代および入湯税として）</div>
+      <table>${rows}<tr><td>入湯税</td><td class="r">${yen(data.bathTax)}</td></tr>
+      <tr><td><b>合計</b></td><td class="r"><b>${yen(data.total)}</b></td></tr></table>
+      <div class="issuer">${esc(date)}<br><b>${esc(data.company.name)}</b>（小夜月）<br>${esc(data.company.address)}<br>TEL ${esc(data.company.tel)}</div>`;
+  }
+
+  try {
+    const res = await fetch('/api/receipt', { headers: { 'x-stay-token': localStorage.getItem('syz_t') || '' } });
+    if (!res.ok) throw new Error(String(res.status));
+    data = await res.json();
+    draw();
+  } catch (e) {
+    paper.innerHTML = '<div class="msg">お支払い完了後に発行できます。<br>Available after payment is completed.</div>';
+  }
+  toInput.addEventListener('input', draw);
+  document.getElementById('print').addEventListener('click', () => window.print());
+</script>
+</body>
+</html>
