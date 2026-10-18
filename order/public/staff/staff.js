@@ -78,7 +78,10 @@ function renderLogin(msg = '') {
     load();
   };
   document.getElementById('go').onclick = go;
-  document.getElementById('pin').onkeydown = (e) => e.key === 'Enter' && go();
+  // onkeydownで false を返すと文字入力そのものが取り消されるので、Enterのときだけ処理する
+  document.getElementById('pin').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) go();
+  });
   document.getElementById('showpin').onchange = (e) => document.getElementById('pin').classList.toggle('masked', !e.target.checked);
 }
 
