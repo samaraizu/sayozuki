@@ -2,7 +2,7 @@ import type { Env } from '../env';
 import { isMock } from '../env';
 import { REQUEST_KINDS } from '../config/requests';
 import { nowIso } from '../lib/time';
-import { HttpError, json, newId, randomToken, readJson, timingSafeEqual } from '../lib/util';
+import { HttpError, json, newId, timingSafeEqual } from '../lib/util';
 import { createCheckoutLink, deletePaymentLink } from '../square/checkout';
 import { desk, pendingSettlement, roomBill, type RoomRow } from './guest';
 
@@ -30,34 +30,6 @@ export async function handleStaff(req: Request, env: Env, url: URL): Promise<Res
   let mt: RegExpMatchArray | null;
 
   if (p === '/ping') return json({ ok: true, mock: isMock(env), env: env.SQUARE_ENV });
-
-  // 客室の登録（固定QRのURLを発行）
-  if (p === '/rooms' && m === 'POST') {
-    const b = await readJson<{ name: string }>(req);
-    const name = String(b.name ?? '').trim().slice(0, 30);
-    if (!name) throw new HttpError(400, 'name_required');
-    const dup = await env.DB.prepare('SELECT id FROM rooms WHERE name = ?').bind(name).first();
-    if (dup) throw new HttpError(409, 'room_exists');
-    const max = await env.DB.prepare('SELECT COALESCE(MAX(sort), 0) AS s FROM rooms').first<{ s: number }>();
-    const id = randomToken(12);
-    await env.DB.prepare('INSERT INTO rooms (id, name, sort, created_at) VALUES (?, ?, ?, ?)').bind(id, name, (max?.s ?? 0) + 1, nowIso()).run();
-    return json({ id, url: roomUrl(url, id) });
-  }
-
-  // 客室の削除（未精算・お支払い待ちがない部屋だけ）
-  if ((mt = p.match(/^\/rooms\/([\w-]+)$/)) && m === 'DELETE') {
-    const room = await getRoom(env, mt[1]);
-    const bill = await roomBill(env, room.id);
-    if (bill.total > 0 || bill.payUrl) throw new HttpError(409, 'room_has_bill');
-    await env.DB.batch([
-      env.DB.prepare('DELETE FROM order_lines WHERE order_id IN (SELECT id FROM orders WHERE room_id = ?)').bind(room.id),
-      env.DB.prepare('DELETE FROM orders WHERE room_id = ?').bind(room.id),
-      env.DB.prepare('DELETE FROM requests WHERE room_id = ?').bind(room.id),
-      env.DB.prepare('DELETE FROM settlements WHERE room_id = ?').bind(room.id),
-      env.DB.prepare('DELETE FROM rooms WHERE id = ?').bind(room.id)
-    ]);
-    return json({ ok: true });
-  }
 
   // 現場の一覧
   if (p === '/board' && m === 'GET') {

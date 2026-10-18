@@ -5,7 +5,7 @@ Cloudflare Workers（無料枠）＋ Square（無料プラン・端末なし）�
 
 ## 全体の流れ
 
-1. **最初に一度だけ**：スタッフ画面 `/staff/` の「客室を追加」で部屋の名前を入れる → その部屋専用の**固定QR**が出る。印刷して客室に置く（チェックインごとの作業はなし）
+1. **客室QR**：部屋ごとに**固定のQR**を一度だけ発行済み（D1の `rooms` 表）。印刷して客室に置きっぱなしにする。スタッフ画面からは発行しない
 2. **滞在中**：ゲストがQRを読む → メニュー注文（部屋付け）・リクエスト・起こさないで・ご案内
 3. **お届け**：スタッフ画面に新着が音付きで出る（Slack通知も可）→「お届け完了」でゲスト画面に通知
 4. **精算**：スタッフが「精算する」→ Squareの支払いリンクを発行。ゲストは自分のスマホの「お会計」タブから支払う（スタッフ画面のQRでも可）
@@ -70,9 +70,20 @@ npm run deploy
 ```bash
 cp .dev.vars.example .dev.vars   # STAFF_PIN を設定。MOCK_SQUARE=1 でSquare未接続のモックになる
 npm run db:local
-npm run dev                      # http://127.0.0.1:8787/staff/ で客室を追加 → 出てきたURLを開く
+npm run dev                      # 下の「客室を足すとき」のSQLを --local で流してから http://127.0.0.1:8787/?r=（id） を開く
 npm test
 ```
+
+## 客室を足すとき
+
+QRのidは推測されないランダムな文字列にする（このリポジトリは公開なので、idをコードやREADMEに書かない）。
+
+```bash
+npx wrangler d1 execute sayozuki-order --remote --command \
+  "INSERT INTO rooms (id, name, sort, created_at) VALUES ('$(openssl rand -base64 12 | tr '+/' '-_')', '205号室', 7, datetime('now'))"
+```
+
+QRの中身は `https://order.sayozuki.com/?r=（id）`。
 
 ## 運用で決めておくこと
 

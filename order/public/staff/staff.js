@@ -129,18 +129,16 @@ function render(fresh = new Set()) {
           const tags = `${s.payUrl ? '<span class="tag w">お支払い待ち</span>' : ''}${s.dnd ? ' <span class="tag w">起こさないで</span>' : ''}`;
           const btns = s.payUrl
             ? `<button class="b p" data-act="payqr" data-id="${s.id}">支払いQR</button><button class="b" data-act="reopen" data-id="${s.id}">精算をやめる</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
-            : `<button class="b" data-act="qr" data-id="${s.id}">客室QR</button>${
-                s.unsettled > 0
-                  ? `<button class="b p" data-act="checkout" data-id="${s.id}">精算する</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
-                  : `<button class="b d" data-act="delroom" data-id="${s.id}">削除</button>`
-              }`;
+            : s.unsettled > 0
+              ? `<button class="b p" data-act="checkout" data-id="${s.id}">精算する</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
+              : '';
           const amount = s.payUrl ? `お支払い待ち <b>${yen(s.pendingTotal)}</b>${s.unsettled ? `（このあとの注文 ${yen(s.unsettled)}）` : ''}` : `未精算 <b>${yen(s.unsettled)}</b>`;
           return `<div class="item"><div class="row"><span class="room">${esc(s.name)}</span><span>${tags}</span></div>
           <div class="row"><span>${amount}</span></div>
           <div class="btns">${btns}</div></div>`;
         })
         .join('')
-    : '<div class="empty">客室がまだ登録されていません。下の「客室を追加」から登録してください。</div>';
+    : '<div class="empty">客室が登録されていません。</div>';
 
   root.innerHTML = `<div class="wrap">
     <header><div class="logo">小夜月<small>スタッフ</small> ${b.mock ? '<span class="pill">モック動作中（Square未接続）</span>' : ''}</div>
@@ -149,25 +147,8 @@ function render(fresh = new Set()) {
       <section><h2>新しい注文 <span class="n">${b.orders.length}</span></h2>${orders}</section>
       <section><h2>リクエスト <span class="n">${b.requests.length}</span></h2>${reqs}</section>
     </div>
-    <section style="margin-top:16px"><div class="row"><h2>客室 <span class="n">${b.rooms.length}</span></h2>${b.rooms.length ? '<button class="b" data-act="printall">QRをまとめて印刷</button>' : ''}</div>${rooms}</section>
-    <section style="margin-top:16px"><h2>客室を追加</h2>
-      <form id="addroom" style="grid-template-columns: 1fr auto"><label>部屋の名前（ゲスト画面にそのまま出ます）<input name="name" required maxlength="30" placeholder="例：203号室 / 蔵王"></label>
-        <button class="b p" type="submit" style="grid-column:auto">追加してQRを発行</button></form>
-      <div class="muted">QRは部屋ごとに固定です。一度印刷して客室に置けば、作り直す必要はありません。</div>
-    </section>
+    <section style="margin-top:16px"><div class="row"><h2>客室 <span class="n">${b.rooms.length}</span></h2></div>${rooms}</section>
   </div>`;
-
-  document.getElementById('addroom').onsubmit = async (e) => {
-    e.preventDefault();
-    const name = new FormData(e.target).get('name');
-    try {
-      const r = await api('/rooms', { method: 'POST', body: { name } });
-      await load();
-      showQr(String(name), r.url, 'room');
-    } catch (err) {
-      fail(err);
-    }
-  };
 }
 
 const qrSvg = (url) => {
@@ -176,27 +157,10 @@ const qrSvg = (url) => {
   qr.make();
   return qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
 };
-const roomCard = (name, url) => `<div class="qr"><div class="ttl">小夜月</div><div class="room">${esc(name)}</div>${qrSvg(url)}
-  <div class="langs">スマホで読み取って、お部屋からご注文ください<br>Scan to order to your room<br>掃描即可客房點餐・扫描即可客房点餐<br>스캔하여 객실에서 주문하세요</div></div>`;
-
-function showQr(name, url, kind) {
-  const body =
-    kind === 'room'
-      ? roomCard(name, url)
-      : `<div class="qr"><div class="room">${esc(name)} お支払い</div>${qrSvg(url)}<div class="langs">ゲストのスマホで読み取ってお支払いいただけます。<br>ゲストの画面の「お会計」タブにも支払いボタンが出ています。</div></div>`;
-  dlg.innerHTML = `${body}<div class="btns noprint" style="justify-content:center;margin-top:12px">${kind === 'room' ? '<button class="b" data-act="print">印刷</button>' : ''}<button class="b" data-act="copy" data-url="${esc(url)}">URLをコピー</button><button class="b p" data-act="close">閉じる</button></div>`;
+function showQr(name, url) {
+  const body = `<div class="qr"><div class="room">${esc(name)} お支払い</div>${qrSvg(url)}<div class="langs">ゲストのスマホで読み取ってお支払いいただけます。<br>ゲストの画面の「お会計」タブにも支払いボタンが出ています。</div></div>`;
+  dlg.innerHTML = `${body}<div class="btns noprint" style="justify-content:center;margin-top:12px"><button class="b" data-act="copy" data-url="${esc(url)}">URLをコピー</button><button class="b p" data-act="close">閉じる</button></div>`;
   dlg.showModal();
-}
-
-function printAll() {
-  const cards = board.rooms.map((r) => `<div class="card">${roomCard(r.name, r.url)}</div>`).join('');
-  const w = window.open('', '_blank');
-  if (!w) return toast('ポップアップを許可してください');
-  w.document.write(`<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>客室QR</title>
-    <style>body{margin:0;font-family:'Zen Kaku Gothic New',sans-serif;color:#1F1C17}.card{page-break-after:always;display:flex;align-items:center;justify-content:center;min-height:95vh}
-    .qr{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}.qr svg{width:70mm;height:70mm}.ttl{font-size:28px;letter-spacing:.15em}.room{font-size:24px}.langs{font-size:13px;line-height:1.8;color:#5F584D}</style>
-    </head><body>${cards}<script>window.onload=()=>window.print()<\/script></body></html>`);
-  w.document.close();
 }
 
 document.addEventListener('click', async (ev) => {
@@ -212,20 +176,16 @@ document.addEventListener('click', async (ev) => {
       case 'deliver': el.disabled = true; await api(`/orders/${id}/deliver`, { method: 'POST' }); return load();
       case 'cancel': if (!confirm('この注文を取り消しますか？')) return; await api(`/orders/${id}/cancel`, { method: 'POST' }); return load();
       case 'reqdone': el.disabled = true; await api(`/requests/${id}/done`, { method: 'POST' }); return load();
-      case 'qr': return showQr(room.name, room.url, 'room');
-      case 'printall': return printAll();
-      case 'delroom': if (!confirm(`${room.name} を削除しますか？印刷済みのQRは使えなくなります。`)) return; await api(`/rooms/${id}`, { method: 'DELETE' }); return load();
       case 'checkout': {
         if (!confirm(`${room.name} の未精算 ${yen(room.unsettled)} を精算します。Squareの支払いリンクを発行します。`)) return;
         el.disabled = true;
         const r = await api(`/rooms/${id}/checkout`, { method: 'POST' });
         await load();
-        return showQr(room.name, r.payUrl, 'pay');
+        return showQr(room.name, r.payUrl);
       }
-      case 'payqr': return showQr(room.name, room.payUrl, 'pay');
+      case 'payqr': return showQr(room.name, room.payUrl);
       case 'reopen': await api(`/rooms/${id}/reopen`, { method: 'POST' }); return load();
       case 'settle': if (!confirm('現金などで受け取り済みとして精算を完了しますか？')) return; await api(`/rooms/${id}/settle`, { method: 'POST' }); return load();
-      case 'print': return window.print();
       case 'copy': await navigator.clipboard.writeText(el.dataset.url); return toast('コピーしました');
       case 'close': return dlg.close();
     }
