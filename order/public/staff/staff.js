@@ -68,7 +68,7 @@ function chime() {
 
 function renderLogin(msg = '') {
   root.innerHTML = `<div class="login"><div class="logo">小夜月<small>スタッフ</small></div>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN" aria-label="PIN">
+    <input id="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="PIN" aria-label="PIN">
     <button class="b p" id="go">ログイン</button><div class="muted">${esc(msg)}</div></div>`;
   const go = () => {
     pin = document.getElementById('pin').value.trim();
