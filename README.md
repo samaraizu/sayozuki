@@ -17,6 +17,8 @@ npm run dev   # http://localhost:3000
 | 宿のページの文章（日本語） | `lib/i18n/ja.ts` |
 | 外国語の文章（英・中・越・泰・韓） | `lib/i18n/en.ts` `zh.ts` `vi.ts` `th.ts` `ko.ts` |
 | 宿のページの構成 | `components/InnPage.tsx` |
+| 滞在中のご案内（/guide）のチェックイン・アウト、浴場の時間、駐車場 | `lib/site.ts` の `stay`（未定は null のままで「準備中」と出る） |
+| 滞在中のご案内の文章（日・英・中・韓） | `lib/guide.ts` |
 | お取り寄せの商品・販売設定・特商法の表記 | `lib/shop.ts` |
 
 料理の写真は `photos.meal` に入れると「お食事」欄に表示されます。

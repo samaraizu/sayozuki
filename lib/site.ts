@@ -97,6 +97,24 @@ export const pricingNotes = [
   "繁忙期は1室3,000円〜の加算となります。",
 ];
 
+/**
+ * 滞在中のご案内（/guide）で使う運用情報。
+ * null のあいだは各ページに「準備中」と出る。決まったら時刻を "15:00" のように入れる。
+ */
+export const stay = {
+  checkIn: null as string | null,
+  checkOut: null as string | null,
+  /** 大浴場を使える時間。例 { from: "15:00", to: "24:00" } */
+  bathHours: null as { from: string; to: string } | null,
+  /** 駐車場の案内（例 "無料・6台"）。未確認のあいだは null */
+  parking: null as string | null,
+  /** 泉質の正式表記と源泉（温泉分析書より） */
+  onsenFull: "ナトリウム・カルシウム－塩化物・硫酸塩温泉（低張性弱アルカリ性高温泉）",
+  onsenSources: ["葉山地区1号源泉", "葉山地区2号源泉"],
+  /** 客室オーダーの受付時間。order/wrangler.jsonc の ORDER_OPEN・LAST_ORDER と合わせる */
+  roomOrder: { open: "6:00", lastOrder: "22:30", dinnerCutoff: "18:00" },
+};
+
 /** 国内表記の番号を国際表記（+81-23-…）にする。外国語のページと tel: リンク用 */
 export const intlPhone = (n: string) => `+81-${n.replace(/^0/, "")}`;
 export const telHref = (n: string) => `tel:+81${n.replace(/^0/, "").replace(/-/g, "")}`;

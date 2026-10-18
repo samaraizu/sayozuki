@@ -297,9 +297,12 @@ function viewBill() {
 }
 
 function viewAbout() {
-  const base = (S.session.guideBase || '').replace(/\/$/, '');
+  // HPのご案内は /guide（日本語）・/en/guide・/zh/guide（簡体字のみ）・/ko/guide
+  const g = new URL(S.session.guideBase || 'https://sayozuki.com/guide');
+  const prefix = { ja: '', en: '/en', zht: '/zh', zhs: '/zh', ko: '/ko' }[S.lang] ?? '/en';
+  const base = `${g.origin}${prefix}${g.pathname.replace(/\/$/, '')}`;
   const links = ABOUT.map(
-    (a) => `<a class="row-card" href="${esc(base)}/${a.slug}?lang=${encodeURIComponent(curLang().code)}" target="_blank" rel="noopener">
+    (a) => `<a class="row-card" href="${esc(base)}/${a.slug}" target="_blank" rel="noopener">
       <span><span class="t">${esc(pick(a.name, S.lang))}</span><span class="s">${esc(pick(a.sub, S.lang))}</span></span><span style="color:var(--accent)">${I.ext}</span></a>`
   ).join('');
   return `<main><h2 class="h2">${esc(t('aboutTitle'))}</h2><p class="lead">${esc(t('aboutLead'))}</p>
