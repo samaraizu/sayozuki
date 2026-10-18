@@ -102,8 +102,8 @@ export const pricingNotes = [
  * null のあいだは各ページに「準備中」と出る。決まったら時刻を "15:00" のように入れる。
  */
 export const stay = {
-  checkIn: null as string | null,
-  checkOut: null as string | null,
+  checkIn: "15:00" as string | null,
+  checkOut: "10:00" as string | null,
   /** 大浴場を使える時間。例 { from: "15:00", to: "24:00" } */
   bathHours: null as { from: string; to: string } | null,
   /** 駐車場の案内（例 "無料・6台"）。未確認のあいだは null */
