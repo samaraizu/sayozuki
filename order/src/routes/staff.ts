@@ -14,7 +14,8 @@ function authStaff(req: Request, env: Env) {
   if (!got || !timingSafeEqual(got, pin)) throw new HttpError(401, 'unauthorized');
 }
 
-const origin = (env: Env, url: URL) => (env.PUBLIC_ORIGIN && !env.PUBLIC_ORIGIN.includes('example.com') ? env.PUBLIC_ORIGIN : url.origin);
+/** 客室QRと支払い後の戻り先は、スタッフ画面を開いているドメインに合わせる（独自ドメイン接続前のworkers.devでも正しく動くように） */
+const origin = (_env: Env, url: URL) => url.origin;
 
 async function getStay(env: Env, id: string) {
   const s = await env.DB.prepare('SELECT * FROM stays WHERE id = ?').bind(id).first<StayRow>();
