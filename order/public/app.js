@@ -245,11 +245,18 @@ function render() {
   const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
 
   const body = { menu: viewMenu, request: viewRequest, chat: viewChat, bill: viewBill, about: viewAbout }[S.tab]();
+  const hadCart = Boolean(app.querySelector('.cartbar'));
   app.innerHTML = header(true) + body + cartBar() + composer() + nav() + overlays();
+  afterRender(hadCart);
   const chips = app.querySelector('.chips');
   if (chips) chips.scrollLeft = chipsScroll;
   const h = app.querySelector('.header');
-  if (h) app.style.setProperty('--header-h', h.offsetHeight + 'px');
+  if (h) {
+    app.style.setProperty('--header-h', h.offsetHeight + 'px');
+    headerRO?.disconnect();
+    headerRO = 'ResizeObserver' in window ? new ResizeObserver(() => app.style.setProperty('--header-h', h.offsetHeight + 'px')) : null;
+    headerRO?.observe(h);
+  }
   if (S.viewer) bindViewerDrag();
   if (S.tab === 'chat') {
     const nta = app.querySelector('.composer textarea');
@@ -263,6 +270,114 @@ function render() {
 }
 
 let stickChat = false;
+
+// ---------- 動き ----------
+const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+const TABS = ['menu', 'request', 'chat', 'bill', 'about'];
+let headerRO = null;
+let scrolled = false;
+let pillFrom = null; // 下のタブのバー：前のタブの位置から動かす
+let tabDir = 0; // タブを切り替えた方向（1: 右へ、-1: 左へ、0: 切り替えなし）
+const shown = new Set(); // 一度ふわっと出したカード・吹き出し（描き直しで繰り返さない）
+let io = null;
+
+function afterRender(hadCart) {
+  // 下のタブのバーを、前のタブの位置から今のタブへ
+  const pill = app.querySelector('.nav .pill');
+  const idx = TABS.indexOf(S.tab);
+  if (pill) {
+    const from = pillFrom ?? idx;
+    pill.style.transform = `translateX(${from * 100}%)`;
+    if (from !== idx) requestAnimationFrame(() => requestAnimationFrame(() => { pill.style.transform = `translateX(${idx * 100}%)`; }));
+    pillFrom = idx;
+  }
+  if (calm.matches) return;
+  // タブを切り替えた直後だけ、中身をすべり込ませる
+  const main = app.querySelector('main');
+  if (main && tabDir) {
+    main.style.setProperty('--dir', `${tabDir * 28}px`);
+    main.classList.add('tab-enter');
+  }
+  tabDir = 0;
+  // カートのバーが出てきたとき
+  if (!hadCart) app.querySelector('.cartbar')?.classList.add('arrive');
+  // まだ見せていないカード・吹き出しを、画面に入ったら時間差で出す
+  io?.disconnect();
+  io = 'IntersectionObserver' in window ? new IntersectionObserver(onSeen, { threshold: 0.05 }) : null;
+  let i = 0;
+  app.querySelectorAll('[data-key]').forEach((el) => {
+    if (shown.has(el.dataset.key)) return;
+    if (!io) return shown.add(el.dataset.key);
+    el.classList.add('pre');
+    io.observe(el);
+    i++;
+  });
+}
+
+let seenBatch = 0;
+let seenTimer;
+function onSeen(entries) {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    const el = e.target;
+    io.unobserve(el);
+    shown.add(el.dataset.key);
+    el.style.setProperty('--d', `${Math.min(seenBatch++, 8) * 55}ms`);
+    el.classList.remove('pre');
+    el.classList.add('in');
+  }
+  clearTimeout(seenTimer);
+  seenTimer = setTimeout(() => { seenBatch = 0; }, 120);
+}
+
+// 触ったところに光が広がる
+document.addEventListener('pointerdown', (e) => {
+  if (calm.matches || !e.target.closest('button, a, .card')) return;
+  const b = document.createElement('span');
+  b.className = 'tap-bloom';
+  b.style.left = e.clientX + 'px';
+  b.style.top = e.clientY + 'px';
+  document.body.appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+}, { passive: true });
+
+// スクロールしたらヘッダーを小さく
+window.addEventListener('scroll', () => {
+  const on = window.scrollY > 24;
+  if (on === scrolled) return;
+  scrolled = on;
+  app.querySelector('.header')?.classList.toggle('scrolled', on);
+}, { passive: true });
+
+// 「＋」から玉がカートへ弧を描いて飛ぶ
+function flyToCart(a) {
+  if (calm.matches || !a) return;
+  requestAnimationFrame(() => {
+    const target = app.querySelector('.cartbar .n') || app.querySelector('.cartbar');
+    if (!target) return;
+    const b = target.getBoundingClientRect();
+    const x0 = a.left + a.width / 2 - 8, y0 = a.top + a.height / 2 - 8;
+    const x1 = b.left + b.width / 2 - 8, y1 = b.top + b.height / 2 - 8;
+    const mx = (x0 + x1) / 2, my = Math.min(y0, y1) - 90;
+    const dot = document.createElement('span');
+    dot.className = 'fly';
+    document.body.appendChild(dot);
+    const anim = dot.animate(
+      [
+        { transform: `translate(${x0}px, ${y0}px) scale(1)` },
+        { transform: `translate(${mx}px, ${my}px) scale(1.25)`, offset: 0.45 },
+        { transform: `translate(${x1}px, ${y1}px) scale(0.5)`, opacity: 0.7 }
+      ],
+      { duration: 620, easing: 'cubic-bezier(0.45, 0, 0.55, 1)' }
+    );
+    anim.onfinish = () => {
+      dot.remove();
+      const n = app.querySelector('.cartbar .n');
+      if (n) { n.classList.remove('pop'); void n.offsetWidth; n.classList.add('pop'); }
+      navigator.vibrate?.(12);
+    };
+  });
+}
 function autosize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 140) + 'px';
@@ -277,7 +392,7 @@ function viewChat() {
       const who = mine ? '' : `<span class="who">${esc(t('chatStaff'))}</span>`;
       const orig = m.original ? `<span class="orig"><span>${esc(t('chatOriginal'))}</span>${esc(m.original)}</span>` : '';
       const meta = `${time(m.at)}${mine && m.id === lastGuestRead ? `・${esc(t('chatRead'))}` : ''}`;
-      return `<div class="msg ${mine ? 'me' : 'them'}">${who}<div class="bubble">${esc(m.text)}${orig}</div><span class="meta">${meta}</span></div>`;
+      return `<div class="msg ${mine ? 'me' : 'them'}" data-key="msg:${esc(m.id)}">${who}<div class="bubble">${esc(m.text)}${orig}</div><span class="meta">${meta}</span></div>`;
     })
     .join('');
   return `<main class="chat-main"><h2 class="h2">${esc(t('chatTitle'))}</h2><p class="lead">${esc(t('chatLead'))}</p>
@@ -300,9 +415,9 @@ function header(full) {
     : S.menu && !S.menu.open
       ? `<div class="banner closed">${esc(t('orderingClosed'))}</div>`
       : `<div class="banner"><span class="muted">${esc(t('lastOrder', { t: s.lastOrder }))}</span><span>${esc(t('deliveryNote'))}</span></div>`;
-  return `<header class="header">
+  return `<header class="header${scrolled ? ' scrolled' : ''}">
     <div class="brand-row">
-      <div class="brand"><span style="color:var(--accent)">${I.moon}</span>
+      <div class="brand"><span class="moon">${I.moon}</span>
         <div><div class="brand-name"><span class="brand-ja">小夜月</span><span class="brand-en" lang="en">Sayozuki</span></div>
         ${s ? `<div class="room">${esc(t('room', { r: s.room }))}</div>` : ''}</div>
       </div>
@@ -325,7 +440,7 @@ function itemCard(i) {
   else
     action = `<div class="stepper"><button data-act="dec" data-id="${esc(i.id)}" aria-label="${esc(t('dec'))}">${I.minus}</button><span class="q">${q}</span><button class="plus" data-act="inc" data-id="${esc(i.id)}" aria-label="${esc(t('inc'))}">${I.plus()}</button></div>`;
   const left = !i.soldOut && i.left != null ? `<span class="left">${esc(t('left', { n: Math.max(0, i.left - q) }))}</span>` : '';
-  return `<div class="card${i.soldOut ? ' sold' : ''}">
+  return `<div class="card${i.soldOut ? ' sold' : ''}" data-key="item:${esc(i.id)}">
     <button class="thumb" data-act="photos" data-id="${esc(i.id)}" aria-label="${esc(t('photos', { n: name }))}">${thumb}</button>
     <div class="info"><div class="name-row"><span class="name">${esc(name)}</span>${left}</div>
       ${itemDesc(i) ? `<span class="desc">${esc(itemDesc(i))}</span>` : ''}
@@ -355,7 +470,7 @@ function viewRequest() {
   const dnd = S.session.dnd;
   const rows = REQUESTS.map((r) => {
     const sent = S.requested.has(r.kind);
-    return `<div class="row-card"><span><span class="t">${esc(pick(r.name, S.lang))}</span><span class="s">${esc(pick(r.sub, S.lang))}</span></span>
+    return `<div class="row-card" data-key="req:${r.kind}"><span><span class="t">${esc(pick(r.name, S.lang))}</span><span class="s">${esc(pick(r.sub, S.lang))}</span></span>
       <button class="req-btn" data-act="req" data-id="${r.kind}" aria-pressed="${sent}" ${sent ? 'disabled' : ''}>${esc(t(sent ? 'reqDone' : 'reqDo'))}</button></div>`;
   }).join('');
   return `<main><h2 class="h2">${esc(t('reqTitle'))}</h2><p class="lead">${esc(t('reqLead'))}</p>
@@ -396,7 +511,7 @@ function viewAbout() {
   const prefix = { ja: '', en: '/en', zht: '/zh', zhs: '/zh', ko: '/ko' }[S.lang] ?? '/en';
   const base = `${g.origin}${prefix}${g.pathname.replace(/\/$/, '')}`;
   const links = ABOUT.map(
-    (a) => `<a class="row-card" href="${esc(base)}/${a.slug}" target="_blank" rel="noopener">
+    (a) => `<a class="row-card" data-key="about:${a.slug}" href="${esc(base)}/${a.slug}" target="_blank" rel="noopener">
       <span><span class="t">${esc(pick(a.name, S.lang))}</span><span class="s">${esc(pick(a.sub, S.lang))}</span></span><span style="color:var(--accent)">${I.ext}</span></a>`
   ).join('');
   return `<main><h2 class="h2">${esc(t('aboutTitle'))}</h2><p class="lead">${esc(t('aboutLead'))}</p>
@@ -418,7 +533,7 @@ function nav() {
     ['about', 'navAbout', I.navAbout]
   ];
   const payDot = Boolean(S.bill && S.bill.payUrl);
-  return `<nav class="nav" aria-label="main">${tabs
+  return `<nav class="nav" aria-label="main"><span class="pill" aria-hidden="true"></span>${tabs
     .map(([id, k, icon]) => `<button data-act="tab" data-id="${id}" ${S.tab === id ? 'aria-current="page"' : ''}>${icon}${esc(t(k))}${(id === 'bill' && payDot) || (id === 'chat' && S.tab !== 'chat' && chatUnseen()) ? '<span class="dot"></span>' : ''}</button>`)
     .join('')}</nav>`;
 }
@@ -551,13 +666,19 @@ app.addEventListener('click', async (ev) => {
   const { act, id } = el.dataset;
   switch (act) {
     case 'tab':
+      tabDir = Math.sign(TABS.indexOf(id) - TABS.indexOf(S.tab));
       S.tab = id;
       S.sheet = false;
       if (id === 'chat') { markChatSeen(); stickChat = true; refreshChat(); }
       else window.scrollTo({ top: 0 });
       return render();
     case 'cat': S.cat = id; window.scrollTo({ top: 0 }); return render();
-    case 'inc': return setQty(id, (S.cart[id] || 0) + 1);
+    case 'inc': {
+      const from = !S.sheet && !S.viewer && el.closest('.card') ? el.getBoundingClientRect() : null;
+      setQty(id, (S.cart[id] || 0) + 1);
+      if (from) flyToCart(from);
+      return;
+    }
     case 'dec': return setQty(id, (S.cart[id] || 0) - 1);
     case 'photos': S.viewer = { id, idx: 0 }; return render();
     case 'viewer-close': S.viewer = null; return render();

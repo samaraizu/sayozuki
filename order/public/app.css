@@ -1,9 +1,14 @@
 :root {
-  --bg: #F3EEE4; --surface: #FFFCF6; --sheet: #FBF7EF; --nav: #EAE3D6;
-  --line: #E2D9C9; --line2: #D8CDBA; --border: #C9BDA8; --dash: #A99D88;
-  --text: #1F1C17; --muted: #5F584D; --dim: #6F675B; --sold-text: #7A7163; --sold-bg: rgba(0,0,0,0.03);
-  --accent: #24456F; --on-accent: #FFFFFF; --sel: #E3E9F1; --badge-bg: #F1E2C4; --badge-fg: #6A4A12;
-  --step: #E8E0D2; --scrim: rgba(20,18,14,0.45);
+  /* 青緑（2026-10 採用）。和紙×藍に戻すときは git の履歴から :root を戻す */
+  --bg: #EEF4FB; --surface: #FFFFFF; --sheet: #F6FAFE; --nav: #FFFFFF;
+  --line: #E2EBF5; --line2: #D5E1EE; --border: #C3D3E5; --dash: #93A8BF;
+  --text: #1D2A3B; --muted: #536479; --dim: #6E8096; --sold-text: #7C8BA0; --sold-bg: rgba(29,42,59,0.04);
+  --accent: #2B6BD3; --on-accent: #FFFFFF; --sel: #E3EEFC; --badge-bg: #D9F2E8; --badge-fg: #145E4B;
+  --step: #EAF1F9; --scrim: rgba(18,32,56,0.45);
+  --grad: linear-gradient(135deg, #2B6BD3 0%, #138A74 100%);
+  --page: linear-gradient(180deg, #EAF2FD 0%, #EDF8F4 100%);
+  --shadow: 0 6px 20px rgba(43,107,211,0.08);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --mincho: 'Shippori Mincho B1', serif;
   --sans: 'Zen Kaku Gothic New', sans-serif;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -160,4 +165,64 @@ body.kb .composer { bottom: var(--kb, 0px); padding-bottom: 10px; }
 
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes up { from { transform: translateY(24px); opacity: 0.6; } to { transform: none; opacity: 1; } }
+
+/* ---------- 青緑の見た目 ---------- */
+body { background: var(--page) fixed; }
+.header { background: var(--grad); color: #fff; border-bottom: none; border-radius: 0 0 26px 26px; padding: 18px 20px 14px; box-shadow: 0 6px 18px rgba(43,107,211,0); transition: padding 0.35s var(--spring), border-radius 0.35s ease, box-shadow 0.35s ease; }
+.header .moon { color: #fff; display: flex; }
+.brand-en { color: rgba(255,255,255,0.92); }
+.room { color: rgba(255,255,255,0.9); }
+.lang-btn { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.18); color: #fff; }
+.banner { background: rgba(255,255,255,0.18); color: #fff; border-radius: 14px; max-height: 60px; overflow: hidden; transition: max-height 0.35s ease, opacity 0.25s ease, padding 0.35s ease, margin 0.35s ease; }
+.banner .muted { color: rgba(255,255,255,0.9); }
+.banner.closed { background: #fff; color: var(--badge-fg); }
+.header.scrolled { padding-top: 10px; padding-bottom: 10px; border-radius: 0 0 20px 20px; box-shadow: 0 10px 26px rgba(43,107,211,0.28); }
+.header.scrolled .banner { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; margin-top: -10px; }
+.chips { background: rgba(238,244,251,0.88); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.chip { background: #fff; border-color: var(--line2); }
+.chip[aria-pressed="true"] { background: var(--grad); color: #fff; border-color: transparent; box-shadow: 0 6px 14px rgba(43,107,211,0.25); }
+.card, .row-card, .bill, .wifi { border-radius: 22px; box-shadow: var(--shadow); }
+.thumb { border-radius: 16px; }
+.add, .stepper button.plus, .req-btn, .btn-primary, .cartbar button, .composer .send, .msg.me .bubble { background: var(--grad); border-color: transparent; }
+.add { box-shadow: 0 6px 14px rgba(43,107,211,0.3); }
+.req-btn[aria-pressed="true"] { background: transparent; border-color: var(--border); }
+.switch[aria-pressed="true"] { background: var(--grad); }
+.bill-total .v { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cartbar button { border-radius: 22px; box-shadow: 0 12px 30px rgba(43,107,211,0.35); }
+.nav { background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-top: none; border-radius: 26px 26px 0 0; box-shadow: 0 -6px 24px rgba(43,107,211,0.1); }
+.composer { background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.done { background: var(--page); }
+.sheet { border-radius: 28px 28px 0 0; }
+
+/* ---------- 動き ---------- */
+/* 押したときに沈んで、離すとぽよんと戻る */
+button, .row-card { transition: transform 0.4s var(--spring), box-shadow 0.3s ease; }
+button:active, a.row-card:active { transform: scale(0.93); transition-duration: 0.08s; }
+.card:active { transform: scale(0.985); }
+/* 触ったところに青緑の光が広がる */
+.tap-bloom { position: fixed; z-index: 60; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgba(43,107,211,0.38) 0%, rgba(19,138,116,0.22) 45%, rgba(19,138,116,0) 70%); animation: bloom 0.6s ease-out forwards; }
+@keyframes bloom { to { transform: scale(10); opacity: 0; } }
+/* カードは下からふわっと、少し時間差で */
+.pre { opacity: 0; transform: translateY(18px) scale(0.97); }
+.in { animation: rise 0.55s var(--spring) both; animation-delay: var(--d, 0ms); }
+@keyframes rise { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+/* タブを切り替えると、進む方向へすべり込む */
+.tab-enter { animation: slidein 0.4s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+@keyframes slidein { from { opacity: 0; transform: translateX(var(--dir, 24px)); } to { opacity: 1; transform: none; } }
+/* 下のタブ：選んだタブへバーが伸びて移動し、アイコンが跳ねる */
+.nav .pill { position: absolute; top: 0; left: 0; width: 20%; height: 4px; display: flex; justify-content: center; transition: transform 0.5s var(--spring); pointer-events: none; }
+.nav .pill::before { content: ''; width: 34px; height: 4px; border-radius: 0 0 4px 4px; background: var(--grad); }
+.nav button[aria-current="page"] svg { animation: hop 0.5s var(--spring); }
+@keyframes hop { 35% { transform: translateY(-6px) scale(1.15); } }
+/* カートへ飛んでいく玉と、数字のはずみ */
+.fly { position: fixed; z-index: 61; top: 0; left: 0; width: 16px; height: 16px; border-radius: 50%; background: var(--grad); box-shadow: 0 4px 12px rgba(43,107,211,0.45); pointer-events: none; }
+.cartbar .n.pop { animation: pop 0.5s var(--spring); }
+@keyframes pop { 40% { transform: scale(1.5); } }
+.cartbar.arrive button { animation: rise 0.5s var(--spring) both; }
+/* チャットの新しい吹き出しは、送った側からぽんと出る */
+.msg.me.in { animation: bubble-r 0.45s var(--spring) both; transform-origin: bottom right; }
+.msg.them.in { animation: bubble-l 0.45s var(--spring) both; transform-origin: bottom left; }
+@keyframes bubble-r { from { opacity: 0; transform: translate(12px, 8px) scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes bubble-l { from { opacity: 0; transform: translate(-12px, 8px) scale(0.85); } to { opacity: 1; transform: none; } }
+
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

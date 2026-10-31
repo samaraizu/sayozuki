@@ -316,6 +316,27 @@ function showQr(name, url) {
   dlg.showModal();
 }
 
+// 触ったところに光が広がる
+const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+document.addEventListener('pointerdown', (e) => {
+  if (calm.matches || !e.target.closest('button')) return;
+  const b = document.createElement('span');
+  b.className = 'tap-bloom';
+  b.style.left = e.clientX + 'px';
+  b.style.top = e.clientY + 'px';
+  document.body.appendChild(b);
+  b.addEventListener('animationend', () => b.remove());
+}, { passive: true });
+
+// 対応済みのカードを右へはじき出してから消す
+const flick = (el) =>
+  new Promise((r) => {
+    const card = el.closest('.item');
+    if (!card || calm.matches) return r();
+    card.classList.add('done-out');
+    setTimeout(r, 420);
+  });
+
 document.addEventListener('click', async (ev) => {
   const el = ev.target.closest('[data-act]');
   if (!el || el.disabled) return;
@@ -334,9 +355,9 @@ document.addEventListener('click', async (ev) => {
       }
       case 'push': return pushOn ? disablePush() : enablePush();
       case 'menu': await api('/menu/refresh', { method: 'POST' }); return toast('メニューを読み込み直しました');
-      case 'deliver': el.disabled = true; await api(`/orders/${id}/deliver`, { method: 'POST' }); return load();
+      case 'deliver': el.disabled = true; await api(`/orders/${id}/deliver`, { method: 'POST' }); await flick(el); return load();
       case 'cancel': if (!confirm('この注文を取り消しますか？')) return; await api(`/orders/${id}/cancel`, { method: 'POST' }); return load();
-      case 'reqdone': el.disabled = true; await api(`/requests/${id}/done`, { method: 'POST' }); return load();
+      case 'reqdone': el.disabled = true; await api(`/requests/${id}/done`, { method: 'POST' }); await flick(el); return load();
       case 'checkout': {
         if (!confirm(`${room.name} の未精算 ${yen(room.unsettled)} を精算します。Squareの支払いリンクを発行します。`)) return;
         el.disabled = true;
