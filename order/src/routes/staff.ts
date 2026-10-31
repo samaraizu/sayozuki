@@ -2,7 +2,10 @@ import type { Env } from '../env';
 import { isMock } from '../env';
 import { REQUEST_KINDS } from '../config/requests';
 import { nowIso } from '../lib/time';
-import { HttpError, json, newId, timingSafeEqual } from '../lib/util';
+import { HttpError, json, newId, readJson, timingSafeEqual } from '../lib/util';
+import { closeChat, forStaff, openMessages, staffSend, type MessageRow } from '../lib/chat';
+import { notifyStaff } from '../lib/notify';
+import { vapid } from '../lib/push';
 import { createCheckoutLink, deletePaymentLink } from '../square/checkout';
 import { desk, pendingSettlement, roomBill, type RoomRow } from './guest';
 
@@ -23,7 +26,7 @@ async function getRoom(env: Env, id: string) {
   return r;
 }
 
-export async function handleStaff(req: Request, env: Env, url: URL): Promise<Response> {
+export async function handleStaff(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
   authStaff(req, env);
   const p = url.pathname.replace(/^\/staff\/api/, '');
   const m = req.method;
@@ -34,9 +37,19 @@ export async function handleStaff(req: Request, env: Env, url: URL): Promise<Res
   // 現場の一覧
   if (p === '/board' && m === 'GET') {
     const rooms = await env.DB.prepare('SELECT * FROM rooms ORDER BY sort, name').all<RoomRow>();
+    const chats = await env.DB.prepare(
+      `SELECT m.* FROM messages m
+        JOIN (SELECT room_id, MAX(created_at) AS last FROM messages WHERE closed = 0 GROUP BY room_id) x
+          ON x.room_id = m.room_id AND x.last = m.created_at
+       WHERE m.closed = 0`
+    ).all<MessageRow>();
+    const unread = await env.DB.prepare(
+      "SELECT room_id, COUNT(*) AS n FROM messages WHERE closed = 0 AND sender = 'guest' AND read_at IS NULL GROUP BY room_id"
+    ).all<{ room_id: string; n: number }>();
     const list = [];
     for (const r of rooms.results ?? []) {
       const bill = await roomBill(env, r.id);
+      const last = (chats.results ?? []).find((m) => m.room_id === r.id);
       list.push({
         id: r.id,
         name: r.name,
@@ -44,7 +57,8 @@ export async function handleStaff(req: Request, env: Env, url: URL): Promise<Res
         unsettled: bill.unsettledTotal,
         pendingTotal: bill.pendingTotal,
         payUrl: bill.payUrl,
-        url: roomUrl(url, r.id)
+        url: roomUrl(url, r.id),
+        chat: last ? { unread: (unread.results ?? []).find((u) => u.room_id === r.id)?.n ?? 0, last: forStaff(last) } : null
       });
     }
     const orders = await env.DB.prepare(
@@ -153,8 +167,55 @@ export async function handleStaff(req: Request, env: Env, url: URL): Promise<Res
         env.DB.prepare(`UPDATE orders SET settlement_id = ? WHERE id IN (${targets.map(() => '?').join(',')})`).bind(sid, ...targets.map((o) => o.id))
       ]);
     }
-    await env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(room.id).run();
+    await env.DB.batch([env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(room.id), closeChat(env, room.id)]);
     await desk(env).purgeMenu();
+    return json({ ok: true });
+  }
+
+  // チャット：部屋ごとの会話を開く（開いた時点でお客様のメッセージは既読にする）
+  if ((mt = p.match(/^\/chat\/([\w-]+)$/)) && m === 'GET') {
+    const room = await getRoom(env, mt[1]);
+    await env.DB.prepare("UPDATE messages SET read_at = ? WHERE room_id = ? AND sender = 'guest' AND closed = 0 AND read_at IS NULL").bind(nowIso(), room.id).run();
+    return json({ room: { id: room.id, name: room.name }, messages: (await openMessages(env, room.id)).map(forStaff) });
+  }
+
+  if ((mt = p.match(/^\/chat\/([\w-]+)$/)) && m === 'POST') {
+    const room = await getRoom(env, mt[1]);
+    await staffSend(env, room.id, await readJson<{ text?: string }>(req));
+    return json({ room: { id: room.id, name: room.name }, messages: (await openMessages(env, room.id)).map(forStaff) });
+  }
+
+  // チェックアウトしたお客様の会話を閉じる（精算が済んだときは自動で閉じる）
+  if ((mt = p.match(/^\/chat\/([\w-]+)\/close$/)) && m === 'POST') {
+    const room = await getRoom(env, mt[1]);
+    await closeChat(env, room.id).run();
+    return json({ ok: true });
+  }
+
+  // スマホへの通知
+  if (p === '/push/key' && m === 'GET') return json({ key: (await vapid(env)).pub });
+
+  if (p === '/push/subscribe' && m === 'POST') {
+    const { endpoint } = await readJson<{ endpoint?: string }>(req);
+    if (!endpoint || !/^https:\/\//.test(endpoint) || endpoint.length > 1000) throw new HttpError(400, 'bad_endpoint');
+    await env.DB.prepare('INSERT OR IGNORE INTO push_subs (endpoint, created_at) VALUES (?, ?)').bind(endpoint, nowIso()).run();
+    return json({ ok: true });
+  }
+
+  if (p === '/push/unsubscribe' && m === 'POST') {
+    const { endpoint } = await readJson<{ endpoint?: string }>(req);
+    await env.DB.prepare('DELETE FROM push_subs WHERE endpoint = ?').bind(String(endpoint ?? '')).run();
+    return json({ ok: true });
+  }
+
+  // 通知を受け取ったスマホが、表示する一文を取りにくる
+  if (p === '/push/latest' && m === 'GET') {
+    const row = await env.DB.prepare("SELECT value FROM settings WHERE key = 'latest'").first<{ value: string }>();
+    return json(row ? JSON.parse(row.value) : { text: null });
+  }
+
+  if (p === '/push/test' && m === 'POST') {
+    ctx.waitUntil(notifyStaff(env, '🔔 通知のテストです。このスマホに届いています。'));
     return json({ ok: true });
   }
 

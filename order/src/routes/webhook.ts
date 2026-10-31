@@ -3,9 +3,10 @@ import { verifySquareSignature } from '../lib/webhook';
 import { notifyStaff } from '../lib/notify';
 import { nowIso } from '../lib/time';
 import { json } from '../lib/util';
+import { closeChat } from '../lib/chat';
 import { desk } from './guest';
 
-export async function handleSquareWebhook(req: Request, env: Env, url: URL): Promise<Response> {
+export async function handleSquareWebhook(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
   const body = await req.text();
   const key = env.SQUARE_WEBHOOK_SIGNATURE_KEY;
   if (!key) return json({ error: 'not_configured' }, 503);
@@ -33,10 +34,11 @@ export async function handleSquareWebhook(req: Request, env: Env, url: URL): Pro
       if (s) {
         await env.DB.batch([
           env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'square', settled_at = ? WHERE id = ?").bind(nowIso(), s.id),
-          env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(s.room_id)
+          env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(s.room_id),
+          closeChat(env, s.room_id)
         ]);
         await desk(env).purgeMenu();
-        await notifyStaff(env, `✅ ${s.name} お支払い完了`);
+        ctx.waitUntil(notifyStaff(env, `✅ ${s.name} お支払い完了`));
       }
     }
   }

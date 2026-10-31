@@ -2,6 +2,8 @@ export interface Env {
   DB: D1Database;
   DESK: DurableObjectNamespace;
   ASSETS: Fetcher;
+  /** 翻訳（Workers AI）。ローカルでは無いことがあるので任意 */
+  AI?: Ai;
 
   SQUARE_ENV: 'sandbox' | 'production';
   SQUARE_LOCATION_ID: string;

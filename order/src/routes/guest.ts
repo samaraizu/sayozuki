@@ -1,6 +1,7 @@
 import type { Env } from '../env';
 import { isMock } from '../env';
 import { REQUEST_KINDS } from '../config/requests';
+import { closeChat, forGuest, guestSend, openMessages } from '../lib/chat';
 import { notifyStaff } from '../lib/notify';
 import { nowIso } from '../lib/time';
 import { HttpError, json, newId, readJson } from '../lib/util';
@@ -84,7 +85,7 @@ export async function settlementLines(env: Env, settlementId: string) {
   return [...map.values()].flat();
 }
 
-export async function handleGuest(req: Request, env: Env, url: URL): Promise<Response> {
+export async function handleGuest(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
   const path = url.pathname;
   const method = req.method;
 
@@ -112,7 +113,7 @@ export async function handleGuest(req: Request, env: Env, url: URL): Promise<Res
     const body = await readJson<{ lines: { id: string; qty: number }[]; delivery: 'door' | 'hand' }>(req);
     const r = await desk(env).placeOrder({ roomId: room.id, lines: Array.isArray(body.lines) ? body.lines.slice(0, 30) : [], delivery: body.delivery });
     if (!r.ok) return json({ error: r.code, detail: r.detail }, r.status);
-    await notifyStaff(env, `🛎 ${r.room} 注文 ${r.lines.map((l) => `${l.name}×${l.qty}`).join('、')}（${body.delivery === 'hand' ? '手渡し' : '扉前'}）`);
+    ctx.waitUntil(notifyStaff(env, `🛎 ${r.room} 注文 ${r.lines.map((l) => `${l.name}×${l.qty}`).join('、')}（${body.delivery === 'hand' ? '手渡し' : '扉前'}）`));
     return json({ id: r.id, total: r.total });
   }
 
@@ -130,7 +131,7 @@ export async function handleGuest(req: Request, env: Env, url: URL): Promise<Res
       await env.DB.prepare('INSERT INTO requests (id, room_id, kind, status, created_at) VALUES (?, ?, ?, ?, ?)')
         .bind(newId('req'), room.id, kind, 'new', nowIso())
         .run();
-      await notifyStaff(env, `🫖 ${room.name} リクエスト：${REQUEST_KINDS[kind]}`);
+      ctx.waitUntil(notifyStaff(env, `🫖 ${room.name} リクエスト：${REQUEST_KINDS[kind]}`));
     }
     return json({ ok: true });
   }
@@ -140,6 +141,19 @@ export async function handleGuest(req: Request, env: Env, url: URL): Promise<Res
     const { on } = await readJson<{ on: boolean }>(req);
     await env.DB.prepare('UPDATE rooms SET dnd = ? WHERE id = ?').bind(on ? 1 : 0, room.id).run();
     return json({ ok: true });
+  }
+
+  // スタッフとのチャット
+  if (path === '/api/chat' && method === 'GET') {
+    const room = await roomFromHeader(req, env);
+    return json({ messages: (await openMessages(env, room.id)).map(forGuest) });
+  }
+
+  if (path === '/api/chat' && method === 'POST') {
+    const room = await roomFromHeader(req, env);
+    const r = await guestSend(env, room, await readJson<{ text?: string; lang?: string }>(req));
+    ctx.waitUntil(notifyStaff(env, r.notice, `/staff/?chat=${room.id}`));
+    return json({ id: r.id, messages: (await openMessages(env, room.id)).map(forGuest) });
   }
 
   // 直近（48時間以内）に支払いが済んだ精算の領収書
@@ -162,9 +176,10 @@ export async function handleGuest(req: Request, env: Env, url: URL): Promise<Res
 
   if (path === '/api/mock/pay' && method === 'POST' && isMock(env)) {
     const room = await roomFromHeader(req, env);
-    await env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'square', settled_at = ? WHERE room_id = ? AND status = 'pending'")
-      .bind(nowIso(), room.id)
-      .run();
+    await env.DB.batch([
+      env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'square', settled_at = ? WHERE room_id = ? AND status = 'pending'").bind(nowIso(), room.id),
+      closeChat(env, room.id)
+    ]);
     return json({ ok: true });
   }
 

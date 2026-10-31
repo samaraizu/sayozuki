@@ -33,3 +33,36 @@ describe('Square webhook署名', () => {
     expect(await verifySquareSignature(key, url, body, null)).toBe(false);
   });
 });
+
+describe('スマホ通知の署名（VAPID）', () => {
+  // D1 の代わり：settings 表だけを持つ
+  const store = new Map<string, string>();
+  const DB = {
+    prepare: (sql: string) => ({
+      bind: (...a: string[]) => ({
+        run: async () => {
+          if (sql.startsWith('INSERT OR IGNORE') && !store.has('vapid')) store.set('vapid', a[0]);
+          return {};
+        },
+        first: async () => null
+      }),
+      first: async () => (store.has('vapid') ? { value: store.get('vapid')! } : null)
+    })
+  };
+  const env = { DB } as never;
+  const unb64u = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+
+  it('公開鍵で検証できるES256のトークンを作る', async () => {
+    const { vapidJwt } = await import('../src/lib/push');
+    const { jwt, pub } = await vapidJwt(env, 'https://web.push.apple.com/abc');
+    const [h, p, sig] = jwt.split('.');
+    expect(JSON.parse(new TextDecoder().decode(unb64u(h)))).toEqual({ typ: 'JWT', alg: 'ES256' });
+    const payload = JSON.parse(new TextDecoder().decode(unb64u(p)));
+    expect(payload.aud).toBe('https://web.push.apple.com');
+    expect(payload.sub).toBe('mailto:info@sayozuki.com');
+    expect(unb64u(pub).length).toBe(65);
+    const key = await crypto.subtle.importKey('raw', unb64u(pub), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, unb64u(sig), new TextEncoder().encode(`${h}.${p}`));
+    expect(ok).toBe(true);
+  });
+});

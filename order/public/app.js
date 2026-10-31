@@ -25,6 +25,10 @@ const S = {
   menu: null,
   bill: null,
   requested: new Set(),
+  chat: [],
+  draft: '',
+  chatSending: false,
+  chatSeen: localStorage.getItem('syz_chat_seen') || '',
   fatal: null
 };
 let t = makeT(S.lang);
@@ -51,10 +55,11 @@ async function api(path, opts = {}) {
 
 async function loadAll() {
   try {
-    const [session, menu, bill] = await Promise.all([api('/api/session'), api('/api/menu'), api('/api/orders')]);
+    const [session, menu, bill, chat] = await Promise.all([api('/api/session'), api('/api/menu'), api('/api/orders'), api('/api/chat')]);
     S.session = session;
     S.menu = menu;
     S.bill = bill;
+    S.chat = chat.messages;
     S.requested = new Set(session.requested || []);
     markSeenDelivered(true);
   } catch (e) {
@@ -66,14 +71,56 @@ async function loadAll() {
 async function refresh() {
   if (!S.room || S.fatal) return;
   try {
-    const [session, bill] = await Promise.all([api('/api/session'), api('/api/orders')]);
+    const [session, bill, chat] = await Promise.all([api('/api/session'), api('/api/orders'), api('/api/chat')]);
     const hadPay = Boolean(S.bill && S.bill.payUrl);
     S.session = session;
     S.bill = bill;
+    setChat(chat.messages);
     if (markSeenDelivered(false)) toast(t('arrived'));
     if (hadPay && !bill.payUrl) { S.paidRecently = true; toast(t('thanksPaid')); }
     render();
   } catch {}
+}
+
+// スタッフからの新しい返事：チャットを見ていればそのまま既読、見ていなければお知らせとタブの点
+const lastStaffId = () => [...S.chat].reverse().find((m) => m.from === 'staff')?.id || '';
+const chatUnseen = () => Boolean(lastStaffId() && lastStaffId() !== S.chatSeen);
+function markChatSeen() {
+  const id = lastStaffId();
+  if (id && id !== S.chatSeen) { S.chatSeen = id; localStorage.setItem('syz_chat_seen', id); }
+}
+function setChat(messages) {
+  const before = lastStaffId();
+  S.chat = messages;
+  const after = lastStaffId();
+  if (S.tab === 'chat' && !document.hidden) markChatSeen();
+  else if (after && after !== before && after !== S.chatSeen) toast(t('chatNew'));
+}
+
+async function refreshChat() {
+  if (!S.room || S.fatal || !S.session) return;
+  try {
+    setChat((await api('/api/chat')).messages);
+    render();
+  } catch {}
+}
+
+async function sendChat() {
+  const text = S.draft.trim();
+  if (!text || S.chatSending) return;
+  S.chatSending = true;
+  render();
+  try {
+    const r = await api('/api/chat', { method: 'POST', body: { text, lang: S.lang } });
+    S.draft = '';
+    setChat(r.messages);
+    stickChat = true;
+  } catch (e) {
+    toast(t(e.code === 'too_many' ? 'errTooMany' : 'errNetwork'));
+  } finally {
+    S.chatSending = false;
+    render();
+  }
 }
 
 async function refreshMenu() {
@@ -170,6 +217,8 @@ const I = {
   navMenu: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 6h14M4 11h14M4 16h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   navReq: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M6 9a5 5 0 0 1 10 0v4l2 3H4l2-3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 19h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   navBill: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M5 3h12v16l-3-2-3 2-3-2-3 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 8h6M8 12h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  navChat: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h11A1.5 1.5 0 0 1 18 5.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V15h0.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+  send: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10L16.5 4l-4 13-2.8-5.2L3.5 10z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
   navAbout: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M11 10v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="11" cy="7" r="1" fill="currentColor"/></svg>'
 };
 
@@ -190,13 +239,58 @@ function render() {
     return;
   }
 
-  const body = { menu: viewMenu, request: viewRequest, bill: viewBill, about: viewAbout }[S.tab]();
-  app.innerHTML = header(true) + body + cartBar() + nav() + overlays();
+  const ta = app.querySelector('.composer textarea');
+  const focused = ta && document.activeElement === ta;
+  const selStart = ta ? ta.selectionStart : 0;
+  const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
+
+  const body = { menu: viewMenu, request: viewRequest, chat: viewChat, bill: viewBill, about: viewAbout }[S.tab]();
+  app.innerHTML = header(true) + body + cartBar() + composer() + nav() + overlays();
   const chips = app.querySelector('.chips');
   if (chips) chips.scrollLeft = chipsScroll;
   const h = app.querySelector('.header');
   if (h) app.style.setProperty('--header-h', h.offsetHeight + 'px');
   if (S.viewer) bindViewerDrag();
+  if (S.tab === 'chat') {
+    const nta = app.querySelector('.composer textarea');
+    if (nta) {
+      autosize(nta);
+      if (focused) { nta.focus(); nta.setSelectionRange(selStart, selStart); }
+    }
+    if (stickChat || nearBottom) window.scrollTo({ top: document.documentElement.scrollHeight });
+    stickChat = false;
+  }
+}
+
+let stickChat = false;
+function autosize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+function viewChat() {
+  const time = (iso) => new Date(iso).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' });
+  const lastGuestRead = [...S.chat].reverse().find((m) => m.from === 'guest' && m.read)?.id;
+  const msgs = S.chat
+    .map((m) => {
+      const mine = m.from === 'guest';
+      const who = mine ? '' : `<span class="who">${esc(t('chatStaff'))}</span>`;
+      const orig = m.original ? `<span class="orig"><span>${esc(t('chatOriginal'))}</span>${esc(m.original)}</span>` : '';
+      const meta = `${time(m.at)}${mine && m.id === lastGuestRead ? `・${esc(t('chatRead'))}` : ''}`;
+      return `<div class="msg ${mine ? 'me' : 'them'}">${who}<div class="bubble">${esc(m.text)}${orig}</div><span class="meta">${meta}</span></div>`;
+    })
+    .join('');
+  return `<main class="chat-main"><h2 class="h2">${esc(t('chatTitle'))}</h2><p class="lead">${esc(t('chatLead'))}</p>
+    <div class="msgs" role="log" aria-live="polite">${msgs || `<div class="chat-empty">${esc(t('chatEmpty'))}</div>`}</div></main>`;
+}
+
+function composer() {
+  if (S.tab !== 'chat' || S.sheet || S.viewer || S.done) return '';
+  const can = S.draft.trim() && !S.chatSending;
+  return `<form class="composer" data-form="chat">
+    <textarea rows="1" maxlength="1000" placeholder="${esc(t('chatPlaceholder'))}" aria-label="${esc(t('chatPlaceholder'))}">${esc(S.draft)}</textarea>
+    <button type="submit" class="send" aria-label="${esc(t('chatSend'))}" ${can ? '' : 'disabled'}>${I.send}</button>
+  </form>`;
 }
 
 function header(full) {
@@ -319,12 +413,13 @@ function nav() {
   const tabs = [
     ['menu', 'navMenu', I.navMenu],
     ['request', 'navRequest', I.navReq],
+    ['chat', 'navChat', I.navChat],
     ['bill', 'navBill', I.navBill],
     ['about', 'navAbout', I.navAbout]
   ];
   const payDot = Boolean(S.bill && S.bill.payUrl);
   return `<nav class="nav" aria-label="main">${tabs
-    .map(([id, k, icon]) => `<button data-act="tab" data-id="${id}" ${S.tab === id ? 'aria-current="page"' : ''}>${icon}${esc(t(k))}${id === 'bill' && payDot ? '<span class="dot"></span>' : ''}</button>`)
+    .map(([id, k, icon]) => `<button data-act="tab" data-id="${id}" ${S.tab === id ? 'aria-current="page"' : ''}>${icon}${esc(t(k))}${(id === 'bill' && payDot) || (id === 'chat' && S.tab !== 'chat' && chatUnseen()) ? '<span class="dot"></span>' : ''}</button>`)
     .join('')}</nav>`;
 }
 
@@ -455,7 +550,12 @@ app.addEventListener('click', async (ev) => {
   if (!el || el.disabled) return;
   const { act, id } = el.dataset;
   switch (act) {
-    case 'tab': S.tab = id; S.sheet = false; window.scrollTo({ top: 0 }); return render();
+    case 'tab':
+      S.tab = id;
+      S.sheet = false;
+      if (id === 'chat') { markChatSeen(); stickChat = true; refreshChat(); }
+      else window.scrollTo({ top: 0 });
+      return render();
     case 'cat': S.cat = id; window.scrollTo({ top: 0 }); return render();
     case 'inc': return setQty(id, (S.cart[id] || 0) + 1);
     case 'dec': return setQty(id, (S.cart[id] || 0) - 1);
@@ -487,6 +587,32 @@ app.addEventListener('click', async (ev) => {
   }
 });
 
+// 入力中は描き直さずに下書きだけ持っておく（送信ボタンの有効・無効だけ切り替える）
+app.addEventListener('input', (e) => {
+  if (!e.target.matches('.composer textarea')) return;
+  S.draft = e.target.value;
+  autosize(e.target);
+  const btn = app.querySelector('.composer .send');
+  if (btn) btn.disabled = !S.draft.trim() || S.chatSending;
+});
+app.addEventListener('submit', (e) => {
+  if (!e.target.matches('[data-form="chat"]')) return;
+  e.preventDefault();
+  sendChat();
+});
+
+// スマホのキーボードが出たら、入力欄をキーボードのすぐ上に出す（下のタブは隠す）
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const onVV = () => {
+    const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    document.body.classList.toggle('kb', kb > 80);
+  };
+  vv.addEventListener('resize', onVV);
+  vv.addEventListener('scroll', onVV);
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (S.viewer) S.viewer = null;
@@ -501,6 +627,8 @@ render();
 if (S.room) {
   loadAll().then(() => { if (justPaid) toast(t('thanksPaid')); });
   setInterval(refresh, 20_000);
+  // チャットを開いているあいだは、返事をすぐ出すために5秒ごとに見にいく
+  setInterval(() => { if (S.tab === 'chat' && !document.hidden) refreshChat(); }, 5_000);
   setInterval(refreshMenu, 60_000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { refresh(); refreshMenu(); } });
 }
