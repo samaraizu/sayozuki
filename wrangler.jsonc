@@ -1,0 +1,21 @@
+{
+  // HP（宿・お取り寄せ）。OpenNext で Next.js を Cloudflare Workers に載せる。
+  // 客室オーダーは別の Worker（order/wrangler.jsonc の sayozuki-order）。
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sayozuki",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    // OpenNext が自分自身を呼ぶための参照。service は name と同じにする
+    { "binding": "WORKER_SELF_REFERENCE", "service": "sayozuki" }
+  ],
+  // next/image の最適化（components/Photo.tsx など）
+  "images": { "binding": "IMAGES" },
+  // RESEND_API_KEY などの秘密の値はここに書かず、`npx wrangler secret put` で入れる
+  "observability": { "enabled": true }
+}

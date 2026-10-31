@@ -7,6 +7,20 @@ npm install
 npm run dev   # http://localhost:3000
 ```
 
+## 公開（Cloudflare Workers）
+
+Cloudflare Workers の Worker「sayozuki」で公開している（OpenNext で Next.js を Workers に載せる）。設定は `wrangler.jsonc` と `open-next.config.ts`。
+
+```bash
+npx wrangler login   # 初回だけ
+npm run preview      # Workers と同じ環境で手元確認（http://localhost:8787）
+npm run deploy       # ビルドして本番へ
+```
+
+- 秘密の値（`RESEND_API_KEY` など、`.env.local.example` の項目）はリポジトリに置かず `npx wrangler secret put RESEND_API_KEY` で入れる。
+- ドメイン接続までの仮のURLは https://sayozuki.toneclown17.workers.dev 。
+- 客室オーダー（`order/`）は別の Worker「sayozuki-order」。`order/` の中でデプロイする。
+
 ## 更新する場所
 
 | 変えたいもの | ファイル |
@@ -33,8 +47,9 @@ npm run dev   # http://localhost:3000
 - 宿：https://sayozuki.com（6言語）
 - お取り寄せ：https://shop.sayozuki.com（中身は `/shop` 以下。`proxy.ts` で振り分ける）
 
-Vercel の本番の環境変数に `NEXT_PUBLIC_SPLIT_DOMAINS=true` を入れると、宿とお取り寄せのリンクがそれぞれのドメインを向き、sayozuki.com/shop は shop.sayozuki.com へ転送される。
-**DNS がつながってから入れること**（先に入れると本番のアクセスが仮ページへ飛ぶ）。未設定のあいだ・プレビュー・ローカルでは今までどおり `/shop` で動く。
+`NEXT_PUBLIC_SPLIT_DOMAINS=true` を入れてビルド・デプロイすると、宿とお取り寄せのリンクがそれぞれのドメインを向き、sayozuki.com/shop は shop.sayozuki.com へ、workers.dev などほかのホストは sayozuki.com へ転送される。
+ビルド時に埋め込まれる値なので、ビルドする環境（ローカルなら `.env.production`）に入れる。Cloudflare の Worker の変数に入れても効かない。
+**DNS がつながってから入れること**（先に入れると本番のアクセスが仮ページへ飛ぶ）。未設定のあいだ・ローカルでは今までどおり `/shop` で動く。
 
 ## 多言語
 

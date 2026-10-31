@@ -1,0 +1,553 @@
+<script>
+(function () {
+  'use strict';
+
+  var DAYS = 7;
+  var MEALS_FROM = '2026-12-01'; // 食事は12/1以降のチェックインから
+  var TAX_PER_NIGHT = 300; // 入湯税の目安（2026/4/1以降の予約）。正式な額は台帳側で計算
+  var ARRIVALS = ['15:00ごろ', '16:00ごろ', '17:00ごろ', '18:00以降', '未定'];
+  var PAYS = ['当日Square', 'あとで決める'];
+  var CHANNEL_CLASS = { 'Airbnb': 'airbnb', '楽天': 'rakuten', '楽天トラベル': 'rakuten', '直販': 'direct' };
+
+  var state = {
+    board: null,
+    view: 'cal',
+    weekStart: '',
+    form: null,
+    saving: false
+  };
+
+  var $view = document.getElementById('view');
+  var $detail = document.getElementById('detail');
+  var $toast = document.getElementById('toast');
+
+  // ---------- 小物 ----------
+
+  // 文字はすべて textContent で入れる（ゲスト名はAirbnb由来の外部テキスト）
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) {
+      Object.keys(attrs).forEach(function (k) {
+        var v = attrs[k];
+        if (v === null || v === undefined || v === false) return;
+        if (k === 'class') el.className = v;
+        else if (k === 'style') el.setAttribute('style', v);
+        else if (k.slice(0, 2) === 'on') el.addEventListener(k.slice(2), v);
+        else if (k === 'value') el.value = v;
+        else el.setAttribute(k, v === true ? '' : v);
+      });
+    }
+    for (var i = 2; i < arguments.length; i++) append(el, arguments[i]);
+    return el;
+  }
+  function append(el) {
+    for (var i = 1; i < arguments.length; i++) {
+      var child = arguments[i];
+      if (child === null || child === undefined || child === false) continue;
+      if (Array.isArray(child)) { append.apply(null, [el].concat(child)); continue; }
+      el.appendChild(typeof child === 'string' || typeof child === 'number' ? document.createTextNode(String(child)) : child);
+    }
+  }
+  function svg(paths, size, color) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var s = document.createElementNS(ns, 'svg');
+    s.setAttribute('width', size || 20);
+    s.setAttribute('height', size || 20);
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', color || 'currentColor');
+    s.setAttribute('stroke-width', '1.75');
+    s.setAttribute('stroke-linecap', 'round');
+    s.setAttribute('stroke-linejoin', 'round');
+    s.setAttribute('aria-hidden', 'true');
+    paths.forEach(function (d) {
+      var p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', d);
+      s.appendChild(p);
+    });
+    return s;
+  }
+  var ICON_WARN = ['M12 3l10 18H2z', 'M12 10v5', 'M12 18h.01'];
+  var ICON_PREV = ['M15 18l-6-6 6-6'];
+  var ICON_NEXT = ['M9 6l6 6-6 6'];
+  var ICON_CLOSE = ['M6 6l12 12', 'M18 6L6 18'];
+
+  function yen(n) { return n.toLocaleString('ja-JP') + '円'; }
+  function md(iso) { var p = iso.split('-'); return (+p[1]) + '/' + (+p[2]); }
+  function channelClass(b) { return CHANNEL_CLASS[b.channel] || 'direct'; }
+  function displayName(b) { return String(b.name || '').trim() || 'Reserved'; }
+
+  function toast(message, bad) {
+    $toast.textContent = message;
+    $toast.className = 'toast' + (bad ? ' bad' : '');
+    $toast.hidden = false;
+    clearTimeout(toast.t);
+    toast.t = setTimeout(function () { $toast.hidden = true; }, bad ? 8000 : 5000);
+  }
+
+  function call(fn, arg) {
+    return new Promise(function (resolve) {
+      google.script.run
+        .withSuccessHandler(function (res) { resolve(res || { ok: false, message: '返事がなかった' }); })
+        .withFailureHandler(function (err) { resolve({ ok: false, message: '通信できなかった（' + (err && err.message ? err.message : err) + '）' }); })[fn](arg);
+    });
+  }
+
+  // ---------- 画面の切り替え ----------
+
+  function go(view) {
+    state.view = view;
+    document.querySelectorAll('[data-view]').forEach(function (a) {
+      if (a.getAttribute('data-view') === view) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  document.querySelectorAll('[data-view]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var v = a.getAttribute('data-view');
+      if (v === 'new') openForm({});
+      else go(v);
+    });
+  });
+
+  function render() {
+    $view.textContent = '';
+    if (!state.board) { append($view, h('p', { class: 'loading' }, '読み込み中…')); return; }
+    if (state.view === 'new') renderForm();
+    else renderCalendar();
+  }
+
+  function load() {
+    return call('getBoard').then(function (res) {
+      if (!res.ok) {
+        $view.textContent = '';
+        append($view, h('p', { class: 'fail' }, res.message),
+          h('p', { class: 'loading' }, h('button', { type: 'button', class: 'pill', onclick: load }, 'もう一度読み込む')));
+        return;
+      }
+      state.board = res;
+      if (!state.weekStart) state.weekStart = res.today;
+      render();
+    });
+  }
+
+  // ---------- 7日カレンダー ----------
+
+  function renderCalendar() {
+    var b = state.board;
+    var start = state.weekStart;
+    var end = Lib.addDays(start, DAYS - 1);
+
+    append($view, h('div', { class: 'cal-head' },
+      h('h1', null, Lib.shortLabel(start) + ' 〜 ' + Lib.shortLabel(end)),
+      h('div', { class: 'pager' },
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の7日', onclick: function () { shiftWeek(-DAYS); } }, svg(ICON_PREV)),
+        h('button', { type: 'button', class: 'pill', onclick: function () { state.weekStart = b.today; render(); } }, '今日'),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の7日', onclick: function () { shiftWeek(DAYS); } }, svg(ICON_NEXT))
+      )
+    ));
+
+    // ダブルブッキング（今日以降に泊まりがかかるもの）
+    Lib.findConflicts(b.bookings)
+      .filter(function (c) { return c.a.checkOut > b.today && c.b.checkOut > b.today; })
+      .forEach(function (c) {
+        append($view, h('button', {
+          type: 'button', class: 'alert',
+          onclick: function () { state.weekStart = c.first < b.today ? b.today : c.first; render(); }
+        },
+          svg(ICON_WARN, 22, '#FF8A8A'),
+          h('span', { class: 'grow' },
+            h('strong', null, c.room + ' ' + md(c.first) + ' に2件入ってる'),
+            h('span', { class: 's' }, (c.a.channel || '?') + ' と ' + (c.b.channel || '?') + ' が重なってる')
+          ),
+          svg(ICON_NEXT, 18, '#FFC2C2')
+        ));
+      });
+
+    var needCount = b.bookings.filter(function (x) { return Lib.isActive(x) && x.checkOut > b.today && Lib.needsInput(x); }).length;
+    append($view, h('div', { class: 'status' },
+      h('span', null, h('span', { class: 'dot', 'aria-hidden': 'true' }), 'Airbnb取り込み ' + (b.lastImport || '—')),
+      needCount ? h('span', { class: 'need' }, '要入力 ' + needCount + '件') : null
+    ));
+    append($view, h('div', { class: 'legend' },
+      h('span', null, h('i', { class: 'sw', style: 'background: var(--airbnb)' }), 'Airbnb'),
+      h('span', null, h('i', { class: 'sw', style: 'background: var(--rakuten)' }), '楽天'),
+      h('span', null, h('i', { class: 'sw', style: 'background: var(--direct)' }), '直販'),
+      h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
+    ));
+
+    var grid = h('div', { class: 'grid', role: 'table', 'aria-label': '部屋ごとの予約' });
+    var days = h('div', { class: 'grow-row days', role: 'row' }, h('div', { class: 'corner', role: 'columnheader' }, '部屋'));
+    for (var d = 0; d < DAYS; d++) {
+      var iso = Lib.addDays(start, d);
+      var wd = Lib.weekday(iso);
+      var p = iso.split('-');
+      var cls = 'day' + (wd === '土' ? ' sat' : wd === '日' ? ' sun' : '') + (iso === b.today ? ' today' : '');
+      append(days, h('div', { class: cls, role: 'columnheader' },
+        h('span', { class: 'wd' }, wd),
+        h('span', { class: 'dn' }, (+p[2] === 1 || d === 0) ? (+p[1]) + '/' + (+p[2]) : String(+p[2]))
+      ));
+    }
+    append(grid, days);
+
+    Lib.layoutWeek(b.rooms, b.bookings, start, DAYS).forEach(function (row) {
+      append(grid, roomRow(row, start));
+    });
+    append($view, grid);
+
+    renderTodayCards();
+  }
+
+  function shiftWeek(n) {
+    state.weekStart = Lib.addDays(state.weekStart, n);
+    render();
+  }
+
+  function roomRow(row, start) {
+    var b = state.board;
+    var r = row.room;
+    var sellable = r.state === Lib.SELLABLE;
+    var lanes = row.lanes;
+    var hasClash = row.clashDays.some(Boolean);
+    var el = h('div', {
+      class: 'grow-row' + (sellable ? '' : ' off'), role: 'row',
+      style: 'grid-template-rows: repeat(' + lanes + ', ' + (lanes > 1 ? 50 : 58) + 'px)'
+    });
+
+    // 売っていない部屋は細い1行に畳む
+    if (!sellable && row.bars.length === 0) {
+      el.style.gridTemplateRows = '40px';
+      append(el,
+        h('div', { class: 'roomcell', role: 'rowheader', style: 'padding-top: 0; justify-content: center' }, h('span', { class: 'rn' }, r.name)),
+        h('div', { class: 'prep' }, r.state + '・定員' + r.capacity));
+      return el;
+    }
+
+    append(el, h('div', { class: 'roomcell', role: 'rowheader', style: 'grid-row: 1 / span ' + lanes },
+      h('span', { class: 'rn' }, r.name),
+      h('span', { class: 'rc' }, '定員' + r.capacity),
+      hasClash ? h('span', { class: 'rx' }, '重複あり') : null
+    ));
+
+    for (var d = 0; d < DAYS; d++) {
+      (function (d) {
+        var iso = Lib.addDays(start, d);
+        var cls = 'slot' + (iso === b.today ? ' today' : '') + (row.clashDays[d] ? ' clash' : '');
+        var attrs = { class: cls, style: 'grid-row: 1 / span ' + lanes + '; grid-column: ' + (d + 2) };
+        if (sellable && iso >= b.today && !row.clashDays[d]) {
+          attrs.type = 'button';
+          attrs['aria-label'] = r.name + ' ' + md(iso) + ' に予約を入れる';
+          attrs.onclick = function () { openForm({ checkIn: iso, checkOut: Lib.addDays(iso, 1), room: r.name }); };
+          append(el, h('button', attrs));
+        } else {
+          attrs.class += ' static';
+          attrs.style += '; cursor: default';
+          append(el, h('div', attrs));
+        }
+      })(d);
+    }
+
+    row.bars.forEach(function (bar) {
+      var bk = bar.booking;
+      var n = Lib.people(bk);
+      var nights = Lib.nightsBetween(bk.checkIn, bk.checkOut);
+      var need = Lib.needsInput(bk);
+      var tight = Lib.isTight(n, nights);
+      var subText = need ? '要入力'
+        : (bk.channel === '直販' ? '直販・' : '') + n + '名' + (nights >= 2 ? '・' + nights + '泊' : '');
+      append(el, h('button', {
+        type: 'button',
+        class: 'bar ' + channelClass(bk) + (need ? ' need-input' : '') + (bar.clipStart ? ' clip-s' : '') + (bar.clipEnd ? ' clip-e' : ''),
+        style: 'grid-row: ' + (bar.lane + 1) + '; grid-column: ' + (bar.col + 2) + ' / span ' + bar.span + (lanes > 1 ? '; height: 40px' : ''),
+        'aria-label': displayName(bk) + '、' + (bk.channel || '') + '、' + md(bk.checkIn) + '〜' + md(bk.checkOut) + (need ? '、要入力' : ''),
+        onclick: function () { openDetail(bk); }
+      },
+        h('span', { class: 'bn' }, displayName(bk)),
+        h('span', { class: 'bs' }, tight && !need ? svg(['M12 3l10 18H2z'], 10) : null, subText)
+      ));
+    });
+    return el;
+  }
+
+  function renderTodayCards() {
+    var b = state.board;
+    var active = b.bookings.filter(Lib.isActive);
+    var ins = active.filter(function (x) { return x.checkIn === b.today; });
+    var outs = active.filter(function (x) { return x.checkOut === b.today; });
+    function card(label, list, meta) {
+      return h('div', { class: 'card' },
+        h('span', { class: 'k' }, label),
+        list.length === 0 ? h('span', { class: 'm' }, 'なし') : list.map(function (x) {
+          return h('button', { type: 'button', onclick: function () { openDetail(x); } },
+            h('span', { class: 'v', style: 'display:block' }, x.room + ' ' + displayName(x)),
+            h('span', { class: 'm', style: 'display:block' }, meta(x)));
+        }));
+    }
+    append($view, h('section', { class: 'todaycards', 'aria-label': '今日' },
+      card('今日のチェックイン', ins, function (x) { return (x.arrival || '到着未定') + '・' + Lib.people(x) + '名'; }),
+      card('今日のチェックアウト', outs, function (x) { return (x.channel || '') + '・' + Lib.people(x) + '名'; })
+    ));
+  }
+
+  // ---------- 予約の中身（第1段は見るだけ） ----------
+
+  function openDetail(b) {
+    var nights = Lib.nightsBetween(b.checkIn, b.checkOut);
+    var rows = [
+      ['ステータス', b.status || '—'],
+      ['部屋', b.room],
+      ['日程', Lib.shortLabel(b.checkIn) + ' → ' + Lib.shortLabel(b.checkOut) + '・' + nights + '泊'],
+      ['人数', '大人' + Lib.toInt(b.adults) + (Lib.toInt(b.children) ? '・子ども' + Lib.toInt(b.children) : '') + (Lib.toInt(b.infants) ? '・乳幼児' + Lib.toInt(b.infants) : '')],
+      ['連絡先', b.contact || '—'],
+      ['到着予定', b.arrival || '—'],
+      ['食事', b.meals || '素泊まり'],
+      ['支払額', b.guestPaid || '—'],
+      ['支払い状況', b.payment || '—'],
+      ['入湯税', (b.tax || '—') + (b.taxCollected ? '（' + b.taxCollected + '）' : '')],
+      ['予約番号', b.no || '—'],
+      ['メモ', b.memo || '—']
+    ];
+    if (b.flag) rows.unshift(['要確認', b.flag]);
+    $detail.textContent = '';
+    append($detail,
+      h('div', { class: 'dh' },
+        h('span', { class: 'chip ' + channelClass(b) }, b.channel || '—'),
+        h('h2', { id: 'detail-title' }, displayName(b)),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '閉じる', onclick: function () { $detail.close(); } }, svg(ICON_CLOSE))
+      ),
+      h('dl', null,
+        rows.map(function (r) { return h('div', null, h('dt', null, r[0]), h('dd', null, r[1])); }),
+        b.url ? h('div', null, h('dt', null, '媒体の画面'), h('dd', null, h('a', { href: b.url, target: '_blank', rel: 'noopener' }, '開く'))) : null
+      )
+    );
+    if ($detail.showModal) $detail.showModal(); else $detail.setAttribute('open', '');
+  }
+  $detail.addEventListener('click', function (e) { if (e.target === $detail) $detail.close(); });
+
+  // ---------- 手動入力 ----------
+
+  function openForm(preset) {
+    var today = state.board ? state.board.today : '';
+    var inIso = preset.checkIn || today;
+    state.form = {
+      checkIn: inIso,
+      checkOut: preset.checkOut || (inIso ? Lib.addDays(inIso, 1) : ''),
+      people: 2,
+      room: preset.room || '',
+      name: '', contact: '', arrival: '16:00ごろ',
+      price: '', payment: '当日Square',
+      breakfast: false, dinner: false, memo: ''
+    };
+    go('new');
+  }
+
+  function renderForm() {
+    if (!state.form) { openForm({}); return; }
+    var f = state.form;
+    var maxPeople = Math.max.apply(null, state.board.rooms.map(function (r) { return r.capacity; }).concat([1]));
+    var refs = {};
+
+    function set(key, value) { f[key] = value; update(); }
+
+    var main = h('div', { class: 'form-main' },
+      h('div', null,
+        h('h1', null, '手動入力'),
+        h('p', { class: 'lead' }, 'Airbnb・楽天以外の予約はここで入れる。入れた内容は「入力内容」にまとまる')
+      ),
+      step(1, '日程と人数', null,
+        h('div', { class: 'row' },
+          h('div', { class: 'field' },
+            h('label', { for: 'f-in' }, 'チェックイン'),
+            h('input', { id: 'f-in', class: 'input', type: 'date', value: f.checkIn, min: state.board.today, oninput: function (e) { set('checkIn', e.target.value); } })),
+          h('div', { class: 'field' },
+            h('label', { for: 'f-out' }, 'チェックアウト'),
+            h('input', { id: 'f-out', class: 'input', type: 'date', value: f.checkOut, min: state.board.today, oninput: function (e) { set('checkOut', e.target.value); } })),
+          h('div', { class: 'field', style: 'flex: 0 0 auto' },
+            h('span', { class: 'lbl', id: 'f-ppl' }, '人数'),
+            h('div', { class: 'stepper', role: 'group', 'aria-labelledby': 'f-ppl' },
+              refs.dec = h('button', { type: 'button', 'aria-label': '1人減らす', onclick: function () { set('people', Math.max(1, f.people - 1)); } }, '−'),
+              refs.ppl = h('output', { 'aria-live': 'polite' }),
+              refs.inc = h('button', { type: 'button', 'aria-label': '1人増やす', onclick: function () { set('people', Math.min(maxPeople, f.people + 1)); } }, '＋')
+            ))
+        ),
+        refs.nights = h('p', { class: 'note' })
+      ),
+      step(2, '部屋', refs.avail = h('span', { class: 'aside' }),
+        refs.rooms = h('div', { class: 'rooms' }),
+        refs.tight = h('div', { class: 'warnbox', hidden: true },
+          svg(ICON_WARN, 18, '#F2C46E'),
+          h('span', null, '2名以上で2泊以上。この部屋だと窮屈になりやすい（予約は止めない）'))
+      ),
+      step(3, 'ゲスト', null,
+        h('div', { class: 'row' },
+          h('div', { class: 'field', style: 'flex-basis: 240px' },
+            h('label', { for: 'f-name' }, '代表者名'),
+            h('input', { id: 'f-name', class: 'input', type: 'text', autocomplete: 'off', maxlength: '100', placeholder: '山田 花子', value: f.name, oninput: function (e) { set('name', e.target.value); } })),
+          h('div', { class: 'field', style: 'flex-basis: 240px' },
+            h('label', { for: 'f-tel' }, '連絡先'),
+            h('input', { id: 'f-tel', class: 'input', type: 'text', autocomplete: 'off', maxlength: '200', placeholder: '090-0000-0000 か メール', value: f.contact, oninput: function (e) { set('contact', e.target.value); } }))
+        ),
+        h('fieldset', null, h('legend', null, '到着の予定'), refs.arrivals = h('div', { class: 'segs' }))
+      ),
+      step(4, '料金と支払い', null,
+        h('div', { class: 'row' },
+          h('div', { class: 'field' },
+            h('label', { for: 'f-price' }, '1泊の料金（1室）'),
+            h('input', { id: 'f-price', class: 'input', type: 'text', inputmode: 'numeric', autocomplete: 'off', placeholder: '例 18000', value: f.price, oninput: function (e) { set('price', e.target.value); } })),
+          h('fieldset', { class: 'field', style: 'flex-basis: 280px' }, h('legend', null, '支払い'), refs.pays = h('div', { class: 'segs' }))
+        ),
+        h('div', { class: 'totals' },
+          h('div', { class: 'total' }, h('span', { class: 'k' }, '宿泊料（自動）'), refs.stay = h('span', { class: 'v' })),
+          h('div', { class: 'total' }, h('span', { class: 'k' }, '入湯税の目安（別・台帳で自動計算）'), refs.tax = h('span', { class: 'v' }))
+        ),
+        refs.meals = h('div', { class: 'meals' })
+      ),
+      h('div', { class: 'field' },
+        h('label', { for: 'f-memo' }, 'メモ'),
+        h('textarea', { id: 'f-memo', class: 'input', rows: '3', maxlength: '1000', placeholder: '記念日、到着が遅れそう、紹介してくれた人、など', oninput: function (e) { f.memo = e.target.value; } }, f.memo))
+    );
+
+    var side = h('aside', { class: 'form-side', 'aria-labelledby': 'sum-h' },
+      h('section', { class: 'summary' }, h('h2', { id: 'sum-h' }, '入力内容'), refs.summary = h('dl')),
+      h('section', { class: 'savebox' },
+        refs.left = h('p', { class: 'left' }),
+        refs.save = h('button', { type: 'button', class: 'save', onclick: save }, 'この内容で予約を入れる'),
+        h('p', null, '台帳の末尾に直販で1行足す。重複チェック・入湯税・Googleカレンダーへの反映は、台帳側で5分以内に動く。')
+      )
+    );
+
+    append($view, h('div', { class: 'form-wrap' }, main, side));
+
+    function update() {
+      var inIso = Lib.toIso(f.checkIn), outIso = Lib.toIso(f.checkOut);
+      var nights = Lib.nightsBetween(inIso, outIso);
+      var okDates = nights > 0;
+
+      refs.ppl.textContent = f.people + '名';
+      refs.dec.disabled = f.people <= 1;
+      refs.inc.disabled = f.people >= maxPeople;
+      refs.nights.textContent = okDates
+        ? Lib.shortLabel(inIso) + ' → ' + Lib.shortLabel(outIso) + '　' + nights + '泊'
+        : (inIso && outIso ? 'チェックアウトがチェックインより前になってる' : '日付を入れて');
+      refs.nights.className = 'note' + (okDates || !(inIso && outIso) ? '' : ' bad');
+
+      var avail = Lib.roomAvailability(state.board.rooms, state.board.bookings, inIso, outIso, f.people);
+      var picked = avail.some(function (a) { return a.name === f.room && a.available; }) ? f.room : '';
+      refs.avail.textContent = okDates ? '空いてる部屋 ' + avail.filter(function (a) { return a.available; }).length + '室' : '';
+      refs.rooms.textContent = '';
+      avail.forEach(function (a) {
+        var on = picked === a.name;
+        var color = on ? 'var(--gold)' : a.available ? 'var(--ok)' : a.status === '埋まってる' ? 'var(--red-soft)' : a.status === '人数が入らない' ? 'var(--warn)' : 'var(--faint)';
+        append(refs.rooms, h('button', {
+          type: 'button', class: 'rcard' + (a.state !== Lib.SELLABLE ? ' off' : ''),
+          'aria-label': a.name + '、定員' + a.capacity + '、' + (on ? '選択中' : a.status) + '、' + a.why,
+          disabled: !a.available, 'aria-pressed': on ? 'true' : 'false',
+          onclick: function () { set('room', a.name); }
+        },
+          h('span', { class: 'top-line' }, h('span', { class: 'rid' }, a.name), h('span', { class: 'cap' }, '定員' + a.capacity)),
+          h('span', { class: 'st', style: 'color: ' + color }, on ? '選択中' : a.status),
+          h('span', { class: 'why' }, a.why)
+        ));
+      });
+      refs.tight.hidden = !(picked && Lib.isTight(f.people, nights));
+
+      refs.arrivals.textContent = '';
+      ARRIVALS.forEach(function (lbl) {
+        append(refs.arrivals, h('button', { type: 'button', class: 'seg', 'aria-pressed': f.arrival === lbl ? 'true' : 'false', onclick: function () { set('arrival', lbl); } }, lbl));
+      });
+      refs.pays.textContent = '';
+      PAYS.forEach(function (lbl) {
+        append(refs.pays, h('button', { type: 'button', class: 'seg', 'aria-pressed': f.payment === lbl ? 'true' : 'false', onclick: function () { set('payment', lbl); } }, lbl));
+      });
+
+      var price = Lib.toInt(f.price);
+      var stay = okDates ? price * nights : 0;
+      var tax = okDates ? f.people * nights * TAX_PER_NIGHT : 0;
+      refs.stay.textContent = price > 0 && okDates ? yen(stay) : '—';
+      refs.tax.textContent = okDates ? f.people + '名×' + nights + '泊＝' + yen(tax) : '—';
+
+      var mealsOn = okDates && inIso >= MEALS_FROM;
+      if (!mealsOn) { f.breakfast = false; f.dinner = false; }
+      refs.meals.textContent = '';
+      append(refs.meals, h('span', { class: 'lbl', style: mealsOn ? '' : 'color: var(--faint)' }, '食事'));
+      if (mealsOn) {
+        append(refs.meals,
+          h('button', { type: 'button', class: 'seg', 'aria-pressed': f.breakfast ? 'true' : 'false', onclick: function () { set('breakfast', !f.breakfast); } }, '朝食'),
+          h('button', { type: 'button', class: 'seg', 'aria-pressed': f.dinner ? 'true' : 'false', onclick: function () { set('dinner', !f.dinner); } }, '夕食'));
+      } else {
+        append(refs.meals, h('span', { class: 'note', style: 'font-size: 13px' }, md(MEALS_FROM) + '以降のチェックインから選べる（今は素泊まり）'));
+      }
+
+      var meals = [f.breakfast ? '朝食' : '', f.dinner ? '夕食' : ''].filter(Boolean);
+      var rows = [
+        ['日程', okDates ? Lib.shortLabel(inIso) + ' → ' + Lib.shortLabel(outIso) + '・' + nights + '泊' : ''],
+        ['人数', f.people + '名'],
+        ['部屋', picked],
+        ['代表者名', f.name.trim()],
+        ['連絡先', f.contact.trim()],
+        ['到着', f.arrival],
+        ['宿泊料', price > 0 && okDates ? yen(stay) : '', true],
+        ['入湯税の目安（別）', okDates ? yen(tax) : ''],
+        ['支払い', f.payment],
+        ['食事', meals.length ? meals.join('・') : '素泊まり']
+      ];
+      refs.summary.textContent = '';
+      rows.forEach(function (r) {
+        var empty = !r[1];
+        append(refs.summary, h('div', null, h('dt', null, r[0]), h('dd', { class: empty && !r[2] ? 'missing' : '' }, empty ? (r[2] ? 'あとで' : '未入力') : r[1])));
+      });
+
+      var missing = [];
+      if (!okDates) missing.push('日程');
+      if (!picked) missing.push('部屋');
+      if (!f.name.trim()) missing.push('代表者名');
+      if (!f.contact.trim()) missing.push('連絡先');
+      refs.left.textContent = missing.length ? 'あと：' + missing.join('・') : '';
+      refs.left.hidden = !missing.length;
+      refs.save.disabled = missing.length > 0 || state.saving;
+      refs.save.textContent = state.saving ? '入れています…' : 'この内容で予約を入れる';
+      f._picked = picked;
+    }
+    state.updateForm = update;
+    update();
+  }
+
+  function step(no, title, aside) {
+    var children = Array.prototype.slice.call(arguments, 3);
+    return h('section', { class: 'step', 'aria-labelledby': 'st' + no },
+      h('div', { class: 'step-h' },
+        h('span', { class: 'no', 'aria-hidden': 'true' }, String(no)),
+        h('h2', { id: 'st' + no }, title),
+        aside),
+      children);
+  }
+
+  function save() {
+    var f = state.form;
+    if (state.saving || !f._picked) return;
+    state.saving = true;
+    state.updateForm();
+    call('createBooking', {
+      checkIn: f.checkIn, checkOut: f.checkOut, people: f.people, room: f._picked,
+      name: f.name, contact: f.contact, arrival: f.arrival,
+      price: f.price, payment: f.payment, breakfast: f.breakfast, dinner: f.dinner, memo: f.memo
+    }).then(function (res) {
+      state.saving = false;
+      if (!res.ok) { toast(res.message, true); state.updateForm(); return; }
+      toast('入れた。予約番号 ' + res.no);
+      state.weekStart = f.checkIn < state.board.today ? state.board.today : f.checkIn;
+      state.form = null;
+      state.view = 'cal';
+      go('cal');
+      load();
+    });
+  }
+
+  go('cal');
+  load();
+})();
+</script>
