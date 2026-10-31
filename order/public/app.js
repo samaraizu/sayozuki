@@ -55,7 +55,7 @@ async function api(path, opts = {}) {
 
 async function loadAll() {
   try {
-    const [session, menu, bill, chat] = await Promise.all([api('/api/session'), api('/api/menu'), api('/api/orders'), api('/api/chat')]);
+    const [session, menu, bill, chat] = await Promise.all([api('/api/session'), api('/api/menu'), api(justPaid ? '/api/orders?check=1' : '/api/orders'), api('/api/chat')]);
     S.session = session;
     S.menu = menu;
     S.bill = bill;

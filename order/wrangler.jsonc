@@ -35,5 +35,7 @@
     "COMPANY_ADDRESS": "山形県上山市葉山5-63",
     "COMPANY_TEL": "023-679-5511"
   },
+  // お支払い待ちの精算をSquareに確かめる（Webhookの代わり・取りこぼしの保険）
+  "triggers": { "crons": ["* * * * *"] },
   "observability": { "enabled": true }
 }

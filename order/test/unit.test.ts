@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addDays, jstParts, withinWindow } from '../src/lib/time';
 import { verifySquareSignature } from '../src/lib/webhook';
 
@@ -64,5 +64,28 @@ describe('スマホ通知の署名（VAPID）', () => {
     const key = await crypto.subtle.importKey('raw', unb64u(pub), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
     const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, unb64u(sig), new TextEncoder().encode(`${h}.${p}`));
     expect(ok).toBe(true);
+  });
+});
+
+describe('Webhookなしの支払い確認（Orders API）', () => {
+  const env = { SQUARE_ENV: 'production', SQUARE_ACCESS_TOKEN: 'x' } as never;
+  const stub = (order: unknown) => vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ order }))));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('COMPLETED、または支払いが付いて残りが0なら支払い済み', async () => {
+    const { orderPaid } = await import('../src/square/checkout');
+    stub({ state: 'COMPLETED' });
+    expect(await orderPaid(env, 'o1')).toBe(true);
+    stub({ state: 'OPEN', tenders: [{ id: 't' }], net_amount_due_money: { amount: 0, currency: 'JPY' } });
+    expect(await orderPaid(env, 'o1')).toBe(true);
+  });
+  it('未払い・取消は支払い済みにしない', async () => {
+    const { orderPaid } = await import('../src/square/checkout');
+    stub({ state: 'OPEN', net_amount_due_money: { amount: 12000, currency: 'JPY' } });
+    expect(await orderPaid(env, 'o1')).toBe(false);
+    stub({ state: 'OPEN', tenders: [], net_amount_due_money: { amount: 0, currency: 'JPY' } });
+    expect(await orderPaid(env, 'o1')).toBe(false);
+    stub({ state: 'CANCELED', tenders: [{ id: 't' }], net_amount_due_money: { amount: 0, currency: 'JPY' } });
+    expect(await orderPaid(env, 'o1')).toBe(false);
   });
 });

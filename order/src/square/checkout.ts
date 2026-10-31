@@ -24,6 +24,17 @@ export async function createCheckoutLink(env: Env, p: { refId: string; room: str
   return { id: r.payment_link.id, url: r.payment_link.url, orderId: r.payment_link.order_id };
 }
 
+/**
+ * 支払いリンクの注文が支払い済みか。支払いリンクの注文は支払い後も OPEN のまま残ることがあるので、
+ * COMPLETED に加えて「支払い（tender）が付いていて、残りの請求額が0」も支払い済みとみなす
+ */
+export async function orderPaid(env: Env, orderId: string) {
+  const r = await sq<{ order: { state: string; tenders?: unknown[]; net_amount_due_money?: { amount: number } } }>(env, `/v2/orders/${orderId}`);
+  const o = r.order;
+  if (o.state === 'CANCELED') return false;
+  return o.state === 'COMPLETED' || (Boolean(o.tenders?.length) && (o.net_amount_due_money?.amount ?? 1) === 0);
+}
+
 export async function deletePaymentLink(env: Env, id: string) {
   try {
     await sq(env, `/v2/online-checkout/payment-links/${id}`, { method: 'DELETE' });

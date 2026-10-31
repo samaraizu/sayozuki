@@ -9,7 +9,7 @@ Cloudflare Workers（無料枠）＋ Square（無料プラン・端末なし）�
 2. **滞在中**：ゲストがQRを読む → メニュー注文（部屋付け）・リクエスト・起こさないで・ご案内
 3. **お届け**：スタッフ画面に新着が音付きで出る（Slack通知も可）→「お届け完了」でゲスト画面に通知
 4. **精算**：スタッフが「精算する」→ Squareの支払いリンクを発行。ゲストは自分のスマホの「お会計」タブから支払う（スタッフ画面のQRでも可）
-5. **支払い完了**：SquareのWebhookで自動的に精算済み → 宛名入り領収書を発行できる
+5. **支払い完了**：Squareの注文を毎分確かめて自動的に精算済み（Webhookを登録すれば即時）→ 宛名入り領収書を発行できる
 
 現金で受け取ったときは「現金で受領済み」で締める。精算が済むと、その部屋は次のお客様向けにまっさらな状態に戻る。
 
@@ -59,6 +59,7 @@ npm run deploy
    - URL：`https://（本番ドメイン）/webhooks/square`
    - イベント：`payment.created` `payment.updated` `catalog.version.updated` `inventory.count.updated`
    - 表示される署名キーを `SQUARE_WEBHOOK_SIGNATURE_KEY` に入れる
+   - Webhookが未登録でも、支払い完了は `src/lib/settle.ts` が拾う（毎分のcron・スタッフ画面の一覧・お客様のお会計タブ・スタッフの「支払いを確認」ボタンから Orders API で確認）。Webhookは即時反映と取りこぼし防止のため
 4. Sandboxで通しテスト → 問題なければ `SQUARE_ENV` を `production` にして本番トークンへ差し替え
 
 ### 3. 商品を増やしたとき
@@ -70,7 +71,8 @@ npm run deploy
 ```bash
 cp .dev.vars.example .dev.vars   # STAFF_PIN を設定。MOCK_SQUARE=1 でSquare未接続のモックになる
 npm run db:local
-npm run dev                      # 下の「客室を足すとき」のSQLを --local で流してから http://127.0.0.1:8787/?r=（id） を開く
+npm run db:seed                  # 手元のD1だけに確認用の6部屋を入れる（本番には流さない）
+npm run dev                      # http://127.0.0.1:8787/?r=local-dev-201 と /staff/ を開く
 npm test
 ```
 
