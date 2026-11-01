@@ -1,5 +1,5 @@
 /**
- * 小夜月 予約管理 Webアプリ（第1段：7日カレンダー・手動入力）
+ * 小夜月 予約管理 Webアプリ（第1段：7日カレンダー・手動入力・HPからの問い合わせ）
  *
  * 予約台帳スプシの画面と入力だけを受け持つ。重複・定員超え・入湯税・
  * Googleカレンダー反映は既存GAS（Booking-System）の5分ごとの実行に任せる。
@@ -7,6 +7,9 @@
  * 台帳のルール（既存GASが見出し名で列を読み、行番号で差分を書くため）
  * - 列は見出し名でだけ触る
  * - 並べ替え・行挿入・行削除はしない。新規は末尾に足すだけ
+ *
+ * HPのご予約フォームの申し込みは、受付用GAS（booking/intake）が「問い合わせ」タブに入れる。
+ * ここでは一覧を出し、「予約にする」で手動入力に引き継ぐか、「見送り」で閉じる。
  *
  * スクリプトプロパティ（公開リポジトリなのでコードには書かない）
  * - SPREADSHEET_ID : 予約台帳のID
@@ -18,6 +21,10 @@ var SHEET_ROOMS = '部屋';
 var SHEET_IMPORT_LOG = 'ログ';
 var SHEET_AUDIT = '操作ログ';
 var AUDIT_HEADERS = ['日時', '誰が', '操作', '予約番号', '内容'];
+var SHEET_INQUIRIES = '問い合わせ';
+var INQUIRY_OPEN = '未対応';
+var INQUIRY_BOOKED = '予約済み';
+var INQUIRY_CLOSED = '見送り';
 var TZ = 'Asia/Tokyo';
 
 // 予約タブの見出し名 → 画面で使う名前
@@ -82,6 +89,7 @@ function getBoard() {
       user: email,
       rooms: readRooms_(ss),
       bookings: readBookings_(ss).map(publicBooking_),
+      inquiries: readInquiries_(ss).filter(function (q) { return q.status === INQUIRY_OPEN; }),
       lastImport: readLastImport_(ss)
     };
   });
@@ -101,6 +109,14 @@ function createBooking(form) {
 
       var inIso = Lib.toIso(form.checkIn);
       var outIso = Lib.toIso(form.checkOut);
+      var inquiryId = String(form.inquiryId || '').trim();
+      var inquiry = null;
+      if (inquiryId) {
+        inquiry = findInquiry_(ss, inquiryId);
+        if (!inquiry) throw new UserError('問い合わせ ' + inquiryId + ' が台帳に見つからない');
+        if (inquiry.status !== INQUIRY_OPEN) throw new UserError('この問い合わせはもう「' + inquiry.status + '」になってる。画面を開き直して');
+      }
+
       var bookings = readBookings_(ss);
       // 保存の直前に、もう一度空室を確かめる
       var clash = Lib.roomAvailability(
@@ -136,9 +152,39 @@ function createBooking(form) {
         '更新日時': nowText_(),
         'メモ': String(form.memo || '').trim()
       });
-      audit_(ss, email, '手動入力', no,
-        form.room + ' ' + inIso + '〜' + outIso + ' ' + Lib.toInt(form.people) + '名 ' + String(form.name).trim());
+      audit_(ss, email, inquiry ? '問い合わせから予約' : '手動入力', no,
+        form.room + ' ' + inIso + '〜' + outIso + ' ' + Lib.toInt(form.people) + '名 ' + String(form.name).trim() +
+        (inquiry ? '（' + inquiryId + '）' : ''));
+      if (inquiry) {
+        updateByHeader_(inquiry.sheet, inquiry.row, {
+          '状態': INQUIRY_BOOKED, '予約番号': no, '対応日時': nowText_(), '対応者': email
+        });
+      }
       return { no: no };
+    } finally {
+      lock.releaseLock();
+    }
+  });
+}
+
+// HPからの問い合わせを予約にせず閉じる（満室・連絡がつかない・いたずら など）
+function closeInquiry(arg) {
+  return api_(function (email) {
+    var id = String((arg && arg.id) || '').trim();
+    var reason = String((arg && arg.reason) || '').trim().slice(0, 200);
+    if (!id) throw new UserError('問い合わせが選ばれていない');
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(15000)) throw new UserError('混み合ってる。少し待ってもう一度押して');
+    try {
+      var ss = openBook_();
+      var inquiry = findInquiry_(ss, id);
+      if (!inquiry) throw new UserError('問い合わせ ' + id + ' が台帳に見つからない');
+      if (inquiry.status !== INQUIRY_OPEN) throw new UserError('この問い合わせはもう「' + inquiry.status + '」になってる');
+      updateByHeader_(inquiry.sheet, inquiry.row, {
+        '状態': INQUIRY_CLOSED, '対応日時': nowText_(), '対応者': email
+      });
+      audit_(ss, email, '問い合わせを見送り', '', id + ' ' + inquiry.name + (reason ? ' ' + reason : ''));
+      return { id: id };
     } finally {
       lock.releaseLock();
     }
@@ -226,6 +272,56 @@ function readBookings_(ss) {
       b.checkOut = Lib.toIso(b.checkOut);
       return b;
     });
+}
+
+// 問い合わせタブ（受付用GASが作る）。まだなければ空
+function readInquiries_(ss) {
+  var sheet = ss.getSheetByName(SHEET_INQUIRIES);
+  if (!sheet) return [];
+  return readTable_(sheet)
+    .filter(function (r) { return String(r['受付番号'] || '').trim(); })
+    .map(inquiryFromRow_)
+    .sort(function (a, b) { return a.receivedAt < b.receivedAt ? 1 : a.receivedAt > b.receivedAt ? -1 : 0; });
+}
+
+function inquiryFromRow_(r) {
+  function v(k) { return String(r[k] || '').trim(); }
+  return {
+    id: v('受付番号'), receivedAt: v('受付日時'), status: v('状態') || INQUIRY_OPEN, lang: v('言語'),
+    name: v('お名前'), email: v('メール'), tel: v('電話'),
+    checkIn: Lib.toIso(v('到着日')), nights: Lib.toInt(v('泊数')), guests: Lib.toInt(v('人数')),
+    room: v('希望の部屋'), meal: v('食事'), message: v('ご要望')
+  };
+}
+
+// 受付番号で行を探す。行番号はその場で引くだけで、どこにも持たない
+function findInquiry_(ss, id) {
+  var sheet = ss.getSheetByName(SHEET_INQUIRIES);
+  if (!sheet) return null;
+  var values = sheet.getDataRange().getDisplayValues();
+  var headers = values[0] || [];
+  var col = headers.indexOf('受付番号');
+  if (col < 0) throw new Error('問い合わせタブに「受付番号」の列がない');
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][col]).trim() !== id) continue;
+    var row = {};
+    headers.forEach(function (h, j) { if (h) row[h] = values[i][j]; });
+    var q = inquiryFromRow_(row);
+    q.sheet = sheet;
+    q.row = i + 1;
+    return q;
+  }
+  return null;
+}
+
+// 見出し名で1行の一部を書き換える（問い合わせタブ専用。予約タブには使わない）
+function updateByHeader_(sheet, row, record) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
+  Object.keys(record).forEach(function (key) {
+    var col = headers.indexOf(key);
+    if (col < 0) throw new Error('問い合わせタブに「' + key + '」の列がない');
+    sheet.getRange(row, col + 1).setValue(record[key]);
+  });
 }
 
 // 画面に渡す形。URLは http(s) のときだけ

@@ -1,6 +1,7 @@
 "use server";
 
 import { dictionaries, isLocale, type Locale } from "@/lib/i18n";
+import { sendToBookingLedger } from "@/lib/booking-intake";
 import { sendInquiryMail } from "@/lib/mail";
 import { rooms } from "@/lib/site";
 
@@ -56,8 +57,10 @@ export async function submitInquiry(
   if (Object.keys(errors).length) return { status: "error", errors, values, key: crypto.randomUUID() };
 
   const roomLabel = rooms.some((r) => r.name === room) ? room : "指定なし";
+  const id = `HP-${todayInJapan().replace(/-/g, "")}-${crypto.randomUUID().slice(0, 6)}`;
 
   const body = [
+    `受付番号：${id}`,
     `言語：${lang === "ja" ? "日本語" : `${dictionaries[lang].label}（${lang}）`}`,
     `お名前：${name}`,
     `メール：${email}`,
@@ -72,8 +75,29 @@ export async function submitInquiry(
     message || "（なし）",
   ].join("\n");
 
-  const result = await sendInquiryMail(`【小夜月】ご予約のお問い合わせ（${name} 様）`, body, email);
-  if ("failed" in result) {
+  // メール通知と予約台帳（問い合わせタブ）の両方に送る。片方でも届けば受け付けたことにする
+  const [mail, ledger] = await Promise.all([
+    sendInquiryMail(`【小夜月】ご予約のお問い合わせ（${name} 様）`, body, email),
+    sendToBookingLedger({
+      id,
+      lang,
+      name: name.slice(0, 100),
+      email: email.slice(0, 200),
+      tel: tel.slice(0, 50),
+      checkin: /^\d{4}-\d{2}-\d{2}$/.test(checkin) ? checkin : "",
+      nights: Math.min(Math.max(parseInt(nights, 10) || 1, 1), 30),
+      guests: Math.min(Math.max(parseInt(guests, 10) || 1, 1), 20),
+      room: roomLabel === "指定なし" ? "" : roomLabel,
+      meal: Object.hasOwn(MEAL_LABELS, meal) ? meal : "",
+      message: message.slice(0, 2000),
+    }),
+  ]);
+
+  // どちらにも届いていないのに「承りました」と出すと、申し込みが黙って消える。
+  // 本番ではエラーにする（next dev のときだけ、ログに出して受け付けたことにする）
+  const delivered = mail.sent || ledger.saved;
+  if (!delivered && ("failed" in mail || "failed" in ledger || process.env.NODE_ENV === "production")) {
+    console.error(`[inquiry] 申し込みをどこにも届けられませんでした（${id}）`);
     return {
       status: "error",
       values,

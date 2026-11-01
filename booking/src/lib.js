@@ -208,6 +208,43 @@ function sayozukiLib() {
     return '';
   }
 
+  // HPの客室名（例「201号室」）と台帳の部屋名（例「201」）を突き合わせる。見つからなければ ''
+  function matchRoom(wish, rooms) {
+    var w = String(wish || '').trim();
+    if (!w) return '';
+    var bare = w.replace(/号室$/, '');
+    for (var i = 0; i < rooms.length; i++) {
+      if (rooms[i].name === w || rooms[i].name === bare) return rooms[i].name;
+    }
+    return '';
+  }
+
+  /**
+   * HPからの問い合わせを手動入力の初期値にする。
+   * 過ぎた日・日付なしは入れない（今日から選び直す）。部屋は空いていなければ画面側で外れる
+   */
+  function inquiryToForm(q, rooms, todayIso) {
+    var inIso = toIso(q.checkIn);
+    if (inIso && todayIso && inIso < todayIso) inIso = '';
+    var nights = Math.min(Math.max(toInt(q.nights), 1), 60);
+    var tel = String(q.tel || '').trim();
+    var email = String(q.email || '').trim();
+    var head = 'HP問い合わせ ' + q.id + (q.lang && q.lang !== 'ja' ? '（' + q.lang + '）' : '');
+    var meal = String(q.meal || '');
+    return {
+      inquiryId: q.id,
+      checkIn: inIso,
+      checkOut: inIso ? addDays(inIso, nights) : '',
+      people: Math.max(1, toInt(q.guests)),
+      room: matchRoom(q.room, rooms),
+      name: String(q.name || '').trim().slice(0, 100),
+      contact: (tel ? tel + ' / ' + email : email).slice(0, 200),
+      breakfast: meal === '朝食付き' || meal === '1泊2食付き',
+      dinner: meal === '1泊2食付き',
+      memo: (q.message ? head + '\n' + q.message : head).slice(0, 1000)
+    };
+  }
+
   return {
     CANCELLED: CANCELLED,
     SELLABLE: SELLABLE,
@@ -227,7 +264,9 @@ function sayozukiLib() {
     roomAvailability: roomAvailability,
     layoutWeek: layoutWeek,
     makeBookingNo: makeBookingNo,
-    validateManual: validateManual
+    validateManual: validateManual,
+    matchRoom: matchRoom,
+    inquiryToForm: inquiryToForm
   };
 }
 

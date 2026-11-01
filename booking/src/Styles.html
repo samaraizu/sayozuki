@@ -39,7 +39,7 @@
   .loading, .fail { padding: 24px 16px; color: var(--muted); }
   .fail { color: var(--red-soft); }
 
-  .bottomnav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--line); background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); z-index: 5; }
+  .bottomnav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); z-index: 5; }
   .bottomnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 11px; }
   .bottomnav a[aria-current="page"] { color: var(--gold); font-weight: 700; }
   @media (min-width: 900px) {
@@ -48,6 +48,10 @@
     .bottomnav { display: none; }
     .view { padding-bottom: 40px; }
   }
+
+  .badge { min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  .bottomnav .ico { position: relative; display: flex; }
+  .bottomnav .badge { position: absolute; top: -6px; left: 14px; margin: 0; }
 
   /* ---------- カレンダー ---------- */
   .cal-head { padding: 8px 16px 4px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; }
@@ -112,6 +116,37 @@
   .card .m { font-size: 12px; color: var(--muted); }
   .card button { all: unset; cursor: pointer; display: block; }
 
+  .inbox-alert { background: #2E2516; border-color: #8C6D2E; color: var(--warn); }
+  .inbox-alert strong { color: var(--gold-soft); }
+  .inbox-alert span.s { color: var(--warn); }
+
+  /* ---------- 問い合わせ ---------- */
+  .inbox { padding: 16px; display: flex; flex-direction: column; gap: 14px; max-width: 760px; }
+  @media (min-width: 900px) { .inbox { padding: 24px; } }
+  .inbox h1 { margin: 0; font-size: 24px; }
+  .empty { padding: 28px 16px; border-radius: 16px; border: 1px dashed var(--line-2); color: var(--muted); text-align: center; font-size: 14px; }
+  .qcard { padding: 18px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+  .qhead { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+  .qhead h2 { margin: 0; font-size: 18px; overflow-wrap: anywhere; }
+  .qhead .when { margin-left: auto; font-size: 12px; color: var(--faint); }
+  .chip.lang { background: #2B3142; color: var(--text); font-weight: 500; }
+  .qcard dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+  .qcard dt { color: var(--muted); font-size: 13px; }
+  .qcard dd { margin: 0; overflow-wrap: anywhere; }
+  .qmsg { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--panel-2); font-size: 14px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .qfit { font-size: 13px; font-weight: 700; }
+  .qfit.ok { color: var(--ok); }
+  .qfit.ng { color: var(--red-soft); }
+  .qfit.unk { color: var(--warn); }
+  .qactions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .qactions .save { width: auto; flex: 1 1 200px; height: 48px; font-size: 15px; }
+  .ghost { height: 48px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line-2); background: transparent; font-size: 14px; cursor: pointer; }
+  .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ghost.danger { border-color: #7A3A40; color: var(--red-soft); }
+  .qclose { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .qclose .input { flex: 1 1 220px; }
+  .from-inq { padding: 10px 14px; border-radius: 10px; background: #2E2516; color: var(--warn); font-size: 14px; }
+
   /* ---------- 予約の中身 ---------- */
   .detail { width: min(480px, calc(100% - 24px)); max-height: calc(100% - 48px); padding: 0; border: 1px solid var(--line-2); border-radius: 16px; background: var(--panel); color: var(--text); }
   .detail::backdrop { background: rgba(5, 7, 10, 0.7); }
@@ -143,7 +178,7 @@
   .field label, .lbl { font-size: 13px; font-weight: 500; }
   .input { height: 48px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg); font-size: 16px; width: 100%; color-scheme: dark; }
   textarea.input { height: auto; padding: 12px 14px; resize: vertical; }
-  .input:focus, .rcard:focus-visible, .seg:focus-visible, .icon-btn:focus-visible, .bar:focus-visible, .slot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .input:focus, .ghost:focus-visible, .save:focus-visible, .rcard:focus-visible, .seg:focus-visible, .icon-btn:focus-visible, .bar:focus-visible, .slot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .stepper { display: flex; align-items: center; gap: 4px; }
   .stepper button { width: 48px; height: 48px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg); font-size: 20px; cursor: pointer; }
   .stepper button:disabled { opacity: 0.4; cursor: not-allowed; }

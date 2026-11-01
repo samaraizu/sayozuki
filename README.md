@@ -52,8 +52,20 @@ GitHub の `main` に入ると、Cloudflare の Workers Builds が2つの Worker
 
 ## ご予約フォーム
 
-直接のお問い合わせは Resend でメール通知します。`.env.local.example` を `.env.local` にコピーして値を入れてください。
-未設定のあいだは送信せず、内容をサーバーのログに出します。
+直接のお問い合わせは、Resend のメール通知と、予約管理の台帳（スプシの「問い合わせ」タブ）の両方に送ります。
+台帳に入った問い合わせは、予約管理の画面（`booking/`）の「問い合わせ」から「予約にする」で手動入力に引き継げます。
+受け口の GAS の作り方は `booking/README.md` の「HPの問い合わせを台帳に入れる」。
+
+| 値 | 用途 |
+| --- | --- |
+| `RESEND_API_KEY` `INQUIRY_MAIL_TO` `INQUIRY_MAIL_FROM` | メール通知 |
+| `BOOKING_INTAKE_URL` `BOOKING_INTAKE_SECRET` | 台帳への連携（受付用 GAS の `/exec` と合言葉） |
+
+本番は Worker の secret（`npx wrangler secret put 名前`）、手元は `.env.local`（`.env.local.example` をコピー）に入れる。
+入っているかは `npx wrangler secret list --name sayozuki` で確かめられる。
+
+どちらか片方に届けば完了画面を出す。**本番でどちらにも届かなかったときはエラーを出す**（以前は未設定でも完了画面が出て、申し込みが黙って消えていた）。
+`next dev` のときだけは、未設定でもログに出して完了画面にする。
 
 ## ドメイン
 

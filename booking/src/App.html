@@ -14,7 +14,8 @@
     view: 'cal',
     weekStart: '',
     form: null,
-    saving: false
+    saving: false,
+    closing: '' // 見送りの理由を入れている問い合わせの受付番号
   };
 
   var $view = document.getElementById('view');
@@ -118,6 +119,7 @@
     $view.textContent = '';
     if (!state.board) { append($view, h('p', { class: 'loading' }, '読み込み中…')); return; }
     if (state.view === 'new') renderForm();
+    else if (state.view === 'inbox') renderInbox();
     else renderCalendar();
   }
 
@@ -130,8 +132,19 @@
         return;
       }
       state.board = res;
+      if (!state.board.inquiries) state.board.inquiries = [];
       if (!state.weekStart) state.weekStart = res.today;
+      updateBadges();
       render();
+    });
+  }
+
+  function updateBadges() {
+    var n = state.board ? state.board.inquiries.length : 0;
+    document.querySelectorAll('[data-inbox-count]').forEach(function (el) {
+      el.textContent = n > 99 ? '99+' : String(n);
+      el.hidden = n === 0;
+      el.setAttribute('aria-label', '未対応 ' + n + '件');
     });
   }
 
@@ -167,6 +180,16 @@
           svg(ICON_NEXT, 18, '#FFC2C2')
         ));
       });
+
+    if (b.inquiries.length) {
+      append($view, h('button', { type: 'button', class: 'alert inbox-alert', onclick: function () { go('inbox'); } },
+        h('span', { class: 'grow' },
+          h('strong', null, 'HPからの問い合わせ ' + b.inquiries.length + '件'),
+          h('span', { class: 's' }, '空室を見て、予約にするか見送る')
+        ),
+        svg(ICON_NEXT, 18, '#F3DDA0')
+      ));
+    }
 
     var needCount = b.bookings.filter(function (x) { return Lib.isActive(x) && x.checkOut > b.today && Lib.needsInput(x); }).length;
     append($view, h('div', { class: 'status' },
@@ -293,6 +316,89 @@
     ));
   }
 
+  // ---------- HPからの問い合わせ ----------
+
+  var LANG_LABEL = { ja: '日本語', en: '英語', zh: '中国語', vi: 'ベトナム語', th: 'タイ語', ko: '韓国語' };
+
+  // 希望の日程で入れそうかの目安。保存のときにサーバーでもう一度確かめる
+  function inquiryFit(q) {
+    var b = state.board;
+    var f = Lib.inquiryToForm(q, b.rooms, b.today);
+    if (!f.checkIn) return { cls: 'unk', text: q.checkIn ? '到着日が過ぎてる' : '到着日の指定なし' };
+    var avail = Lib.roomAvailability(b.rooms, b.bookings, f.checkIn, f.checkOut, f.people);
+    var free = avail.filter(function (a) { return a.available; });
+    if (f.room) {
+      var mine = avail.filter(function (a) { return a.name === f.room; })[0];
+      if (mine && mine.available) return { cls: 'ok', text: '希望の' + f.room + 'が空いてる' };
+      return free.length
+        ? { cls: 'unk', text: '希望の' + f.room + 'は' + (mine ? mine.status : '不明') + '。ほかに空き' + free.length + '室' }
+        : { cls: 'ng', text: 'この日程は空きなし' };
+    }
+    return free.length ? { cls: 'ok', text: '空き' + free.length + '室' } : { cls: 'ng', text: 'この日程は空きなし' };
+  }
+
+  function renderInbox() {
+    var b = state.board;
+    var wrap = h('div', { class: 'inbox' },
+      h('div', null,
+        h('h1', null, '問い合わせ'),
+        h('p', { class: 'lead' }, 'HPのご予約フォームから届いた未対応のもの。返事はメールで。予約にすると台帳に直販で入り、ここから消える')));
+    if (!b.inquiries.length) {
+      append(wrap, h('p', { class: 'empty' }, '未対応の問い合わせはない'));
+      append($view, wrap);
+      return;
+    }
+    b.inquiries.forEach(function (q) { append(wrap, inquiryCard(q)); });
+    append($view, wrap);
+  }
+
+  function inquiryCard(q) {
+    var fit = inquiryFit(q);
+    var dates = q.checkIn
+      ? Lib.shortLabel(q.checkIn) + ' から ' + (q.nights || 1) + '泊'
+      : '未定';
+    var rows = [
+      ['日程', dates],
+      ['人数', (q.guests || '—') + '名'],
+      ['希望の部屋', q.room || '指定なし'],
+      ['食事', q.meal || '未選択'],
+      ['メール', q.email ? h('a', { href: 'mailto:' + q.email }, q.email) : '—'],
+      ['電話', q.tel ? h('a', { href: 'tel:' + q.tel.replace(/[^0-9+]/g, '') }, q.tel) : '—']
+    ];
+    var closing = state.closing === q.id;
+    var reason = null;
+    var card = h('article', { class: 'qcard', 'aria-labelledby': 'q-' + q.id },
+      h('div', { class: 'qhead' },
+        h('h2', { id: 'q-' + q.id }, q.name || '（名前なし）'),
+        q.lang && q.lang !== 'ja' ? h('span', { class: 'chip lang' }, LANG_LABEL[q.lang] || q.lang) : null,
+        h('span', { class: 'when' }, q.receivedAt + ' 受付')
+      ),
+      h('span', { class: 'qfit ' + fit.cls }, fit.text),
+      h('dl', null, rows.map(function (r) { return [h('dt', null, r[0]), h('dd', null, r[1])]; })),
+      q.message ? h('p', { class: 'qmsg' }, q.message) : null,
+      h('div', { class: 'qactions' },
+        h('button', { type: 'button', class: 'save', onclick: function () { openForm(Lib.inquiryToForm(q, state.board.rooms, state.board.today)); } }, '予約にする'),
+        h('button', { type: 'button', class: 'ghost', 'aria-expanded': closing ? 'true' : 'false', onclick: function () { state.closing = closing ? '' : q.id; render(); } }, '見送り')
+      ),
+      closing ? h('div', { class: 'qclose' },
+        reason = h('input', { class: 'input', type: 'text', maxlength: '200', placeholder: '理由（任意）満室、連絡がつかない など', 'aria-label': '見送る理由' }),
+        h('button', { type: 'button', class: 'ghost danger', onclick: function (e) { closeInquiry(q, reason.value, e.currentTarget); } }, '見送る')
+      ) : null
+    );
+    if (closing) setTimeout(function () { reason.focus(); }, 0);
+    return card;
+  }
+
+  function closeInquiry(q, reason, btn) {
+    btn.disabled = true;
+    call('closeInquiry', { id: q.id, reason: reason }).then(function (res) {
+      if (!res.ok) { btn.disabled = false; toast(res.message, true); return; }
+      state.closing = '';
+      toast(q.name + ' の問い合わせを見送りにした');
+      load();
+    });
+  }
+
   // ---------- 予約の中身（第1段は見るだけ） ----------
 
   function openDetail(b) {
@@ -333,14 +439,16 @@
   function openForm(preset) {
     var today = state.board ? state.board.today : '';
     var inIso = preset.checkIn || today;
+    var maxPeople = state.board ? Math.max.apply(null, state.board.rooms.map(function (r) { return r.capacity; }).concat([1])) : 99;
     state.form = {
+      inquiryId: preset.inquiryId || '',
       checkIn: inIso,
       checkOut: preset.checkOut || (inIso ? Lib.addDays(inIso, 1) : ''),
-      people: 2,
+      people: Math.min(preset.people || 2, maxPeople),
       room: preset.room || '',
-      name: '', contact: '', arrival: '16:00ごろ',
+      name: preset.name || '', contact: preset.contact || '', arrival: '16:00ごろ',
       price: '', payment: '当日Square',
-      breakfast: false, dinner: false, memo: ''
+      breakfast: !!preset.breakfast, dinner: !!preset.dinner, memo: preset.memo || ''
     };
     go('new');
   }
@@ -358,6 +466,7 @@
         h('h1', null, '手動入力'),
         h('p', { class: 'lead' }, 'Airbnb・楽天以外の予約はここで入れる。入れた内容は「入力内容」にまとまる')
       ),
+      f.inquiryId ? h('p', { class: 'from-inq' }, 'HPの問い合わせ ' + f.inquiryId + ' から。保存すると問い合わせは「予約済み」になる。お客様への返事はメールで') : null,
       step(1, '日程と人数', null,
         h('div', { class: 'row' },
           h('div', { class: 'field' },
@@ -534,7 +643,8 @@
     call('createBooking', {
       checkIn: f.checkIn, checkOut: f.checkOut, people: f.people, room: f._picked,
       name: f.name, contact: f.contact, arrival: f.arrival,
-      price: f.price, payment: f.payment, breakfast: f.breakfast, dinner: f.dinner, memo: f.memo
+      price: f.price, payment: f.payment, breakfast: f.breakfast, dinner: f.dinner, memo: f.memo,
+      inquiryId: f.inquiryId
     }).then(function (res) {
       state.saving = false;
       if (!res.ok) { toast(res.message, true); state.updateForm(); return; }

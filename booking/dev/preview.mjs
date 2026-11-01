@@ -38,16 +38,32 @@ const bookings = [
   b('Airbnb', '月山', -2, 0, 'Test Guest D', 2),
 ];
 
+// 架空の問い合わせ（HPのご予約フォームから）
+const q = (id, i, extra) => ({
+  id: `HP-${today.replace(/-/g, '')}-${id}`, receivedAt: `${today.replace(/-/g, '/')} 10:0${i}`, status: '未対応',
+  lang: 'ja', email: `test${i}@example.com`, tel: '', nights: 1, guests: 2, room: '', meal: '素泊まり', message: '', ...extra,
+});
+const inquiries = [
+  q('a1b2c3', 1, { name: 'テスト 四郎', checkIn: d(6), nights: 2, room: '蔵王', meal: '1泊2食付き', tel: '090-0000-0001', message: '記念日なので静かな部屋だとうれしいです。' }),
+  q('d4e5f6', 2, { name: 'Test Guest E', lang: 'en', checkIn: d(3), room: '201号室', guests: 3, message: 'Is there parking?' }),
+  q('0a0b0c', 3, { name: 'テスト 五郎', checkIn: '', guests: 1 }),
+];
+
 const mock = `<script>
 window.google = { script: { run: (function () {
-  var data = ${JSON.stringify({ today, user: 'preview@example.com', rooms, bookings, lastImport: today.replace(/-/g, '/') + ' 11:12' })};
+  var data = ${JSON.stringify({ today, user: 'preview@example.com', rooms, bookings, lastImport: today.replace(/-/g, '/') + ' 11:12', inquiries })};
   var api = {
     getBoard: function () { return Object.assign({ ok: true }, JSON.parse(JSON.stringify(data))); },
     createBooking: function (f) {
       var no = 'SZ-' + data.today.replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 9000) + 1000);
       data.bookings.push({ channel: '直販', no: no, status: '確定', room: f.room, checkIn: f.checkIn, checkOut: f.checkOut,
         adults: String(f.people), name: f.name, contact: f.contact, arrival: f.arrival, payment: Lib.PAYMENTS[f.payment], memo: f.memo });
+      if (f.inquiryId) data.inquiries = data.inquiries.filter(function (q) { return q.id !== f.inquiryId; });
       return { ok: true, no: no };
+    },
+    closeInquiry: function (a) {
+      data.inquiries = data.inquiries.filter(function (q) { return q.id !== a.id; });
+      return { ok: true, id: a.id };
     }
   };
   function runner(ok, ng) {
