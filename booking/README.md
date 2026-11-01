@@ -84,6 +84,8 @@
 
 ## 更新のしかた
 
+`booking/` を触るPRでは、GitHub Actions（`.github/workflows/booking.yml`）が `npm test` を自動で回す。GASへの反映は下の手順で手元から。
+
 ```bash
 cd booking
 npm test

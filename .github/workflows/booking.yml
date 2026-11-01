@@ -1,0 +1,30 @@
+# 予約管理アプリ（booking/）のテスト。booking/ を触ったPRと main への push で回す。
+# GAS へのデプロイ（clasp）は台帳の持ち主のアカウントが要るので、ここではやらない。
+name: booking
+
+on:
+  pull_request:
+    paths:
+      - "booking/**"
+      - ".github/workflows/booking.yml"
+  push:
+    branches: [main]
+    paths:
+      - "booking/**"
+      - ".github/workflows/booking.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
