@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "db:local": "wrangler d1 migrations apply sayozuki-order --local",
+    "db:seed": "wrangler d1 execute sayozuki-order --local --file scripts/seed-local.sql",
     "db:remote": "wrangler d1 migrations apply sayozuki-order --remote",
     "deploy": "wrangler deploy",
     "test": "vitest run",

@@ -1,9 +1,8 @@
 import type { Env } from '../env';
 import { verifySquareSignature } from '../lib/webhook';
 import { notifyStaff } from '../lib/notify';
-import { nowIso } from '../lib/time';
+import { markSettled } from '../lib/settle';
 import { json } from '../lib/util';
-import { closeChat } from '../lib/chat';
 import { desk } from './guest';
 
 export async function handleSquareWebhook(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
@@ -31,15 +30,8 @@ export async function handleSquareWebhook(req: Request, env: Env, url: URL, ctx:
       )
         .bind(pay.order_id)
         .first<{ id: string; room_id: string; name: string }>();
-      if (s) {
-        await env.DB.batch([
-          env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'square', settled_at = ? WHERE id = ?").bind(nowIso(), s.id),
-          env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(s.room_id),
-          closeChat(env, s.room_id)
-        ]);
-        await desk(env).purgeMenu();
-        ctx.waitUntil(notifyStaff(env, `✅ ${s.name} お支払い完了`));
-      }
+      // 定期の確認で先に済みになっていれば、通知は重ねない
+      if (s && (await markSettled(env, s.id, s.room_id, 'square'))) ctx.waitUntil(notifyStaff(env, `✅ ${s.name} お支払い完了`));
     }
   }
 
