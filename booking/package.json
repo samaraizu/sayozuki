@@ -1,0 +1,13 @@
+{
+  "name": "sayozuki-booking",
+  "version": "1.0.0",
+  "description": "小夜月 予約管理 Webアプリ（Google Apps Script・予約台帳スプシを読み書き）",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "preview": "node dev/preview.mjs && python3 -m http.server 4178 --directory dev",
+    "push": "clasp push",
+    "deploy": "clasp push && clasp create-deployment --deploymentId \"$BOOKING_DEPLOYMENT_ID\" --description \"$(git log -1 --format=%h)\""
+  }
+}

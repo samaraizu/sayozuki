@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "order"]
+  "exclude": ["node_modules", "order", "booking", ".open-next", ".wrangler"]
 }

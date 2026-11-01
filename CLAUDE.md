@@ -11,9 +11,12 @@ GitHub は `samaraizu/sayozuki`。**public リポジトリなので、原価・�
 
 - 宿情報（客室・料金・温泉・住所・予約URL）の単一の出所は `lib/site.ts`。
   画面側に数値や住所を直書きしない。更新場所の一覧は README.md の表にある。
+- HP は Cloudflare Workers（Worker「sayozuki」、OpenNext）で公開する。Vercel からは移行済み。
+  デプロイは `npm run deploy`、設定は `wrangler.jsonc` / `open-next.config.ts`。
 - 宿のドメインは sayozuki.com、お取り寄せは shop.sayozuki.com。`proxy.ts` で振り分ける。
   `NEXT_PUBLIC_SPLIT_DOMAINS=true` は **DNS がつながってから** 入れる
   （先に入れると本番のアクセスが仮ページへ飛ぶ）。
+  ビルド時の値なので Worker の変数ではなくビルド環境に入れる。
 - `order/` は客室オーダー（Cloudflare Workers + Square）。HPとは別アプリで、`order/` の中だけでビルド・デプロイする。
   ルートの tsconfig と ESLint の対象から外してある。手順は `order/README.md`。
 - 支給写真は Google Drive の共有リンクで届く。curl で取得して `public/images/` に置き、

@@ -1,0 +1,4 @@
+# スクリプトIDはリポジトリに置かない（.clasp.json.example をコピーして使う）
+.clasp.json
+# ダミーデータ入りのプレビュー
+dev/preview.html
