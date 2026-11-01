@@ -114,5 +114,8 @@ http://localhost:4178/preview.html にダミーデータで出る。保存も画
 - **Webプッシュ通知とPWA化**：HtmlService は service worker を登録できないので不可。通知は当面、既存GASのGmail通知。プッシュが必須になったら、Sheets API 経由で別ホスティングに移す
 - **予約の編集・キャンセル**：第1段は見るだけ。台帳で直す
 - **キャンセル規定**：未定なので画面に出さない
-- **楽天を閉じて／Airbnbを更新して の通知**：既存GAS側で出しているか確認が要る
-- **既存GAS（Booking-System）のコード**：まだリポジトリにない。`clasp clone <スクリプトID>` で別フォルダに取り込む予定（IDは引き継ぎメモにある）
+- **楽天を閉じて／Airbnbを更新して の通知**：出していない。当面はAirbnbだけ自動取り込みで、他の媒体の在庫を閉じるのは手作業（2026-11-02 決定）
+
+## 既存GAS（Booking-System）
+
+コードの写しと説明は [`booking-system/`](booking-system/README.md)。札の意味、タブの中身、スクリプトプロパティ、本番への反映のしかたはそこにある。テストは `test/booking-system*.test.mjs` で、`npm test` に含まれる。
