@@ -14,6 +14,11 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // 客室オーダー（Cloudflare Workers）は別アプリ
     "order/**",
+    // 予約管理（Google Apps Script）も別アプリ
+    "booking/**",
+    // OpenNext / wrangler のビルド成果物
+    ".open-next/**",
+    ".wrangler/**",
   ]),
 ]);
 

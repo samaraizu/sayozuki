@@ -35,10 +35,12 @@ export function proxy(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  if (process.env.NEXT_PUBLIC_SPLIT_DOMAINS === "true" && process.env.VERCEL_ENV === "production") {
+  // ローカル（next dev / wrangler dev）では転送しない
+  const local = host === "localhost" || host === "127.0.0.1";
+  if (process.env.NEXT_PUBLIC_SPLIT_DOMAINS === "true" && !local) {
     // 宿側の /shop はお取り寄せのドメインへ
     if (underShop) return NextResponse.redirect(`https://${SHOP_HOST}${stripShop(pathname)}${search}`, 308);
-    // vercel.app や www で来た本番アクセスは sayozuki.com へまとめる
+    // workers.dev や www で来たアクセスは sayozuki.com へまとめる
     if (host !== INN_HOST) return NextResponse.redirect(`https://${INN_HOST}${pathname}${search}`, 308);
   }
 

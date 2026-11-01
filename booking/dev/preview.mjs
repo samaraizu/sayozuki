@@ -1,0 +1,73 @@
+// GAS なしで画面を確かめるためのプレビュー。
+// src/Index.html のテンプレートを組み立て、google.script.run をダミーデータに差し替える。
+// 使い方: node dev/preview.mjs [出力先.html]   （出力は .gitignore 済みの dev/preview.html が既定）
+import { readFileSync, writeFileSync } from 'node:fs';
+import vm from 'node:vm';
+
+const src = (name) => readFileSync(new URL(`../src/${name}`, import.meta.url), 'utf8');
+const ctx = {};
+vm.createContext(ctx);
+vm.runInContext(src('lib.js'), ctx);
+const Lib = ctx.Lib;
+
+const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+const d = (n) => Lib.addDays(today, n);
+const rooms = [
+  { name: '301', capacity: 4, state: '販売可' },
+  { name: '302', capacity: 1, state: '販売可' },
+  { name: '月山', capacity: 4, state: '販売可' },
+  { name: '蔵王', capacity: 4, state: '販売可' },
+  { name: '201', capacity: 5, state: '準備中' },
+  { name: '303', capacity: 1, state: '準備中' },
+];
+// 架空のゲスト
+const b = (channel, room, i, o, name, adults, extra = {}) => ({
+  channel, room, checkIn: d(i), checkOut: d(o), name, adults: String(adults), status: '確定',
+  no: channel === '直販' ? `SZ-TEST-${room}${i}` : `HMTEST${room}${i}`, payment: channel === '直販' ? '現地でSquare' : '媒体で決済済',
+  ...extra,
+});
+const bookings = [
+  b('Airbnb', '301', -1, 2, 'Test Guest A', 2),
+  b('直販', '301', 3, 5, 'テスト 一郎', 2, { contact: '090-0000-0000', arrival: '16:00ごろ' }),
+  b('Airbnb', '302', 1, 4, 'Test Guest B', 1),
+  b('楽天', '月山', 2, 3, 'テスト 花子', 2),
+  b('Airbnb', '月山', 4, 9, 'Reserved', 0),
+  b('直販', '蔵王', 0, 1, 'テスト 次郎', 3, { arrival: '15:00ごろ' }),
+  b('Airbnb', '蔵王', 2, 5, 'Test Guest C', 2),
+  b('直販', '蔵王', 3, 4, 'テスト 三郎', 2),
+  b('Airbnb', '月山', -2, 0, 'Test Guest D', 2),
+];
+
+const mock = `<script>
+window.google = { script: { run: (function () {
+  var data = ${JSON.stringify({ today, user: 'preview@example.com', rooms, bookings, lastImport: today.replace(/-/g, '/') + ' 11:12' })};
+  var api = {
+    getBoard: function () { return Object.assign({ ok: true }, JSON.parse(JSON.stringify(data))); },
+    createBooking: function (f) {
+      var no = 'SZ-' + data.today.replace(/-/g, '') + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+      data.bookings.push({ channel: '直販', no: no, status: '確定', room: f.room, checkIn: f.checkIn, checkOut: f.checkOut,
+        adults: String(f.people), name: f.name, contact: f.contact, arrival: f.arrival, payment: Lib.PAYMENTS[f.payment], memo: f.memo });
+      return { ok: true, no: no };
+    }
+  };
+  function runner(ok, ng) {
+    return new Proxy({}, { get: function (_, k) {
+      if (k === 'withSuccessHandler') return function (fn) { return runner(fn, ng); };
+      if (k === 'withFailureHandler') return function (fn) { return runner(ok, fn); };
+      return function (arg) { setTimeout(function () { ok(api[k](arg)); }, 300); };
+    } });
+  }
+  return runner(function () {}, function () {});
+})() } };
+</script>`;
+
+let html = src('Index.html')
+  // 本番は doGet の addMetaTag で入る
+  .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">')
+  .replace("<?!= include_('Styles') ?>", src('Styles.html'))
+  .replace("<?!= include_('App') ?>", mock + src('App.html'))
+  .replace('<?!= libSource_() ?>', 'var Lib = (' + ctx.sayozukiLib.toString() + ')();');
+if (/<\?/.test(html)) throw new Error('組み立て漏れのスクリプトレットがある');
+const out = process.argv[2] || new URL('./preview.html', import.meta.url).pathname;
+writeFileSync(out, html);
+console.log(out);
