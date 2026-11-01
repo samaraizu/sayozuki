@@ -21,6 +21,19 @@ npm run deploy       # ビルドして本番へ
 - ドメイン接続までの仮のURLは https://sayozuki.toneclown17.workers.dev 。
 - 客室オーダー（`order/`）は別の Worker「sayozuki-order」。`order/` の中でデプロイする。
 
+### 自動デプロイ（Workers Builds）
+
+GitHub の `main` に入ると、Cloudflare の Workers Builds が2つの Worker をそれぞれビルドして本番に出す。
+設定はダッシュボードの各 Worker → Settings → Builds にある（リポジトリには入っていない）。
+
+| Worker | ルート | ビルドコマンド | デプロイコマンド |
+| --- | --- | --- | --- |
+| sayozuki | `/` | `npx opennextjs-cloudflare build` | `npx opennextjs-cloudflare deploy` |
+| sayozuki-order | `order` | なし | `npx wrangler deploy` |
+
+- **`main` 以外のブランチのビルド（Previews）は2つとも止めている。** `npx wrangler preview` は Wrangler の設定に `previews` ブロックがないと失敗し、客室オーダーで使うには本番と別の D1 と Square のサンドボックスを用意する必要があるため。PR でビルドを確かめたくなったら、それを用意してから Settings → Builds → Previews Base でオンにする。
+- sayozuki のビルドコマンドを `npx wrangler deploy` にしないこと。OpenNext のプロジェクトだと Wrangler がビルドせずにデプロイしようとして失敗する。
+
 ## 更新する場所
 
 | 変えたいもの | ファイル |
