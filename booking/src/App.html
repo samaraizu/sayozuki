@@ -3,7 +3,6 @@
   'use strict';
 
   var DAYS = 7;
-  var MEALS_FROM = '2026-12-01'; // 食事は12/1以降のチェックインから
   var TAX_PER_NIGHT = 300; // 入湯税の目安（2026/4/1以降の予約）。正式な額は台帳側で計算
   var ARRIVALS = ['15:00ごろ', '16:00ごろ', '17:00ごろ', '18:00以降', '未定'];
   var PAYS = ['当日Square', 'あとで決める'];
@@ -470,17 +469,11 @@
       refs.stay.textContent = price > 0 && okDates ? yen(stay) : '—';
       refs.tax.textContent = okDates ? f.people + '名×' + nights + '泊＝' + yen(tax) : '—';
 
-      var mealsOn = okDates && inIso >= MEALS_FROM;
-      if (!mealsOn) { f.breakfast = false; f.dinner = false; }
       refs.meals.textContent = '';
-      append(refs.meals, h('span', { class: 'lbl', style: mealsOn ? '' : 'color: var(--faint)' }, '食事'));
-      if (mealsOn) {
-        append(refs.meals,
-          h('button', { type: 'button', class: 'seg', 'aria-pressed': f.breakfast ? 'true' : 'false', onclick: function () { set('breakfast', !f.breakfast); } }, '朝食'),
-          h('button', { type: 'button', class: 'seg', 'aria-pressed': f.dinner ? 'true' : 'false', onclick: function () { set('dinner', !f.dinner); } }, '夕食'));
-      } else {
-        append(refs.meals, h('span', { class: 'note', style: 'font-size: 13px' }, md(MEALS_FROM) + '以降のチェックインから選べる（今は素泊まり）'));
-      }
+      append(refs.meals,
+        h('span', { class: 'lbl' }, '食事'),
+        h('button', { type: 'button', class: 'seg', 'aria-pressed': f.breakfast ? 'true' : 'false', onclick: function () { set('breakfast', !f.breakfast); } }, '朝食'),
+        h('button', { type: 'button', class: 'seg', 'aria-pressed': f.dinner ? 'true' : 'false', onclick: function () { set('dinner', !f.dinner); } }, '夕食'));
 
       var meals = [f.breakfast ? '朝食' : '', f.dinner ? '夕食' : ''].filter(Boolean);
       var rows = [
