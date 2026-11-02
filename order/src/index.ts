@@ -1,5 +1,6 @@
 import type { Env } from './env';
 import { HttpError, json } from './lib/util';
+import { syncPendingPayments } from './lib/settle';
 import { handleGuest } from './routes/guest';
 import { handleStaff } from './routes/staff';
 import { handleSquareWebhook } from './routes/webhook';
@@ -19,5 +20,10 @@ export default {
       console.error(e);
       return json({ error: 'internal' }, 500);
     }
+  },
+
+  // Webhookが届かなくても、お支払い待ちの精算を毎分Squareに確かめる
+  async scheduled(_ctl: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(syncPendingPayments(env, { force: true }));
   }
 } satisfies ExportedHandler<Env>;

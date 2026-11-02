@@ -6,6 +6,7 @@ import { HttpError, json, newId, readJson, timingSafeEqual } from '../lib/util';
 import { closeChat, forStaff, openMessages, staffSend, type MessageRow } from '../lib/chat';
 import { notifyStaff } from '../lib/notify';
 import { vapid } from '../lib/push';
+import { markSettled, syncPendingPayments } from '../lib/settle';
 import { createCheckoutLink, deletePaymentLink } from '../square/checkout';
 import { desk, pendingSettlement, roomBill, type RoomRow } from './guest';
 
@@ -36,6 +37,7 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
 
   // 現場の一覧
   if (p === '/board' && m === 'GET') {
+    await syncPendingPayments(env);
     const rooms = await env.DB.prepare('SELECT * FROM rooms ORDER BY sort, name').all<RoomRow>();
     const chats = await env.DB.prepare(
       `SELECT m.* FROM messages m
@@ -131,6 +133,13 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
     return json({ payUrl: link.url, total });
   }
 
+  // お支払いが済んだかをSquareに確かめる（Webhookが届かないとき用）
+  if ((mt = p.match(/^\/rooms\/([\w-]+)\/verify$/)) && m === 'POST') {
+    const room = await getRoom(env, mt[1]);
+    if (!(await pendingSettlement(env, room.id))) return json({ paid: true });
+    return json({ paid: (await syncPendingPayments(env, { roomId: room.id, force: true })).includes(room.id) });
+  }
+
   // 精算をやめる（注文を未精算に戻す）
   if ((mt = p.match(/^\/rooms\/([\w-]+)\/reopen$/)) && m === 'POST') {
     const room = await getRoom(env, mt[1]);
@@ -150,7 +159,8 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
     const s = await pendingSettlement(env, room.id);
     if (s) {
       if (s.payment_link_id && !isMock(env)) await deletePaymentLink(env, s.payment_link_id);
-      await env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'manual', settled_at = ? WHERE id = ?").bind(nowIso(), s.id).run();
+      await markSettled(env, s.id, room.id, 'manual');
+      return json({ ok: true });
     } else {
       const bill = await roomBill(env, room.id);
       const targets = bill.orders.filter((o) => !o.settlement_id && o.status !== 'canceled');

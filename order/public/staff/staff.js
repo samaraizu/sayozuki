@@ -151,7 +151,7 @@ function render(fresh = new Set()) {
         .map((s) => {
           const tags = `${s.payUrl ? '<span class="tag w">お支払い待ち</span>' : ''}${s.dnd ? ' <span class="tag w">起こさないで</span>' : ''}`;
           const btns = s.payUrl
-            ? `<button class="b p" data-act="payqr" data-id="${s.id}">支払いQR</button><button class="b" data-act="reopen" data-id="${s.id}">精算をやめる</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
+            ? `<button class="b p" data-act="payqr" data-id="${s.id}">支払いQR</button><button class="b" data-act="verify" data-id="${s.id}">支払いを確認</button><button class="b" data-act="reopen" data-id="${s.id}">精算をやめる</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
             : s.unsettled > 0
               ? `<button class="b p" data-act="checkout" data-id="${s.id}">精算する</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
               : '';
@@ -366,6 +366,12 @@ document.addEventListener('click', async (ev) => {
         return showQr(room.name, r.payUrl);
       }
       case 'payqr': return showQr(room.name, room.payUrl);
+      case 'verify': {
+        el.disabled = true;
+        const r = await api(`/rooms/${id}/verify`, { method: 'POST' });
+        toast(r.paid ? `${room.name} のお支払いを確認しました` : 'まだSquareで支払いが済んでいません');
+        return load();
+      }
       case 'reopen': await api(`/rooms/${id}/reopen`, { method: 'POST' }); return load();
       case 'settle': if (!confirm('現金などで受け取り済みとして精算を完了しますか？')) return; await api(`/rooms/${id}/settle`, { method: 'POST' }); return load();
       case 'copy': await navigator.clipboard.writeText(el.dataset.url); return toast('コピーしました');

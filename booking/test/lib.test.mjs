@@ -109,7 +109,7 @@ test('validateManual', () => {
   assert.match(Lib.validateManual({ ...ok, checkOut: '2026-11-07' }, rooms, '2026-10-31'), /前/);
   assert.match(Lib.validateManual({ ...ok, room: '201' }, rooms, '2026-10-31'), /売ってない/);
   assert.match(Lib.validateManual({ ...ok, room: '302' }, rooms, '2026-10-31'), /定員1/);
-  assert.match(Lib.validateManual({ ...ok, name: ' ' }, rooms, '2026-10-31'), /代表者名/);
+  assert.match(Lib.validateManual({ ...ok, name: ' ' }, rooms, '2026-10-31'), /ゲスト名/);
   assert.match(Lib.validateManual({ ...ok, payment: '現金' }, rooms, '2026-10-31'), /支払い/);
   assert.match(Lib.validateManual({ ...ok, checkIn: '2026-10-01' }, rooms, '2026-10-31'), /過ぎた日/);
 });

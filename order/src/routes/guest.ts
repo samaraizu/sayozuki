@@ -1,8 +1,9 @@
 import type { Env } from '../env';
 import { isMock } from '../env';
 import { REQUEST_KINDS } from '../config/requests';
-import { closeChat, forGuest, guestSend, openMessages } from '../lib/chat';
+import { forGuest, guestSend, openMessages } from '../lib/chat';
 import { notifyStaff } from '../lib/notify';
+import { markSettled, syncPendingPayments } from '../lib/settle';
 import { nowIso } from '../lib/time';
 import { HttpError, json, newId, readJson } from '../lib/util';
 import type { OrderDesk } from '../desk';
@@ -119,6 +120,8 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
 
   if (path === '/api/orders' && method === 'GET') {
     const room = await roomFromHeader(req, env);
+    // Squareの支払いページから戻ってきたとき（?paid=1）はすぐ、それ以外は間を空けて支払いを確かめる
+    await syncPendingPayments(env, { roomId: room.id, force: url.searchParams.get('check') === '1' });
     return json(await roomBill(env, room.id));
   }
 
@@ -176,10 +179,8 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
 
   if (path === '/api/mock/pay' && method === 'POST' && isMock(env)) {
     const room = await roomFromHeader(req, env);
-    await env.DB.batch([
-      env.DB.prepare("UPDATE settlements SET status = 'settled', method = 'square', settled_at = ? WHERE room_id = ? AND status = 'pending'").bind(nowIso(), room.id),
-      closeChat(env, room.id)
-    ]);
+    const s = await pendingSettlement(env, room.id);
+    if (s) await markSettled(env, s.id, room.id, 'square');
     return json({ ok: true });
   }
 

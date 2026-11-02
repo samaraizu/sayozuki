@@ -1,0 +1,100 @@
+# 予約管理Webアプリ（booking/src/）を GAS に反映する。
+# main に booking/src/ の変更が入ったときと、Actions 画面から手で押したときに動く。
+# PR では動かさない（フォークからのPRに Google の認証情報を渡さないため）。
+#
+# 要るもの（Settings → Secrets and variables → Actions → Secrets）
+#   CLASPRC_JSON          GASプロジェクトの持ち主（sayozuki.com のアカウント）で clasp login したときの ~/.clasprc.json の中身
+#   BOOKING_SCRIPT_ID     「小夜月 予約管理」GASプロジェクトのスクリプトID
+#   BOOKING_DEPLOYMENT_ID ウェブアプリのデプロイID。公開済みなので必ず入れる（空だと別URLのデプロイを新しく作る）
+# 手順は booking/README.md の「GitHubからの自動反映をつなぐ」。
+name: booking-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "booking/src/**"
+      - ".github/workflows/booking-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: booking-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking
+    env:
+      CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+      BOOKING_SCRIPT_ID: ${{ secrets.BOOKING_SCRIPT_ID }}
+      BOOKING_DEPLOYMENT_ID: ${{ secrets.BOOKING_DEPLOYMENT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 設定の確認
+        id: check
+        run: |
+          if [ -z "$CLASPRC_JSON" ] || [ -z "$BOOKING_SCRIPT_ID" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLASPRC_JSON か BOOKING_SCRIPT_ID が未設定なので、GASへの反映は飛ばした（booking/README.md の「GitHubからの自動反映をつなぐ」）"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: テスト
+        if: steps.check.outputs.ready == 'true'
+        run: npm test
+
+      - name: clasp を用意
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          npm install -g @google/clasp@3.4.1
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+          printf '{"scriptId":"%s","rootDir":"src"}\n' "$BOOKING_SCRIPT_ID" > .clasp.json
+
+      - name: コードを上げる
+        if: steps.check.outputs.ready == 'true'
+        run: clasp push --force
+
+      - name: ウェブアプリに反映
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          desc="github $(git log -1 --format=%h)"
+          if [ -n "$BOOKING_DEPLOYMENT_ID" ]; then
+            clasp update-deployment "$BOOKING_DEPLOYMENT_ID" --description "$desc"
+            id="$BOOKING_DEPLOYMENT_ID"
+          else
+            out="$(clasp create-deployment --description "$desc")"
+            echo "$out"
+            id="$(echo "$out" | grep -oE 'AKfy[A-Za-z0-9_-]+' | head -1)"
+            if [ -z "$id" ]; then
+              echo "::error::デプロイIDが読み取れなかった。GASエディタの「デプロイを管理」で確認する"
+              exit 1
+            fi
+          fi
+          {
+            echo "### 予約管理アプリを反映した"
+            echo ""
+            echo "URL: https://script.google.com/macros/s/${id}/exec"
+            if [ -z "$BOOKING_DEPLOYMENT_ID" ]; then
+              echo ""
+              echo "初回のデプロイ。次からも同じURLに出すため、このデプロイID を Secrets の BOOKING_DEPLOYMENT_ID に入れる:"
+              echo ""
+              echo "\`${id}\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 認証情報を消す
+        if: always()
+        run: rm -f "$HOME/.clasprc.json" .clasp.json

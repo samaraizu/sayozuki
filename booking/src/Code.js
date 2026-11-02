@@ -1,5 +1,5 @@
 /**
- * 小夜月 予約管理 Webアプリ（第1段：7日カレンダー・手動入力・HPからの問い合わせ）
+ * 小夜月 予約管理 Webアプリ（第1段：4週間カレンダー・手動入力・HPからの問い合わせ）
  *
  * 予約台帳スプシの画面と入力だけを受け持つ。重複・定員超え・入湯税・
  * Googleカレンダー反映は既存GAS（Booking-System）の5分ごとの実行に任せる。
@@ -58,6 +58,9 @@ function UserError(message) {
 // ---------- 配信 ----------
 
 function doGet() {
+  // 許可画面で権限を1つずつ選べるので、台帳（スプシ）のチェックが外れたまま通ることがある。
+  // 足りない権限があれば、ここで実行を止めて許可画面をもう一度出す
+  ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);
   var email = currentEmail_();
   if (!isAllowed_(email)) {
     var denied = HtmlService.createTemplateFromFile('Denied');
