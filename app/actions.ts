@@ -1,14 +1,15 @@
 "use server";
 
 import { dictionaries, isLocale, type Locale } from "@/lib/i18n";
-import { sendToBookingLedger } from "@/lib/booking-intake";
+import { roomStatus } from "@/lib/availability";
+import { getAvailability, sendToBookingLedger } from "@/lib/booking-intake";
 import { sendInquiryMail } from "@/lib/mail";
 import { rooms } from "@/lib/site";
 
 export type InquiryState = {
   status: "idle" | "ok" | "error";
   message?: string;
-  errors?: Partial<Record<"name" | "email" | "checkin" | "guests", string>>;
+  errors?: Partial<Record<"name" | "email" | "checkin" | "guests" | "room", string>>;
   /** エラー時に入力を戻すため（React はフォーム送信後に入力欄をリセットする） */
   values?: Record<string, string>;
   /** エラーのたびにフォームを作り直して values を確実に反映させるため */
@@ -53,6 +54,16 @@ export async function submitInquiry(
   if (checkin && checkin < todayInJapan())
     errors.checkin = t.errCheckin;
   if (!guests) errors.guests = t.errGuests;
+  // 客室を選んでいて、台帳ではその日程が埋まっている（または売っていない）なら止める。
+  // 空室が取れないときや、日程が分かる範囲の外のときは止めない（宿が確かめる）
+  const picked = rooms.find((r) => r.name === room);
+  if (picked && /^\d{4}-\d{2}-\d{2}$/.test(checkin) && !errors.checkin) {
+    const avail = await getAvailability();
+    if (avail) {
+      const st = roomStatus(avail, picked, checkin, Math.min(Math.max(parseInt(nights, 10) || 1, 1), 30), parseInt(guests, 10) || 1);
+      if (st === "full" || st === "closed" || st === "over") errors.room = t.errRoomFull;
+    }
+  }
   const values = Object.fromEntries(FIELDS.map((k) => [k, get(k)]));
   if (Object.keys(errors).length) return { status: "error", errors, values, key: crypto.randomUUID() };
 
