@@ -24,7 +24,8 @@ Cloudflare Workers（無料枠）＋ Square（無料プラン・端末なし）�
 | `src/desk.ts` | 注文の受付窓口（Durable Object）。旅館全体で1つ、注文を1件ずつ処理して**二重受注を防ぐ**。メニューのキャッシュも持つ |
 | `src/square/` | カタログ・在庫の読み込み、支払いリンク作成、Square未接続時のモック |
 | `src/config/i18n-menu.ts` | **商品名・カテゴリ名の4言語訳**と、カテゴリごとの受付締め切り |
-| `public/i18n.js` | 画面文言の5言語、**Wi-Fi情報**、ご案内リンク、リクエスト項目 |
+| `public/i18n.js` | 画面文言の5言語、ご案内リンク、リクエスト項目 |
+| Wi-Fi情報 | Cloudflare の Secret `WIFI_SSID` `WIFI_PASSWORD`（公開リポジトリに書かない。客室QRで開いた人にだけ /api/session で渡す） |
 | `migrations/` | D1（データベース）の表定義 |
 
 ## 最初のセットアップ

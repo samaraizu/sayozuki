@@ -100,7 +100,9 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
       payUrl: pending?.payment_url ?? null,
       requested: (reqs.results ?? []).map((r) => r.kind),
       guideBase: env.GUIDE_BASE_URL,
-      lastOrder: env.LAST_ORDER
+      lastOrder: env.LAST_ORDER,
+      // Wi-Fiは客室QRで開いた人にだけ渡す（公開ページやリポジトリには載せない）
+      wifi: env.WIFI_SSID ? { ssid: env.WIFI_SSID, password: env.WIFI_PASSWORD ?? '' } : null
     });
   }
 

@@ -1,4 +1,4 @@
-import { LANGS, ABOUT, REQUESTS, STAY_INFO, makeT, pick } from './i18n.js';
+import { LANGS, ABOUT, REQUESTS, makeT, pick } from './i18n.js';
 
 // ---------- 状態 ----------
 const qs = new URLSearchParams(location.search);
@@ -12,7 +12,7 @@ const S = {
   room: urlRoom || localStorage.getItem(ROOM_KEY),
   paidRecently: justPaid,
   lang: localStorage.getItem('syz_lang') || detectLang(),
-  tab: 'menu',
+  tab: justPaid ? 'bill' : 'home',
   cat: 'all',
   cart: {},
   delivery: 'door',
@@ -29,8 +29,12 @@ const S = {
   draft: '',
   chatSending: false,
   chatSeen: localStorage.getItem('syz_chat_seen') || '',
-  fatal: null
+  fatal: null,
+  // 初めてこの部屋のQRを読んだときだけ、ようこその画面を出す
+  welcome: false
 };
+const WELCOME_KEY = () => 'syz_welcomed_' + (S.room || '');
+try { S.welcome = Boolean(S.room) && !justPaid && !localStorage.getItem(WELCOME_KEY()); } catch {}
 let t = makeT(S.lang);
 
 function detectLang() {
@@ -217,6 +221,10 @@ const I = {
   navMenu: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 6h14M4 11h14M4 16h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   navReq: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M6 9a5 5 0 0 1 10 0v4l2 3H4l2-3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 19h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   navBill: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M5 3h12v16l-3-2-3 2-3-2-3 2z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8 8h6M8 12h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  navHome: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M3.5 10L11 4l7.5 6v7.5a1 1 0 0 1-1 1H13v-5H9v5H4.5a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
+  wifi: '<svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M3 10a15 15 0 0 1 20 0M6.5 13.5a10 10 0 0 1 13 0M10 17a5 5 0 0 1 6 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="13" cy="20.5" r="1.6" fill="currentColor"/></svg>',
+  dish: '<svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true"><path d="M4 16h22a11 11 0 0 1-22 0z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M11 12c0-2 2-2 2-4M16 12c0-2 2-2 2-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
+  arrow: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M5 11h12M12 6l5 5-5 5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   navChat: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h11A1.5 1.5 0 0 1 18 5.5v8a1.5 1.5 0 0 1-1.5 1.5H9l-4 3.5V15h0.5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
   send: '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3.5 10L16.5 4l-4 13-2.8-5.2L3.5 10z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>',
   navAbout: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M11 10v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="11" cy="7" r="1" fill="currentColor"/></svg>'
@@ -244,7 +252,7 @@ function render() {
   const selStart = ta ? ta.selectionStart : 0;
   const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80;
 
-  const body = { menu: viewMenu, request: viewRequest, chat: viewChat, bill: viewBill, about: viewAbout }[S.tab]();
+  const body = { home: viewHome, menu: viewMenu, request: viewRequest, chat: viewChat, bill: viewBill }[S.tab]();
   const hadCart = Boolean(app.querySelector('.cartbar'));
   app.innerHTML = header(true) + body + cartBar() + composer() + nav() + overlays();
   afterRender(hadCart);
@@ -273,7 +281,7 @@ let stickChat = false;
 
 // ---------- 動き ----------
 const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
-const TABS = ['menu', 'request', 'chat', 'bill', 'about'];
+const TABS = ['home', 'menu', 'request', 'chat', 'bill'];
 let headerRO = null;
 let scrolled = false;
 let pillFrom = null; // 下のタブのバー：前のタブの位置から動かす
@@ -505,18 +513,68 @@ function viewBill() {
     </div>${action}</main>`;
 }
 
-function viewAbout() {
+function guideLinks() {
   // HPのご案内は /guide（日本語）・/en/guide・/zh/guide（簡体字のみ）・/ko/guide
   const g = new URL(S.session.guideBase || 'https://sayozuki.com/guide');
   const prefix = { ja: '', en: '/en', zht: '/zh', zhs: '/zh', ko: '/ko' }[S.lang] ?? '/en';
   const base = `${g.origin}${prefix}${g.pathname.replace(/\/$/, '')}`;
-  const links = ABOUT.map(
+  return ABOUT.map(
     (a) => `<a class="row-card" data-key="about:${a.slug}" href="${esc(base)}/${a.slug}" target="_blank" rel="noopener">
       <span><span class="t">${esc(pick(a.name, S.lang))}</span><span class="s">${esc(pick(a.sub, S.lang))}</span></span><span style="color:var(--accent)">${I.ext}</span></a>`
   ).join('');
-  return `<main><h2 class="h2">${esc(t('aboutTitle'))}</h2><p class="lead">${esc(t('aboutLead'))}</p>
-    <div class="wifi"><div><span class="k">Wi-Fi</span><span class="v">${esc(STAY_INFO.wifiSsid)}</span></div><div><span class="k">${esc(t('wifiPass'))}</span><span class="v">${esc(STAY_INFO.wifiPass)}</span></div></div>
-    ${links}<p class="foot">${esc(t('opensSite'))}</p></main>`;
+}
+
+// 日本時間の時刻で、おはよう・こんにちは・こんばんは
+function greeting() {
+  const h = Number(new Date().toLocaleString('en-US', { hour: 'numeric', hour12: false, timeZone: 'Asia/Tokyo' })) % 24;
+  return t(h >= 5 && h < 11 ? 'greetMorning' : h >= 11 && h < 17 ? 'greetDay' : 'greetEvening');
+}
+
+function viewHome() {
+  const s = S.session;
+  const w = s.wifi;
+  const wifi = w
+    ? `<div class="wifi-rows">
+        <div class="wifi-row"><span><span class="k">${esc(t('wifiNet'))}</span><span class="v">${esc(w.ssid)}</span></span><button class="copy" data-act="copy" data-val="${esc(w.ssid)}">${esc(t('copy'))}</button></div>
+        ${w.password ? `<div class="wifi-row"><span><span class="k">${esc(t('wifiPass'))}</span><span class="v">${esc(w.password)}</span></span><button class="copy" data-act="copy" data-val="${esc(w.password)}">${esc(t('copy'))}</button></div>` : ''}
+      </div>`
+    : `<p class="lead" style="margin:0">${esc(t('wifiSoon'))}</p>`;
+  const open = S.menu ? S.menu.open : true;
+  const quick = [
+    ['request', 'navRequest', 'reqShort', I.navReq, false],
+    ['chat', 'navChat', 'chatShort', I.navChat, chatUnseen()],
+    ['bill', 'navBill', 'billShort', I.navBill, Boolean(S.bill && S.bill.payUrl)]
+  ]
+    .map(([id, k, sub, icon, dot]) => `<button class="quick-btn" data-act="tab" data-id="${id}" data-key="home:q:${id}"><span class="qi">${icon}${dot ? '<span class="dot"></span>' : ''}</span><span class="t">${esc(t(k))}</span><span class="s">${esc(t(sub))}</span></button>`)
+    .join('');
+  return `<main class="home">
+    <section class="hello" data-key="home:hello"><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></section>
+    <section class="wifi-card" data-key="home:wifi"><div class="wifi-head"><span class="wi">${I.wifi}</span><span class="t">Wi-Fi</span></div>${wifi}</section>
+    <button class="order-card" data-act="tab" data-id="menu" data-key="home:order">
+      <span class="oi">${I.dish}</span>
+      <span class="ot"><span class="t">${esc(t('orderTitle'))}</span><span class="s">${esc(open ? t('orderSub', { t: s.lastOrder }) : t('orderingClosed'))}</span></span>
+      <span class="oa">${I.arrow}</span>
+    </button>
+    <div class="quick">${quick}</div>
+    <h3 class="cat-title" style="margin-top:14px">${esc(t('aboutTitle'))}</h3>
+    ${guideLinks()}
+    <p class="foot">${esc(t('opensSite'))}</p>
+  </main>`;
+}
+
+function welcomeHtml() {
+  return `<div class="welcome" role="dialog" aria-label="${esc(t('welcomeTitle'))}">
+    <button class="lang-btn wl-lang" data-act="lang-open" aria-label="${esc(t('langTitle'))}">${I.globe}${esc(curLang().short)}</button>
+    <div class="wl-body">
+      <svg class="wl-moon" width="88" height="88" viewBox="0 0 72 72" aria-hidden="true"><path d="M47 10a28 28 0 1 0 16 46A30 30 0 0 1 47 10z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <p class="wl-en wl-s1" lang="en">SAYOZUKI</p>
+      <h1 class="wl-title wl-s2">${esc(t('welcomeTitle'))}</h1>
+      <p class="wl-room wl-s3">${esc(S.session ? S.session.room : '')}</p>
+      <p class="wl-lead wl-s3">${esc(t('welcomeLead'))}</p>
+      <p class="wl-hint wl-s4">${esc(t('welcomeHint'))}</p>
+    </div>
+    <button class="wl-start wl-s5" data-act="welcome-close">${esc(t('welcomeStart'))}</button>
+  </div>`;
 }
 
 function cartBar() {
@@ -526,11 +584,11 @@ function cartBar() {
 
 function nav() {
   const tabs = [
+    ['home', 'navHome', I.navHome],
     ['menu', 'navMenu', I.navMenu],
     ['request', 'navRequest', I.navReq],
     ['chat', 'navChat', I.navChat],
-    ['bill', 'navBill', I.navBill],
-    ['about', 'navAbout', I.navAbout]
+    ['bill', 'navBill', I.navBill]
   ];
   const payDot = Boolean(S.bill && S.bill.payUrl);
   return `<nav class="nav" aria-label="main"><span class="pill" aria-hidden="true"></span>${tabs
@@ -540,6 +598,7 @@ function nav() {
 
 function overlays() {
   let h = '';
+  if (S.welcome && S.session) h += welcomeHtml();
   if (S.sheet && cartCount()) {
     const lines = Object.entries(S.cart)
       .map(([id, q]) => {
@@ -690,6 +749,21 @@ app.addEventListener('click', async (ev) => {
     case 'order': return placeOrder();
     case 'done-close': S.done = false; S.tab = 'menu'; return render();
     case 'lang-open': S.langOpen = true; return render();
+    case 'welcome-close':
+      S.welcome = false;
+      try { localStorage.setItem(WELCOME_KEY(), '1'); } catch {}
+      S.tab = 'home';
+      pillFrom = null;
+      return render();
+    case 'copy': {
+      const v = el.dataset.val || '';
+      try { await navigator.clipboard.writeText(v); } catch {
+        const ta = document.createElement('textarea'); ta.value = v; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch {} ta.remove();
+      }
+      navigator.vibrate?.(10);
+      return toast(t('copied'));
+    }
     case 'lang-close': S.langOpen = false; return render();
     case 'lang': S.lang = id; S.langOpen = false; localStorage.setItem('syz_lang', id); return render();
     case 'dnd': {
