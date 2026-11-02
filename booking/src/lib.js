@@ -130,13 +130,13 @@ function sayozukiLib() {
       }
       res.available = true;
       res.status = '空いてる';
-      res.why = '選んで次へ';
+      res.why = '';
       return res;
     });
   }
 
   /**
-   * 7日カレンダーの並べ方。部屋ごとに、表示範囲に入る予約を帯にして段（lane）に振る。
+   * カレンダーの並べ方。部屋ごとに、表示範囲に入る予約を帯にして段（lane）に振る。
    * 帯は泊まる夜の列にかかる（チェックアウト日の列にはかからない）。
    */
   function layoutWeek(rooms, bookings, startIso, days) {
@@ -199,7 +199,7 @@ function sayozukiLib() {
     var n = toInt(form.people);
     if (n < 1) return '人数を入れて';
     if (n > room.capacity) return room.name + 'は定員' + room.capacity + 'まで';
-    if (!String(form.name || '').trim()) return '代表者名を入れて';
+    if (!String(form.name || '').trim()) return 'ゲスト名を入れて';
     if (!String(form.contact || '').trim()) return '連絡先を入れて';
     if (!PAYMENTS[form.payment]) return '支払いを選んで';
     if (String(form.name).length > 100 || String(form.contact).length > 200 || String(form.memo || '').length > 1000) {

@@ -2,9 +2,10 @@
 (function () {
   'use strict';
 
-  var DAYS = 7;
+  var DAYS = 28; // 4週間
+  var STEP = 7;  // 前後の矢印は1週間ずつ
   var TAX_PER_NIGHT = 300; // 入湯税の目安（2026/4/1以降の予約）。正式な額は台帳側で計算
-  var ARRIVALS = ['15:00ごろ', '16:00ごろ', '17:00ごろ', '18:00以降', '未定'];
+  var ARRIVALS = ['15:00', '16:00', '17:00', '18:00以降', '未定'];
   var PAYS = ['当日Square', 'あとで決める'];
   var CHANNEL_CLASS = { 'Airbnb': 'airbnb', '楽天': 'rakuten', '楽天トラベル': 'rakuten', '直販': 'direct' };
 
@@ -134,7 +135,7 @@
     });
   }
 
-  // ---------- 7日カレンダー ----------
+  // ---------- 4週間カレンダー ----------
 
   function renderCalendar() {
     var b = state.board;
@@ -144,9 +145,9 @@
     append($view, h('div', { class: 'cal-head' },
       h('h1', null, Lib.shortLabel(start) + ' 〜 ' + Lib.shortLabel(end)),
       h('div', { class: 'pager' },
-        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の7日', onclick: function () { shiftWeek(-DAYS); } }, svg(ICON_PREV)),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の週', onclick: function () { shiftWeek(-STEP); } }, svg(ICON_PREV)),
         h('button', { type: 'button', class: 'pill', onclick: function () { state.weekStart = b.today; render(); } }, '今日'),
-        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の7日', onclick: function () { shiftWeek(DAYS); } }, svg(ICON_NEXT))
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の週', onclick: function () { shiftWeek(STEP); } }, svg(ICON_NEXT))
       )
     ));
 
@@ -179,13 +180,13 @@
       h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
     ));
 
-    var grid = h('div', { class: 'grid', role: 'table', 'aria-label': '部屋ごとの予約' });
+    var grid = h('div', { class: 'grid', role: 'table', 'aria-label': '部屋ごとの予約', style: '--cols: ' + DAYS });
     var days = h('div', { class: 'grow-row days', role: 'row' }, h('div', { class: 'corner', role: 'columnheader' }, '部屋'));
     for (var d = 0; d < DAYS; d++) {
       var iso = Lib.addDays(start, d);
       var wd = Lib.weekday(iso);
       var p = iso.split('-');
-      var cls = 'day' + (wd === '土' ? ' sat' : wd === '日' ? ' sun' : '') + (iso === b.today ? ' today' : '');
+      var cls = 'day' + (wd === '月' && d > 0 ? ' wk' : '') + (wd === '土' ? ' sat' : wd === '日' ? ' sun' : '') + (iso === b.today ? ' today' : '');
       append(days, h('div', { class: cls, role: 'columnheader' },
         h('span', { class: 'wd' }, wd),
         h('span', { class: 'dn' }, (+p[2] === 1 || d === 0) ? (+p[1]) + '/' + (+p[2]) : String(+p[2]))
@@ -196,7 +197,7 @@
     Lib.layoutWeek(b.rooms, b.bookings, start, DAYS).forEach(function (row) {
       append(grid, roomRow(row, start));
     });
-    append($view, grid);
+    append($view, h('div', { class: 'grid-scroll' }, grid));
 
     renderTodayCards();
   }
@@ -235,7 +236,7 @@
     for (var d = 0; d < DAYS; d++) {
       (function (d) {
         var iso = Lib.addDays(start, d);
-        var cls = 'slot' + (iso === b.today ? ' today' : '') + (row.clashDays[d] ? ' clash' : '');
+        var cls = 'slot' + (Lib.weekday(iso) === '月' && d > 0 ? ' wk' : '') + (iso === b.today ? ' today' : '') + (row.clashDays[d] ? ' clash' : '');
         var attrs = { class: cls, style: 'grid-row: 1 / span ' + lanes + '; grid-column: ' + (d + 2) };
         if (sellable && iso >= b.today && !row.clashDays[d]) {
           attrs.type = 'button';
@@ -337,7 +338,7 @@
       checkOut: preset.checkOut || (inIso ? Lib.addDays(inIso, 1) : ''),
       people: 2,
       room: preset.room || '',
-      name: '', contact: '', arrival: '16:00ごろ',
+      name: '', contact: '', arrival: '16:00',
       price: '', payment: '当日Square',
       breakfast: false, dinner: false, memo: ''
     };
@@ -353,17 +354,13 @@
     function set(key, value) { f[key] = value; update(); }
 
     var main = h('div', { class: 'form-main' },
-      h('div', null,
-        h('h1', null, '手動入力'),
-        h('p', { class: 'lead' }, 'Airbnb・楽天以外の予約はここで入れる。入れた内容は「入力内容」にまとまる')
-      ),
-      step(1, '日程と人数', null,
+      step(1, 'Dates', null,
         h('div', { class: 'row' },
           h('div', { class: 'field' },
-            h('label', { for: 'f-in' }, 'チェックイン'),
+            h('label', { for: 'f-in' }, 'Check-in'),
             h('input', { id: 'f-in', class: 'input', type: 'date', value: f.checkIn, min: state.board.today, oninput: function (e) { set('checkIn', e.target.value); } })),
           h('div', { class: 'field' },
-            h('label', { for: 'f-out' }, 'チェックアウト'),
+            h('label', { for: 'f-out' }, 'Check-out'),
             h('input', { id: 'f-out', class: 'input', type: 'date', value: f.checkOut, min: state.board.today, oninput: function (e) { set('checkOut', e.target.value); } })),
           h('div', { class: 'field', style: 'flex: 0 0 auto' },
             h('span', { class: 'lbl', id: 'f-ppl' }, '人数'),
@@ -375,16 +372,16 @@
         ),
         refs.nights = h('p', { class: 'note' })
       ),
-      step(2, '部屋', refs.avail = h('span', { class: 'aside' }),
+      step(2, 'Room', null,
         refs.rooms = h('div', { class: 'rooms' }),
         refs.tight = h('div', { class: 'warnbox', hidden: true },
           svg(ICON_WARN, 18, '#E6C877'),
           h('span', null, '2名以上で2泊以上。この部屋だと窮屈になりやすい（予約は止めない）'))
       ),
-      step(3, 'ゲスト', null,
+      step(3, 'Guest', null,
         h('div', { class: 'row' },
           h('div', { class: 'field', style: 'flex-basis: 240px' },
-            h('label', { for: 'f-name' }, '代表者名'),
+            h('label', { for: 'f-name' }, 'ゲスト名'),
             h('input', { id: 'f-name', class: 'input', type: 'text', autocomplete: 'off', maxlength: '100', placeholder: '山田 花子', value: f.name, oninput: function (e) { set('name', e.target.value); } })),
           h('div', { class: 'field', style: 'flex-basis: 240px' },
             h('label', { for: 'f-tel' }, '連絡先'),
@@ -436,20 +433,19 @@
 
       var avail = Lib.roomAvailability(state.board.rooms, state.board.bookings, inIso, outIso, f.people);
       var picked = avail.some(function (a) { return a.name === f.room && a.available; }) ? f.room : '';
-      refs.avail.textContent = okDates ? '空いてる部屋 ' + avail.filter(function (a) { return a.available; }).length + '室' : '';
       refs.rooms.textContent = '';
       avail.forEach(function (a) {
         var on = picked === a.name;
         var color = on ? 'var(--gold)' : a.available ? 'var(--text)' : 'var(--faint)';
         append(refs.rooms, h('button', {
           type: 'button', class: 'rcard' + (a.state !== Lib.SELLABLE ? ' off' : ''),
-          'aria-label': a.name + '、定員' + a.capacity + '、' + (on ? '選択中' : a.status) + '、' + a.why,
+          'aria-label': a.name + '、定員' + a.capacity + '、' + (on ? '選択中' : a.status) + (a.why ? '、' + a.why : ''),
           disabled: !a.available, 'aria-pressed': on ? 'true' : 'false',
           onclick: function () { set('room', a.name); }
         },
           h('span', { class: 'top-line' }, h('span', { class: 'rid' }, a.name), h('span', { class: 'cap' }, '定員' + a.capacity)),
           h('span', { class: 'st', style: 'color: ' + color }, on ? '選択中' : a.status),
-          h('span', { class: 'why' }, a.why)
+          a.why ? h('span', { class: 'why' }, a.why) : null
         ));
       });
       refs.tight.hidden = !(picked && Lib.isTight(f.people, nights));
@@ -480,7 +476,7 @@
         ['日程', okDates ? Lib.shortLabel(inIso) + ' → ' + Lib.shortLabel(outIso) + '・' + nights + '泊' : ''],
         ['人数', f.people + '名'],
         ['部屋', picked],
-        ['代表者名', f.name.trim()],
+        ['ゲスト名', f.name.trim()],
         ['連絡先', f.contact.trim()],
         ['到着', f.arrival],
         ['宿泊料', price > 0 && okDates ? yen(stay) : '', true],
@@ -497,7 +493,7 @@
       var missing = [];
       if (!okDates) missing.push('日程');
       if (!picked) missing.push('部屋');
-      if (!f.name.trim()) missing.push('代表者名');
+      if (!f.name.trim()) missing.push('ゲスト名');
       if (!f.contact.trim()) missing.push('連絡先');
       refs.left.textContent = missing.length ? 'あと：' + missing.join('・') : '';
       refs.left.hidden = !missing.length;

@@ -72,17 +72,20 @@
   .sw.direct { background: var(--direct); }
   .sw.prep { background: repeating-linear-gradient(135deg, #2A2F3B 0 3px, #171B24 3px 6px); border: 1px solid var(--line-2); }
 
-  .grid { --cols: 7; }
-  .grow-row { display: grid; grid-template-columns: 54px repeat(var(--cols), minmax(0, 1fr)); border-bottom: 1px solid var(--line); }
+  /* 4週間は画面に収まらないので横スクロール。部屋の列は左に貼り付けておく */
+  .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .grid { --cols: 28; min-width: calc(54px + var(--cols) * 44px); }
+  .grow-row { display: grid; grid-template-columns: 54px repeat(var(--cols), minmax(44px, 1fr)); border-bottom: 1px solid var(--line); }
   .days { border-top: 1px solid var(--line); background: var(--panel-2); }
-  .days .corner { padding: 0 0 6px 12px; font-size: 11px; color: var(--faint); align-self: end; }
+  .days .corner { padding: 0 0 6px 12px; font-size: 11px; color: var(--faint); align-self: end; position: sticky; left: 0; z-index: 3; background: var(--panel-2); align-self: stretch; display: flex; align-items: flex-end; }
+  .day.wk, .slot.wk { border-left: 1px solid var(--line-2); }
   .day { padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
   .day .wd { font-size: 10px; color: var(--muted); }
   .day .dn { font-size: 15px; font-weight: 700; }
   .day.sat .wd, .day.sun .wd { color: var(--text); font-weight: 700; }
   .day.today { background: rgba(230, 200, 119, 0.12); border-top: 2px solid var(--gold); margin-top: -1px; }
   .day.today .wd, .day.today .dn { color: var(--gold); }
-  .roomcell { grid-column: 1; padding: 10px 0 0 12px; display: flex; flex-direction: column; gap: 1px; }
+  .roomcell { grid-column: 1; padding: 10px 0 0 12px; display: flex; flex-direction: column; gap: 1px; position: sticky; left: 0; z-index: 2; background: var(--bg); }
   .roomcell .rn { font-size: 14px; font-weight: 700; }
   .roomcell .rc { font-size: 10px; color: var(--faint); }
   .roomcell .rx { margin-top: 6px; font-size: 10px; font-weight: 700; color: #FF8A8A; }
