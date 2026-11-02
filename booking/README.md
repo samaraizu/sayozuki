@@ -41,64 +41,63 @@
 公開リポジトリなので、**スプシIDとメールアドレスはコードに書かずスクリプトプロパティに入れる**。
 スクリプトIDの入る `.clasp.json` もコミットしない。
 
-1. clasp（3.x）を入れて、台帳の持ち主のGoogleアカウントでログインする
+コードの反映は GitHub Actions（`.github/workflows/booking-deploy.yml`）がやる。人がやるのは最初の1回の準備だけ。
 
-   ```bash
-   npm install -g @google/clasp
-   clasp login
-   ```
+1. https://script.google.com/home/usersettings で「Google Apps Script API」をオンにする（台帳の持ち主のアカウントで）
 
-   初回だけ https://script.google.com/home/usersettings で「Google Apps Script API」をオンにする。
+2. https://script.google.com で「新しいプロジェクト」を作り、名前を「小夜月 予約管理」にする（既存の Booking-System には足さない）。
+   左の歯車「プロジェクトの設定」にある**スクリプトID**を控える。中身の `コード.gs` は空のままでいい（Actions が上書きする）
 
-2. Webアプリ用のGASプロジェクトを新しく作る（既存の Booking-System には足さない）
-
-   ```bash
-   cd booking
-   clasp create-script --type standalone --title "小夜月 予約管理" --rootDir src
-   ```
-
-   できた `.clasp.json` はそのまま使う（`.gitignore` 済み）。別のPCでは `.clasp.json.example` をコピーしてスクリプトIDを入れる。
-
-3. コードを上げる
-
-   ```bash
-   clasp push
-   ```
-
-4. GASのエディタ（`clasp open-script`）→ プロジェクトの設定 → **スクリプト プロパティ** に2つ入れる
+3. 同じ「プロジェクトの設定」の**スクリプト プロパティ**に2つ入れる
 
    | プロパティ | 値 |
    | --- | --- |
-   | `SPREADSHEET_ID` | 予約台帳のID |
+   | `SPREADSHEET_ID` | 予約台帳のID（URLの `/d/` と `/edit` の間） |
    | `ALLOWED_EMAILS` | 本人と海斗のGoogleアカウント（カンマ区切り） |
 
-5. 台帳スプシを海斗のアカウントに**編集者**で共有する（アプリは開いた人の権限で台帳を読み書きする）
+4. 台帳スプシを海斗のアカウントに**編集者**で共有する（アプリは開いた人の権限で台帳を読み書きする）
 
-6. デプロイ → 新しいデプロイ → 種類「ウェブアプリ」
-   - 次のユーザーとして実行：**ウェブアプリにアクセスしているユーザー**
-   - アクセスできるユーザー：**Google アカウントを持つ全員**
+5. GitHub が GAS に書き込むための認証情報を作る。Node の入ったPCで1回だけ：
 
-   許可リストとの照合は `Session.getActiveUser()` のメールで行う。「自分として実行」にすると閲覧者のメールが取れないので使わない。
+   ```bash
+   npx @google/clasp@3.4.1 login
+   ```
 
-7. 出てきた `/exec` のURLを、2人のスマホで開いて「ホーム画面に追加」。最初に開いたときにGoogleの許可画面が出るので許可する
+   台帳の持ち主のアカウントで許可すると、`~/.clasprc.json` ができる。
+
+6. GitHub のリポジトリ → Settings → Secrets and variables → Actions →「New repository secret」で2つ入れる
+
+   | Secret | 値 |
+   | --- | --- |
+   | `CLASPRC_JSON` | `~/.clasprc.json` の中身を丸ごと（Mac なら `pbcopy < ~/.clasprc.json` でコピー） |
+   | `BOOKING_SCRIPT_ID` | 手順2のスクリプトID |
+
+   `CLASPRC_JSON` は台帳の持ち主のGoogleアカウントの鍵なので、ほかには貼らない。入れたら手元の `~/.clasprc.json` は消していい
+
+7. GitHub の Actions →「booking-deploy」→「Run workflow」。終わったら実行結果の Summary に `/exec` のURLと**デプロイID**が出る。
+   デプロイIDを Secret `BOOKING_DEPLOYMENT_ID` に入れる（次から同じURLのまま新しい版に差し替わる）
+
+8. `/exec` のURLを2人のスマホで開いて「ホーム画面に追加」。最初に開いたときにGoogleの許可画面が出るので許可する。
+   「このアプリは確認されていません」と出たら「詳細」→「移動」で進む
+
+ウェブアプリの設定（開いた人として実行／Googleアカウントを持つ全員）は `src/appsscript.json` に書いてあり、デプロイのたびにそのまま使われる。
+許可リストとの照合は `Session.getActiveUser()` のメールで行う。「自分として実行」にすると閲覧者のメールが取れないので使わない。
 
 ## 更新のしかた
 
-`booking/` を触るPRでは、GitHub Actions（`.github/workflows/booking.yml`）が `npm test` を自動で回す。GASへの反映は下の手順で手元から。
+`booking/` を触るPRでは `.github/workflows/booking.yml` が `npm test` を回す。
+`main` にマージされて `booking/src/` が変わっていれば、`booking-deploy` がテスト → `clasp push` → 同じデプロイの新しい版、まで自動でやる。URLは変わらない。
+Secrets が未設定のあいだは反映を飛ばすだけで、失敗にはしない。
+
+手元から直接出すこともできる（`.clasp.json.example` をコピーしてスクリプトIDを入れてから）：
 
 ```bash
 cd booking
 npm test
-clasp push
-```
-
-`clasp push` だけだとテスト用URL（`/dev`）にしか出ない。本番の `/exec` に出すには、エディタの「デプロイを管理」で今のデプロイを編集して新しいバージョンにするか、デプロイIDを環境変数に入れて：
-
-```bash
 BOOKING_DEPLOYMENT_ID=（デプロイID） npm run deploy
 ```
 
-**ロールバック**は「デプロイを管理」で前のバージョンに戻す。
+**ロールバック**はGASエディタの「デプロイ」→「デプロイを管理」で前のバージョンに戻す。
 
 ## 手元で画面を見る
 

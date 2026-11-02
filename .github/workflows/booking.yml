@@ -1,5 +1,5 @@
 # 予約管理アプリ（booking/）のテスト。booking/ を触ったPRと main への push で回す。
-# GAS へのデプロイ（clasp）は台帳の持ち主のアカウントが要るので、ここではやらない。
+# GAS への反映は main にマージされたあと booking-deploy.yml がやる。
 name: booking
 
 on:
