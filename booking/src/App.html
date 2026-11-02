@@ -174,9 +174,9 @@
       needCount ? h('span', { class: 'need' }, '要入力 ' + needCount + '件') : null
     ));
     append($view, h('div', { class: 'legend' },
-      h('span', null, h('i', { class: 'sw', style: 'background: var(--airbnb)' }), 'Airbnb'),
-      h('span', null, h('i', { class: 'sw', style: 'background: var(--rakuten)' }), '楽天'),
-      h('span', null, h('i', { class: 'sw', style: 'background: var(--direct)' }), '直販'),
+      h('span', null, h('i', { class: 'sw airbnb' }), 'Airbnb'),
+      h('span', null, h('i', { class: 'sw rakuten' }), '楽天'),
+      h('span', null, h('i', { class: 'sw direct' }), '直販'),
       h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
     ));
 
@@ -379,7 +379,7 @@
       step(2, '部屋', refs.avail = h('span', { class: 'aside' }),
         refs.rooms = h('div', { class: 'rooms' }),
         refs.tight = h('div', { class: 'warnbox', hidden: true },
-          svg(ICON_WARN, 18, '#F2C46E'),
+          svg(ICON_WARN, 18, '#E6C877'),
           h('span', null, '2名以上で2泊以上。この部屋だと窮屈になりやすい（予約は止めない）'))
       ),
       step(3, 'ゲスト', null,
@@ -441,7 +441,7 @@
       refs.rooms.textContent = '';
       avail.forEach(function (a) {
         var on = picked === a.name;
-        var color = on ? 'var(--gold)' : a.available ? 'var(--ok)' : a.status === '埋まってる' ? 'var(--red-soft)' : a.status === '人数が入らない' ? 'var(--warn)' : 'var(--faint)';
+        var color = on ? 'var(--gold)' : a.available ? 'var(--text)' : 'var(--faint)';
         append(refs.rooms, h('button', {
           type: 'button', class: 'rcard' + (a.state !== Lib.SELLABLE ? ' off' : ''),
           'aria-label': a.name + '、定員' + a.capacity + '、' + (on ? '選択中' : a.status) + '、' + a.why,
