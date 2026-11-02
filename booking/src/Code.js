@@ -51,6 +51,9 @@ function UserError(message) {
 // ---------- 配信 ----------
 
 function doGet() {
+  // 許可画面で権限を1つずつ選べるので、台帳（スプシ）のチェックが外れたまま通ることがある。
+  // 足りない権限があれば、ここで実行を止めて許可画面をもう一度出す
+  ScriptApp.requireAllScopes(ScriptApp.AuthMode.FULL);
   var email = currentEmail_();
   if (!isAllowed_(email)) {
     var denied = HtmlService.createTemplateFromFile('Denied');
