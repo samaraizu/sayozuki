@@ -3,10 +3,10 @@
 # PR では動かさない（フォークからのPRに Google の認証情報を渡さないため）。
 #
 # 要るもの（Settings → Secrets and variables → Actions → Secrets）
-#   CLASPRC_JSON          台帳の持ち主で clasp login したときの ~/.clasprc.json の中身
+#   CLASPRC_JSON          GASプロジェクトの持ち主（sayozuki.com のアカウント）で clasp login したときの ~/.clasprc.json の中身
 #   BOOKING_SCRIPT_ID     「小夜月 予約管理」GASプロジェクトのスクリプトID
-#   BOOKING_DEPLOYMENT_ID ウェブアプリのデプロイID（初回は空でいい。初回の実行で作って結果に出す）
-# 手順は booking/README.md の「GitHub から反映する」。
+#   BOOKING_DEPLOYMENT_ID ウェブアプリのデプロイID。公開済みなので必ず入れる（空だと別URLのデプロイを新しく作る）
+# 手順は booking/README.md の「GitHubからの自動反映をつなぐ」。
 name: booking-deploy
 
 on:
@@ -46,7 +46,7 @@ jobs:
         run: |
           if [ -z "$CLASPRC_JSON" ] || [ -z "$BOOKING_SCRIPT_ID" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::CLASPRC_JSON か BOOKING_SCRIPT_ID が未設定なので、GASへの反映は飛ばした（booking/README.md の「GitHub から反映する」）"
+            echo "::notice::CLASPRC_JSON か BOOKING_SCRIPT_ID が未設定なので、GASへの反映は飛ばした（booking/README.md の「GitHubからの自動反映をつなぐ」）"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
