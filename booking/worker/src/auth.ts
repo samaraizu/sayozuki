@@ -72,8 +72,17 @@ export function allowedList(env: Env): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Secrets の値。前後の空白・改行は落とす。
+ * ダッシュボードの Secret の「Rotate」欄は複数行入力なので、
+ * `openssl rand -hex 32 | pbcopy` を貼ると末尾の改行まで入る（GAS のプロパティ欄は1行なので入らない）。
+ */
+export function secret(value: string | undefined): string {
+  return String(value || '').trim();
+}
+
 export function loginConfigured(env: Env): boolean {
-  return !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && String(env.SESSION_SECRET || '').length >= 32);
+  return !!(secret(env.GOOGLE_CLIENT_ID) && secret(env.GOOGLE_CLIENT_SECRET) && secret(env.SESSION_SECRET).length >= 32);
 }
 
 // ---------- ログイン状態のクッキー（メール＋期限を SESSION_SECRET で署名） ----------
@@ -84,16 +93,16 @@ async function hmac(secret: string, data: string): Promise<Uint8Array> {
 }
 
 export async function makeSession(email: string, env: Env, nowSec = Date.now() / 1000): Promise<string> {
-  const secret = String(env.SESSION_SECRET || '');
-  if (secret.length < 32) throw new Error('SESSION_SECRET が短い（32文字以上）');
+  const key = secret(env.SESSION_SECRET);
+  if (key.length < 32) throw new Error('SESSION_SECRET が短い（32文字以上）');
   const body = bytesToB64url(new TextEncoder().encode(JSON.stringify({ e: email.trim().toLowerCase(), x: Math.floor(nowSec + SESSION_DAYS * 86400) })));
-  return body + '.' + bytesToB64url(await hmac(secret, body));
+  return body + '.' + bytesToB64url(await hmac(key, body));
 }
 
 /** 署名と期限が正しければメール。だめなら null（許可リストはここでは見ない） */
 export async function readSession(value: string | null, env: Env, nowSec = Date.now() / 1000): Promise<string | null> {
-  const secret = String(env.SESSION_SECRET || '');
-  if (!value || secret.length < 32) return null;
+  const key = secret(env.SESSION_SECRET);
+  if (!value || key.length < 32) return null;
   const [body, sig, extra] = value.split('.');
   if (!body || !sig || extra !== undefined) return null;
   let given: Uint8Array;
@@ -102,7 +111,7 @@ export async function readSession(value: string | null, env: Env, nowSec = Date.
   } catch {
     return null;
   }
-  if (!sameBytes(given, await hmac(secret, body))) return null;
+  if (!sameBytes(given, await hmac(key, body))) return null;
   let data: { e?: string; x?: number };
   try {
     data = decodePart(body);
@@ -197,7 +206,7 @@ export function startLogin(env: Env, origin: string): { location: string; cookie
   const state = randomToken();
   const nonce = randomToken();
   const q = new URLSearchParams({
-    client_id: String(env.GOOGLE_CLIENT_ID),
+    client_id: secret(env.GOOGLE_CLIENT_ID),
     redirect_uri: origin + '/api/auth/callback',
     response_type: 'code',
     scope: 'openid email',
@@ -227,22 +236,22 @@ export async function finishLogin(
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       code: params.code,
-      client_id: String(env.GOOGLE_CLIENT_ID),
-      client_secret: String(env.GOOGLE_CLIENT_SECRET),
+      client_id: secret(env.GOOGLE_CLIENT_ID),
+      client_secret: secret(env.GOOGLE_CLIENT_SECRET),
       redirect_uri: origin + '/api/auth/callback',
       grant_type: 'authorization_code',
     }).toString(),
   });
   if (!res.ok) return null;
   const body = (await res.json()) as { id_token?: string };
-  return verifyGoogleIdToken(body.id_token, { clientId: String(env.GOOGLE_CLIENT_ID), nonce }, fetcher, nowSec);
+  return verifyGoogleIdToken(body.id_token, { clientId: secret(env.GOOGLE_CLIENT_ID), nonce }, fetcher, nowSec);
 }
 
 // ---------- 取り込みGASからの同期。Authorization: Bearer <SYNC_TOKEN> ----------
 
 export async function isSyncCaller(req: Request, env: Env): Promise<boolean> {
-  const want = env.SYNC_TOKEN || '';
-  const got = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+  const want = secret(env.SYNC_TOKEN);
+  const got = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim();
   if (want.length < 32 || !got) return false;
   return sameBytes(new TextEncoder().encode(want), new TextEncoder().encode(got));
 }
