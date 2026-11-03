@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sayozuki-booking",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // 画面（index.html）は Cloudflare Access の後ろで静的に配る。API だけ Worker を通す
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sayozuki-booking",
+      "database_id": "d5ab357e-205d-435e-8a9f-ea9f7aa3fade",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Secrets（公開リポジトリに書かない。npx wrangler secret put で入れる。手順は README.md）
+  //   ACCESS_TEAM_DOMAIN  Zero Trust のチームのURL（例 https://xxxx.cloudflareaccess.com）
+  //   ACCESS_AUD      Access アプリの Application Audience (AUD) タグ
+  //   ALLOWED_EMAILS  使う人のGoogleアカウント（カンマ区切り）
+  //   SYNC_TOKEN      取り込みGASとの同期の合言葉（長い乱数）
+  "observability": { "enabled": true }
+}

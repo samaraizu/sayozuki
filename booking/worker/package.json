@@ -1,0 +1,22 @@
+{
+  "name": "sayozuki-booking",
+  "version": "1.0.0",
+  "description": "小夜月 予約管理（Cloudflare Workers + D1）",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && wrangler dev",
+    "db:local": "wrangler d1 migrations apply sayozuki-booking --local",
+    "db:remote": "wrangler d1 migrations apply sayozuki-booking --remote",
+    "deploy": "npm run build && wrangler d1 migrations apply sayozuki-booking --remote && wrangler deploy",
+    "test": "npm run build && vitest run",
+    "typecheck": "npm run build && tsc -p ."
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261018.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.151.1"
+  }
+}

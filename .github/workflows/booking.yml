@@ -1,4 +1,5 @@
-# 予約管理アプリ（booking/）のテスト。booking/ を触ったPRと main への push で回す。
+# 予約管理アプリ（booking/）のテスト。GAS版（booking/）と Cloudflare版（booking/worker/）。
+# booking/ を触ったPRと main への push で回す。
 # GAS への反映は main にマージされたあと booking-deploy.yml がやる。
 name: booking
 
@@ -27,4 +28,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm test
+
+  worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: booking/worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run typecheck
       - run: npm test
