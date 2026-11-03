@@ -20,6 +20,12 @@ let certCache: { at: number; keys: Jwk[] } | null = null;
 
 // ---------- 小道具 ----------
 
+/** ログインできなかった理由をログに残して null を返す（Workers のログで原因を追えるように） */
+function no(reason: string): null {
+  console.log('ログインできなかった：' + reason);
+  return null;
+}
+
 function b64urlToBytes(s: string): Uint8Array {
   const b64 = s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4);
   const bin = atob(b64);
@@ -153,18 +159,19 @@ export async function verifyGoogleIdToken(
   fetcher: typeof fetch = fetch,
   nowSec = Date.now() / 1000,
 ): Promise<string | null> {
-  if (!token || !opts.clientId || !opts.nonce) return null;
+  if (!token) return no('ID トークンが来なかった');
+  if (!opts.clientId || !opts.nonce) return no('クライアントIDか nonce が空');
   const parts = token.split('.');
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3) return no('ID トークンの形が違う');
   let header: { kid?: string; alg?: string };
   let payload: { aud?: string | string[]; exp?: number; iat?: number; iss?: string; email?: string; email_verified?: boolean | string; nonce?: string };
   try {
     header = decodePart(parts[0]);
     payload = decodePart(parts[1]);
   } catch {
-    return null;
+    return no('ID トークンが読めない');
   }
-  if (header.alg !== 'RS256' || !header.kid) return null;
+  if (header.alg !== 'RS256' || !header.kid) return no('署名の方式が違う（' + header.alg + '）');
 
   let keys = await googleKeys(fetcher);
   let jwk = keys.find((k) => k.kid === header.kid);
@@ -172,7 +179,7 @@ export async function verifyGoogleIdToken(
     keys = await googleKeys(fetcher, true); // 鍵の入れ替え直後
     jwk = keys.find((k) => k.kid === header.kid);
   }
-  if (!jwk) return null;
+  if (!jwk) return no('Google の公開鍵に kid がない');
 
   const key = await crypto.subtle.importKey(
     'jwk',
@@ -187,16 +194,16 @@ export async function verifyGoogleIdToken(
     b64urlToBytes(parts[2]),
     new TextEncoder().encode(parts[0] + '.' + parts[1]),
   );
-  if (!ok) return null;
+  if (!ok) return no('署名が合わない');
 
   const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-  if (!aud.includes(opts.clientId)) return null;
-  if (!payload.iss || !GOOGLE_ISSUERS.includes(payload.iss)) return null;
-  if (!payload.exp || payload.exp < nowSec) return null;
-  if (payload.iat && payload.iat > nowSec + 300) return null;
-  if (payload.nonce !== opts.nonce) return null;
-  if (payload.email_verified !== true && payload.email_verified !== 'true') return null;
-  return payload.email ? payload.email.trim().toLowerCase() : null;
+  if (!aud.includes(opts.clientId)) return no('宛先（aud）がクライアントIDと違う');
+  if (!payload.iss || !GOOGLE_ISSUERS.includes(payload.iss)) return no('発行元が違う（' + payload.iss + '）');
+  if (!payload.exp || payload.exp < nowSec) return no('期限切れ');
+  if (payload.iat && payload.iat > nowSec + 300) return no('発行時刻が未来');
+  if (payload.nonce !== opts.nonce) return no('nonce が違う');
+  if (payload.email_verified !== true && payload.email_verified !== 'true') return no('メールが未確認');
+  return payload.email ? payload.email.trim().toLowerCase() : no('メールがない');
 }
 
 // ---------- ログインの行き来 ----------
@@ -226,10 +233,11 @@ export async function finishLogin(
   fetcher: typeof fetch = fetch,
   nowSec = Date.now() / 1000,
 ): Promise<string | null> {
-  if (!params.code || !params.state || !saved) return null;
+  if (!params.code || !params.state) return no('コードか state が来なかった');
+  if (!saved) return no('控えのクッキーがない（時間切れか、別のブラウザで開いた）');
   const [state, nonce] = saved.split('.');
-  if (!state || !nonce) return null;
-  if (!sameBytes(new TextEncoder().encode(params.state), new TextEncoder().encode(state))) return null;
+  if (!state || !nonce) return no('控えのクッキーの形が違う');
+  if (!sameBytes(new TextEncoder().encode(params.state), new TextEncoder().encode(state))) return no('state が違う');
 
   const res = await fetcher(GOOGLE_TOKEN, {
     method: 'POST',
@@ -242,7 +250,17 @@ export async function finishLogin(
       grant_type: 'authorization_code',
     }).toString(),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    // Google の返す error（invalid_client など）だけ残す。中身に秘密は入らない
+    let err = '';
+    try {
+      const e = (await res.json()) as { error?: string; error_description?: string };
+      err = [e.error, e.error_description].filter(Boolean).join(' / ');
+    } catch {
+      err = '';
+    }
+    return no('コードの引き換えに失敗（' + res.status + (err ? ' ' + err : '') + '）');
+  }
   const body = (await res.json()) as { id_token?: string };
   return verifyGoogleIdToken(body.id_token, { clientId: secret(env.GOOGLE_CLIENT_ID), nonce }, fetcher, nowSec);
 }
