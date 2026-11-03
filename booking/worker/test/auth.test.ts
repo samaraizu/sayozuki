@@ -85,6 +85,10 @@ describe('ログイン状態のクッキー', () => {
     expect(await readSession(c, { ...env, SESSION_SECRET: 't'.repeat(40) }, now)).toBeNull();
     expect(await readSession(c, { ...env, SESSION_SECRET: 'short' }, now)).toBeNull();
   });
+  it('鍵の末尾の改行は無視する（同じ鍵として扱う）', async () => {
+    const c = await makeSession('a@x.jp', { ...env, SESSION_SECRET: SECRET + '\n' }, now);
+    expect(await readSession(c, env, now)).toBe('a@x.jp');
+  });
   it('鍵が短いと作らない', async () => {
     await expect(makeSession('a@x.jp', { ...env, SESSION_SECRET: 'short' }, now)).rejects.toThrow();
   });
@@ -108,6 +112,7 @@ describe('ログインの行き来', () => {
     const u = new URL(location);
     expect(u.origin + u.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
     expect(u.searchParams.get('client_id')).toBe(CLIENT);
+    expect(new URL(startLogin({ ...env, GOOGLE_CLIENT_ID: CLIENT + '\n' }, 'https://w.example').location).searchParams.get('client_id')).toBe(CLIENT);
     expect(u.searchParams.get('redirect_uri')).toBe('https://w.example/api/auth/callback');
     expect(u.searchParams.get('scope')).toBe('openid email');
     const [state, nonce] = cookie.split('.');
@@ -169,6 +174,10 @@ describe('同期の合言葉', () => {
     expect(await isSyncCaller(req('Bearer ' + token), { SYNC_TOKEN: token } as Env)).toBe(true);
     expect(await isSyncCaller(req('Bearer ' + token + 'y'), { SYNC_TOKEN: token } as Env)).toBe(false);
     expect(await isSyncCaller(req(), { SYNC_TOKEN: token } as Env)).toBe(false);
+  });
+  it('ダッシュボードで貼ったときの末尾の改行は無視する', async () => {
+    expect(await isSyncCaller(req('Bearer ' + token), { SYNC_TOKEN: token + '\n' } as Env)).toBe(true);
+    expect(await isSyncCaller(req('Bearer ' + token), { SYNC_TOKEN: ' ' + token + '\r\n' } as Env)).toBe(true);
   });
   it('合言葉が短い・未設定なら誰も通さない', async () => {
     expect(await isSyncCaller(req('Bearer short'), { SYNC_TOKEN: 'short' } as Env)).toBe(false);
