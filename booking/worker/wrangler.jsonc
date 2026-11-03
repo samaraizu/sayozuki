@@ -6,7 +6,7 @@
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
-    // 画面（index.html）は Cloudflare Access の後ろで静的に配る。API だけ Worker を通す
+    // 画面（index.html・login.html）は静的に配る。中身のデータは /api/* だけで、そこはログインを確かめる
     "run_worker_first": ["/api/*"]
   },
   "d1_databases": [
@@ -17,10 +17,11 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Secrets（公開リポジトリに書かない。npx wrangler secret put で入れる。手順は README.md）
-  //   ACCESS_TEAM_DOMAIN  Zero Trust のチームのURL（例 https://xxxx.cloudflareaccess.com）
-  //   ACCESS_AUD      Access アプリの Application Audience (AUD) タグ
-  //   ALLOWED_EMAILS  使う人のGoogleアカウント（カンマ区切り）
-  //   SYNC_TOKEN      取り込みGASとの同期の合言葉（長い乱数）
+  // Secrets（公開リポジトリに書かない。ダッシュボードか npx wrangler secret put で入れる。手順は README.md）
+  //   GOOGLE_CLIENT_ID      Google Cloud の OAuth クライアント（ウェブ アプリケーション）
+  //   GOOGLE_CLIENT_SECRET  同じクライアントのシークレット
+  //   SESSION_SECRET        ログイン状態のクッキーの署名（長い乱数）
+  //   ALLOWED_EMAILS        使う人のGoogleアカウント（カンマ区切り）
+  //   SYNC_TOKEN            取り込みGASとの同期の合言葉（長い乱数）
   "observability": { "enabled": true }
 }

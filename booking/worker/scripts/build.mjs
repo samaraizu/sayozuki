@@ -32,7 +32,8 @@ window.google = { script: { run: (function () {
       return function (arg) {
         routes[k](arg)
           .then(function (r) {
-            // Access のログインが切れていると HTML のログイン画面が返る
+            // ログインしていない・切れた・許可リストから外れた → ログイン画面へ
+            if (r.status === 401) { location.replace('/login'); return null; }
             if (!(r.headers.get('content-type') || '').includes('application/json')) { location.reload(); return null; }
             return r.json();
           })

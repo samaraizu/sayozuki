@@ -26,7 +26,8 @@ Airbnbとの衝突は、取り込みGASの [重複] とカレンダーの赤表�
 | 場所 | 中身 |
 | --- | --- |
 | `src/index.ts` | 入口。`/api/board` `/api/bookings`（画面用）、`/api/sync/*`（取り込みGAS用） |
-| `src/auth.ts` | Cloudflare Access のトークンの確認、`ALLOWED_EMAILS` との照合、同期の合言葉 |
+| `src/auth.ts` | 「Googleでログイン」、ログイン状態のクッキー、`ALLOWED_EMAILS` との照合、同期の合言葉 |
+| `public/login.html` | ログイン画面（`/login`） |
 | `src/db.ts` | D1の読み書き。手動入力、スプシとの同期 |
 | `migrations/` | D1の表（`rooms` `bookings` `op_log` `meta`） |
 | `scripts/build.mjs` | `../src/` から `public/index.html` と `src/lib.gen.js` を作る（どちらも gitignore） |
@@ -52,26 +53,43 @@ Cloudflare のダッシュボード → Workers & Pages → 作成 →「Gitリ�
 
 URL は `https://sayozuki-booking.toneclown17.workers.dev`。
 
-### 2. ログインを Cloudflare Access で絞る
+### 2. 「Googleでログイン」の鍵を作る（Google Cloud。カード登録は要らない）
 
-1. Worker「sayozuki-booking」→ 設定 → ドメインとルート → `workers.dev` の「…」→ **Cloudflare Access を有効にする**。
-   出てきた **AUD（Application Audience）タグ** と **JWKS のURL**（`https://（チーム名）.cloudflareaccess.com/cdn-cgi/access/certs`）を控える
-2. Zero Trust → Access → アプリケーションで、いまできたアプリのポリシーを「メールアドレスが本人と海斗のどちらか」に絞る。
-   ログイン方法は Google（なければワンタイムPIN）
-3. 同じ画面で **もう1つアプリを足す**（セルフホスト）：ドメイン `sayozuki-booking.toneclown17.workers.dev`、パス `api/sync/`、
-   ポリシーのアクションは **Bypass（全員）**。取り込みGASはログインできないので、このパスだけ Access を外し、Worker が合言葉で確かめる
+ログインは Worker の中で完結させる（Cloudflare Access / Zero Trust は使わない。Free でも支払い情報の登録が要るため）。
+
+1. https://console.cloud.google.com/ に自分のGoogleアカウントで入り、上のプロジェクト選択 →「新しいプロジェクト」→ 名前 `sayozuki-booking` →「作成」
+2. https://console.cloud.google.com/auth/overview（Google Auth Platform）→「開始」。
+   アプリ名「小夜月 予約」、サポートメールは自分 → 対象は **外部** → 連絡先は自分 → ポリシーに同意 →「作成」
+3. 「対象」→ テストユーザーに本人と海斗のGoogleアカウントを足す。公開ステータスは「テスト中」のままでよい
+   （求めるのは `openid` `email` だけなので、未確認アプリの警告も7日での失効も出ない）
+4. 「クライアント」→「クライアントを作成」→ 種類 **ウェブ アプリケーション**、名前 `sayozuki-booking`、
+   承認済みのリダイレクト URI に `https://sayozuki-booking.toneclown17.workers.dev/api/auth/callback` →「作成」
+5. 出てきた **クライアントID** と **クライアントシークレット** を控える。
+   シークレットはこの画面を閉じると二度と見られないので「JSONをダウンロード」もしておく（なくしたら作り直す）
+
+6か月ログインがないクライアントは Google が自動で消す（30日以内なら戻せる）。
 
 ### 3. Secrets
 
-```bash
-cd booking/worker
-npx wrangler secret put ACCESS_TEAM_DOMAIN   # https://（チーム名）.cloudflareaccess.com
-npx wrangler secret put ACCESS_AUD           # 手順2で控えたAUDタグ
-npx wrangler secret put ALLOWED_EMAILS       # 本人と海斗のアドレス（カンマ区切り）
-npx wrangler secret put SYNC_TOKEN           # 下で作る長い乱数
-```
+Worker「sayozuki-booking」→ 設定 → 変数とシークレット →「追加」で、種類を **シークレット** にして入れる
+（「テキスト」にすると次のデプロイで消える）。
 
-合言葉は `openssl rand -hex 32` で作る（32文字未満だと同期を受け付けない）。ダッシュボードの Worker → 設定 → 変数とシークレット からでも入れられる。
+| 名前 | 値 |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | 手順2のクライアントID |
+| `GOOGLE_CLIENT_SECRET` | 手順2のクライアントシークレット |
+| `SESSION_SECRET` | 長い乱数（ログイン状態のクッキーの署名） |
+| `ALLOWED_EMAILS` | 使う人のGoogleアカウント（カンマ区切り） |
+| `SYNC_TOKEN` | 長い乱数（取り込みGASとの合言葉。手順4でも使う） |
+
+乱数は `openssl rand -hex 32` で作る（Mac なら `openssl rand -hex 32 | pbcopy` でコピーまで済む）。
+`SESSION_SECRET` と `SYNC_TOKEN` は別の値にする。どちらも32文字未満だと受け付けない。
+手元からなら `npx wrangler secret put 名前` でも入れられる。
+
+- 入れる前に開くと、ログイン画面に「ログインの設定がまだ終わっていない」と出る
+- `ALLOWED_EMAILS` から消した人は、ログイン済みでも次の操作から入れなくなる
+- `SESSION_SECRET` を変えると全員ログアウトになる
+- ログインは30日もつ。ログアウトは `/api/auth/logout`
 
 ### 4. 取り込みGASをつなぐ
 
@@ -101,7 +119,9 @@ printf 'DEV_EMAIL=dev@example.com\nALLOWED_EMAILS=dev@example.com\nSYNC_TOKEN=%s
 npm run dev
 ```
 
-`http://localhost:8787` で開く。`DEV_EMAIL` は localhost のときだけ Access の代わりに使われる（本番には入れない）。
+`http://localhost:8787` で開く。`DEV_EMAIL` は localhost のときだけログインの代わりに使われる（本番には入れない）。
+手元で本物のログインを試すなら、`.dev.vars` から `DEV_EMAIL` を消して `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `SESSION_SECRET` を足し、
+クライアントのリダイレクト URI に `http://localhost:8787/api/auth/callback` を足す。
 中身は空なので、`/api/sync/sheet` に部屋と予約のJSONを送って入れる。
 
 ## この先（第2段・第3段）

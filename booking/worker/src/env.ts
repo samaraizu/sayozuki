@@ -1,8 +1,9 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
-  ACCESS_TEAM_DOMAIN: string; // 例 https://sayozuki.cloudflareaccess.com
-  ACCESS_AUD?: string;
+  GOOGLE_CLIENT_ID?: string; // Google Cloud の OAuth クライアント（ウェブアプリケーション）
+  GOOGLE_CLIENT_SECRET?: string;
+  SESSION_SECRET?: string; // ログイン状態のクッキーの署名（32文字以上の乱数）
   ALLOWED_EMAILS?: string;
   SYNC_TOKEN?: string;
   DEV_EMAIL?: string; // 手元の wrangler dev だけ（.dev.vars）。本番には入れない
