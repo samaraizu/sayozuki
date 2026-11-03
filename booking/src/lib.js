@@ -104,7 +104,7 @@ function sayozukiLib() {
       var res = { name: r.name, capacity: r.capacity, state: r.state, available: false, status: '', why: '', clash: null };
       if (r.state !== SELLABLE) {
         res.status = r.state || '停止';
-        res.why = '今は売らない部屋';
+        res.why = '';
         return res;
       }
       if (!okDates) {

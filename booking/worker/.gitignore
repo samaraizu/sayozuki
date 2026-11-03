@@ -1,0 +1,6 @@
+node_modules/
+.wrangler/
+.dev.vars
+# npm run build で ../src から作る
+public/index.html
+src/lib.gen.js
