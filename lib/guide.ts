@@ -72,6 +72,7 @@ export const guideUI: Record<GuideLocale, UI> = {
 
 const yenOf = (l: GuideLocale, n: number) => (l === "ja" ? `${n.toLocaleString("ja-JP")}円` : `¥${n.toLocaleString("en-US")}`);
 const range = (r: { from: string; to: string }) => `${r.from}〜${r.to}`;
+const ALL_DAY: Record<GuideLocale, string> = { ja: "24時間いつでも", en: "Open 24 hours", zh: "24小时开放", ko: "24시간 이용 가능" };
 
 /** 決まっていない値は「準備中」の行にする */
 const row = (l: GuideLocale, k: string, v: string | null) =>
@@ -96,7 +97,7 @@ const benefits = (l: GuideLocale) => onsen.benefits.map((b) => (l === "ja" ? b :
 
 export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
   const o = stay.roomOrder;
-  const bath = stay.bathHours ? range(stay.bathHours) : null;
+  const bath = stay.bathHours === "24h" ? ALL_DAY[l] : stay.bathHours ? range(stay.bathHours) : null;
   const bf = yenOf(l, meals.breakfast);
   const dn = yenOf(l, meals.dinner);
 
