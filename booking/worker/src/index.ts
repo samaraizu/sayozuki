@@ -23,6 +23,7 @@ import { WorkerEntrypoint } from 'cloudflare:workers';
 import { createBooking, getBoard, pendingForSheet, syncFromSheet, type ManualForm, type SyncPayload } from './db';
 import { UserError, json, type Env } from './env';
 import { calendar, checkoutStatus, startCheckout, sweep, type CheckoutInput } from './hp';
+import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -93,6 +94,11 @@ async function handle(req: Request, env: Env): Promise<Response> {
       if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
       return json(await createBooking(env, email, (await req.json()) as ManualForm));
     }
+    if (path === '/api/inquiries/close' && req.method === 'POST') {
+      const origin = req.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
+      return json(await closeInquiry(env, email, (await req.json()) as { id?: string; reason?: string }));
+    }
     return json({ ok: false, message: 'not found' }, 404);
   }
 
@@ -101,7 +107,7 @@ async function handle(req: Request, env: Env): Promise<Response> {
 
 /**
  * HP（Worker「sayozuki」）専用の入口。サービスバインディング（entrypoint: "HpApi"）でしか呼べず、
- * インターネットからは届かない。空室・予約と事前決済の開始・完了画面の確認だけ。
+ * インターネットからは届かない。空室・予約と事前決済の開始・完了画面の確認・お問い合わせの受け取りだけ。
  */
 export class HpApi extends WorkerEntrypoint<Env> {
   async calendar(days?: number) {
@@ -112,6 +118,9 @@ export class HpApi extends WorkerEntrypoint<Env> {
   }
   async checkoutStatus(no: string, key: string) {
     return checkoutStatus(this.env, no, key);
+  }
+  async addInquiry(input: InquiryInput) {
+    return addInquiry(this.env, input);
   }
 }
 

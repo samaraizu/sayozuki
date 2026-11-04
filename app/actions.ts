@@ -2,8 +2,7 @@
 
 import { dictionaries, isLocale, type Locale } from "@/lib/i18n";
 import { roomStatus } from "@/lib/availability";
-import { getAvailability } from "@/lib/booking-api";
-import { sendToBookingLedger } from "@/lib/booking-intake";
+import { getAvailability, saveInquiry } from "@/lib/booking-api";
 import { sendInquiryMail } from "@/lib/mail";
 import { rooms } from "@/lib/site";
 
@@ -87,10 +86,10 @@ export async function submitInquiry(
     message || "（なし）",
   ].join("\n");
 
-  // メール通知と予約台帳（問い合わせタブ）の両方に送る。片方でも届けば受け付けたことにする
+  // メール通知と予約管理（予約管理アプリの「問い合わせ」）の両方に送る。片方でも届けば受け付けたことにする
   const [mail, ledger] = await Promise.all([
     sendInquiryMail(`【小夜月】ご予約のお問い合わせ（${name} 様）`, body, email),
-    sendToBookingLedger({
+    saveInquiry({
       id,
       lang,
       name: name.slice(0, 100),

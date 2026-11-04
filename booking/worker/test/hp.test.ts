@@ -54,3 +54,19 @@ describe('isPaidOrder', () => {
     expect(isPaidOrder({ state: 'CANCELED', tenders: [{}], net_amount_due_money: { amount: 0 } })).toBe(false);
   });
 });
+
+import { cleanInquiry } from '../src/inquiries';
+
+describe('cleanInquiry', () => {
+  const ok = { id: 'HP-20261201-a1b2c3', lang: 'en', name: 'Test', email: 't@example.com', tel: '090', checkin: '2026-12-10', nights: 2, guests: 3, room: '201号室', meal: 'both', message: 'Parking?' };
+  it('必須が欠けていれば断る', () => {
+    expect(cleanInquiry({ ...ok, id: 'x' })).toBeNull();
+    expect(cleanInquiry({ ...ok, name: ' ' })).toBeNull();
+    expect(cleanInquiry({ ...ok, email: 'x' })).toBeNull();
+  });
+  it('範囲外の値を丸め、知らない食事と日付を捨てる', () => {
+    const r = cleanInquiry({ ...ok, nights: 999, guests: -1, meal: 'toString', checkin: '12/10' })!;
+    expect([r.nights, r.guests, r.meal, r.checkIn]).toEqual([30, 1, '', '']);
+    expect(cleanInquiry(ok)!.meal).toBe('1泊2食付き');
+  });
+});

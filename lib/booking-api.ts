@@ -42,10 +42,28 @@ export type CheckoutStatus = {
   payUrl?: string;
 };
 
+/** お問い合わせ（booking/worker/src/inquiries.ts の InquiryInput） */
+export type InquiryInput = {
+  /** 受付番号。送り直しても二重にならないよう、HPが決める */
+  id: string;
+  lang: string;
+  name: string;
+  email: string;
+  tel: string;
+  checkin: string;
+  nights: number;
+  guests: number;
+  room: string;
+  /** none / breakfast / both */
+  meal: string;
+  message: string;
+};
+
 export interface HpApi {
   calendar(days?: number): Promise<Availability>;
   startCheckout(input: CheckoutInput): Promise<CheckoutResult>;
   checkoutStatus(no: string, key: string): Promise<CheckoutStatus>;
+  addInquiry(input: InquiryInput): Promise<{ ok: boolean; duplicate?: boolean }>;
 }
 
 export async function bookingApi(): Promise<HpApi | null> {
@@ -87,5 +105,25 @@ export async function getAvailability(force = false): Promise<Availability | nul
   } catch (e) {
     console.error("[availability] 空室が取れませんでした", e);
     return memo?.data ?? null;
+  }
+}
+
+/** お問い合わせを予約管理に入れる（予約管理アプリの「問い合わせ」に出る）。つながっていなければ saved: false */
+export async function saveInquiry(input: InquiryInput): Promise<{ saved: true } | { saved: false; failed?: true }> {
+  const api = await bookingApi();
+  if (!api) {
+    console.info(`[inquiry] 予約管理につながっていないため入れませんでした（${input.id}）`);
+    return { saved: false };
+  }
+  try {
+    const r = await api.addInquiry(input);
+    if (!r.ok) {
+      console.error("[inquiry] 予約管理に断られました", input.id);
+      return { saved: false, failed: true };
+    }
+    return { saved: true };
+  } catch (e) {
+    console.error("[inquiry] 予約管理に入れられませんでした", e);
+    return { saved: false, failed: true };
   }
 }

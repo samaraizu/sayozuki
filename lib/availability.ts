@@ -1,9 +1,9 @@
 /**
- * 空室の判定。予約台帳（受付用GAS）から届いた「部屋ごとの埋まっている夜」を、
+ * 空室の判定。予約管理（D1）から届いた「部屋ごとの埋まっている夜」を、
  * HPの客室（lib/site.ts の rooms）に当てはめる。サーバーと画面の両方で使う。
  */
 
-/** 受付用GASが返す形（booking/intake/src/Intake.js の occupancy_） */
+/** 予約管理が返す形（booking/worker/src/hp.ts の calendar） */
 export type Availability = {
   /** 台帳側の今日（yyyy-MM-dd、日本時間） */
   today: string;

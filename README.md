@@ -78,18 +78,16 @@ HP（Worker sayozuki）──サービスバインディング（BOOKING → say
 
 ## お問い合わせフォーム
 
-直接のお問い合わせは、Resend のメール通知と、予約管理の台帳（スプシの「問い合わせ」タブ）の両方に送ります。
-台帳に入った問い合わせは、予約管理の画面（`booking/`）の「問い合わせ」から「予約にする」で手動入力に引き継げます。
+直接のお問い合わせは、Resend のメール通知と、予約管理（Worker「sayozuki-booking」の D1）の両方に送ります。
+予約管理の画面の「問い合わせ」に出て、「予約にする」で手動入力に引き継げます（予約と同じ `BOOKING` でつなぐので、別の設定は要らない）。
 
 フォームでご到着日を選ぶと、予約管理（D1）の空きをもとに客室ごとの「空室あり／満室／定員を超えます／受付準備中／宿で確認」を出し、満室・準備中・定員超えの客室は選べなくなる。
 送信のときもサーバーで確かめ直し、見ているあいだに埋まった客室なら止める。
 HPの「201号室」は台帳の「201」に読み替え、台帳にない客室（304号室など）は「宿で確認」で選べる。空室が取れないときは、空室表示なしで今までどおり送れる。
-受け口の GAS の作り方は `booking/README.md` の「HPの問い合わせを台帳に入れる」。
 
 | 値 | 用途 |
 | --- | --- |
 | `RESEND_API_KEY` `INQUIRY_MAIL_TO` `INQUIRY_MAIL_FROM` | メール通知 |
-| `BOOKING_INTAKE_URL` `BOOKING_INTAKE_SECRET` | 台帳への連携（受付用 GAS の `/exec` と合言葉） |
 
 本番は Worker の secret（`npx wrangler secret put 名前`）、手元は `.env.local`（`.env.local.example` をコピー）に入れる。
 入っているかは `npx wrangler secret list --name sayozuki` で確かめられる。
