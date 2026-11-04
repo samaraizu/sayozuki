@@ -1,11 +1,10 @@
 import "server-only";
-import type { Availability } from "@/lib/availability";
 
 /**
- * 予約管理の台帳とのやりとり。受け口は booking/intake の GAS（自分として実行・合言葉で照合）。
- * - sendToBookingLedger : ご予約フォームの申し込みを「問い合わせ」タブに入れる
- * - getAvailability     : 部屋ごとの埋まっている夜を取る（HPの空室表示）
- * BOOKING_INTAKE_URL / BOOKING_INTAKE_SECRET が未設定のあいだはどちらも何もしない。
+ * お問い合わせフォームの申し込みを、予約台帳の「問い合わせ」タブに入れる。
+ * 受け口は booking/intake の GAS（自分として実行・合言葉で照合）。
+ * BOOKING_INTAKE_URL / BOOKING_INTAKE_SECRET が未設定のあいだは何もしない。
+ * （空室は予約管理の Worker から取る。lib/booking-api.ts）
  */
 export type IntakeRecord = {
   /** 受付番号。送り直しても台帳で二重にならないよう、こちらで決める */
@@ -60,45 +59,4 @@ export async function sendToBookingLedger(record: IntakeRecord): Promise<IntakeR
     console.error("[intake] 台帳に届きませんでした", e);
     return { saved: false, failed: true };
   }
-}
-
-// 空室は5分ためておく（GASは1回1〜2秒かかり、1日の実行回数にも上限がある）
-const TTL_MS = 5 * 60 * 1000;
-let memo: { at: number; data: Availability } | null = null;
-let pending: Promise<Availability | null> | null = null;
-
-/** 空室。取れなければ null（画面は空室表示なしで今までどおり動く） */
-export async function getAvailability(): Promise<Availability | null> {
-  if (memo && Date.now() - memo.at < TTL_MS) return memo.data;
-  // 同時に来たリクエストは1回のGAS呼び出しにまとめる
-  pending ??= (async () => {
-    try {
-      const r = await callIntake({ action: "availability" }, 8_000);
-      if (!r) return null;
-      const d = r.data;
-      if (!r.ok || !d || typeof d.today !== "string" || typeof d.until !== "string" || !Array.isArray(d.rooms)) {
-        console.error("[availability] 空室が取れませんでした", r.status, d?.message ?? "");
-        return memo?.data ?? null;
-      }
-      const data: Availability = {
-        today: d.today,
-        until: d.until,
-        rooms: (d.rooms as Availability["rooms"]).map((x) => ({
-          name: String(x.name),
-          capacity: Number(x.capacity) || 0,
-          state: String(x.state),
-          booked: Array.isArray(x.booked) ? x.booked.map(String) : [],
-        })),
-      };
-      memo = { at: Date.now(), data };
-      return data;
-    } catch (e) {
-      console.error("[availability] 空室が取れませんでした", e);
-      // 取れなかったときは、古くても直前の値を使う
-      return memo?.data ?? null;
-    } finally {
-      pending = null;
-    }
-  })();
-  return pending;
 }

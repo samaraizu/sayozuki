@@ -23,5 +23,16 @@
   //   SESSION_SECRET        ログイン状態のクッキーの署名（長い乱数）
   //   ALLOWED_EMAILS        使う人のGoogleアカウント（カンマ区切り）
   //   SYNC_TOKEN            取り込みGASとの同期の合言葉（長い乱数）
+  //   --- HPの事前決済（src/hp.ts）---
+  //   SQUARE_ACCESS_TOKEN   客室オーダーと同じ Square アカウントのアクセストークン
+  //   SQUARE_LOCATION_ID    同じロケーションID
+  //   RESEND_API_KEY        確認メール（Resend）
+  //   MAIL_FROM             確認メールの送信元（例：小夜月 <info@sayozuki.com>）
+  //   MAIL_TO               新しいHP予約の通知先（カンマ区切り）
+  "vars": {
+    "SQUARE_ENV": "production"
+  },
+  // 毎分：HPの決済待ちを確かめ、期限切れなら部屋を戻す
+  "triggers": { "crons": ["* * * * *"] },
   "observability": { "enabled": true }
 }

@@ -91,6 +91,40 @@ export const meals = {
   dinner: 3500,
 };
 
+/**
+ * HPの予約（事前決済）の料金の決まり。lib/pricing.ts が使う。
+ * - 3名様以上：1名ごとに、その部屋の2名料金の半分を足す（Notion「室料＋素泊まり販売価格の1名料金」）
+ * - 繁忙期：下の期間の夜は 1室1泊 busySurcharge を足す（期間は始まりと終わりを含む。毎年同じ月日）
+ * - 入湯税（大人1人1泊300円）は事前決済に含めず、現地でいただく
+ */
+export const bookingRules = {
+  baseGuests: 2,
+  busySurcharge: 3000,
+  /** 月日（MM-DD）。年をまたぐ期間は from > to で書く */
+  busySeasons: [
+    { label: "年末年始", from: "12-29", to: "01-03" },
+    { label: "ゴールデンウィーク", from: "04-29", to: "05-05" },
+    { label: "お盆", from: "08-11", to: "08-16" },
+  ],
+  /** 予約できる泊数の上限 */
+  maxNights: 14,
+  /** 何日先まで予約を受けるか（予約管理の空室は180日先まで） */
+  bookAheadDays: 180,
+  /** 入湯税（大人1人1泊）。現地払い */
+  bathTax: 300,
+};
+
+/**
+ * キャンセル料（事前決済の予約）。日数はご到着日の何日前か。上から順に当てはめる。
+ * 画面と確認メールの文言は lib/i18n の book.policy。ここを変えたら6言語とも直す
+ */
+export const cancellationPolicy = [
+  { daysBefore: 7, rate: 0 },
+  { daysBefore: 2, rate: 30 },
+  { daysBefore: 1, rate: 50 },
+  { daysBefore: 0, rate: 100 },
+] as const;
+
 export const pricingNotes = [
   "表示は素泊まり・2名様でご利用の場合の1室料金です。",
   "3名様以上でのご利用は、1名様分の素泊まり料金を加算いたします。",

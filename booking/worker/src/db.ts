@@ -138,7 +138,10 @@ export interface SyncPayload {
 /** アプリで入れて、まだスプシに載っていない予約（GASがスプシに足す）。スプシの見出し名で返す */
 export async function pendingForSheet(env: Env) {
   const { results } = await env.DB.prepare(
-    `SELECT ${SELECT_COLS}, created_at AS createdAt FROM bookings WHERE source = 'app' AND in_sheet = 0 ORDER BY id`,
+    `SELECT ${SELECT_COLS}, created_at AS createdAt FROM bookings WHERE source = 'app' AND in_sheet = 0
+       -- HPの予約は払われるまで送らない（決済待ちの仮でカレンダーや通知が出ないように）
+       AND NOT EXISTS (SELECT 1 FROM hp_checkouts h WHERE h.no = bookings.no AND h.status <> 'paid')
+     ORDER BY id`,
   ).all<Row>();
   return {
     ok: true,

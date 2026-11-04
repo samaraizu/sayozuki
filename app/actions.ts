@@ -2,7 +2,8 @@
 
 import { dictionaries, isLocale, type Locale } from "@/lib/i18n";
 import { roomStatus } from "@/lib/availability";
-import { getAvailability, sendToBookingLedger } from "@/lib/booking-intake";
+import { getAvailability } from "@/lib/booking-api";
+import { sendToBookingLedger } from "@/lib/booking-intake";
 import { sendInquiryMail } from "@/lib/mail";
 import { rooms } from "@/lib/site";
 

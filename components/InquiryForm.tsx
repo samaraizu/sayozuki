@@ -9,8 +9,8 @@ import { rooms } from "@/lib/site";
 const initialState: InquiryState = { status: "idle" };
 
 const field =
-  "mt-1.5 w-full border border-line bg-white px-3 py-2.5 text-[15px] outline-none transition-colors focus:border-green";
-const label = "block text-[13px] font-bold";
+  "mt-1.5 w-full rounded-xl border border-steel bg-mist px-3 py-3 text-[16px] text-navy outline-none transition-colors focus:border-sea focus:ring-2 focus:ring-sea/20";
+const label = "block text-[13px] font-bold text-navy";
 
 export function InquiryForm({
   lang,
@@ -25,8 +25,8 @@ export function InquiryForm({
 
   if (state.status === "ok") {
     return (
-      <div className="border border-line bg-green-soft px-6 py-12 text-center" role="status">
-        <p className="text-lg font-bold text-green">{t.thanks}</p>
+      <div className="rounded-[22px] bg-mint px-6 py-12 text-center" role="status">
+        <p className="font-serif text-xl font-semibold text-pine">{t.thanks}</p>
         <p className="mt-4 text-sm leading-7">
           {state.message ?? t.ok}
         </p>
@@ -118,15 +118,15 @@ function Fields({
       <input type="hidden" name="lang" value={lang} />
       <div>
         <label htmlFor="name" className={label}>
-          {t.name}<span className="ml-1 text-moon">*</span>
+          {t.name}<span className="ml-1 text-sea">*</span>
         </label>
         <input id="name" name="name" defaultValue={v.name} autoComplete="name" className={field} aria-invalid={!!err.name} />
-        {err.name && <p className="mt-1 text-xs text-red-700">{err.name}</p>}
+        {err.name && <p className="mt-1 text-xs text-[#B3261E]">{err.name}</p>}
       </div>
 
       <div>
         <label htmlFor="email" className={label}>
-          {t.email}<span className="ml-1 text-moon">*</span>
+          {t.email}<span className="ml-1 text-sea">*</span>
         </label>
         <input
           id="email"
@@ -136,7 +136,7 @@ function Fields({
           className={field}
           aria-invalid={!!err.email}
         />
-        {err.email && <p className="mt-1 text-xs text-red-700">{err.email}</p>}
+        {err.email && <p className="mt-1 text-xs text-[#B3261E]">{err.email}</p>}
       </div>
 
       <div>
@@ -159,7 +159,7 @@ function Fields({
           className={field}
           aria-invalid={!!err.checkin}
         />
-        {err.checkin && <p className="mt-1 text-xs text-red-700">{err.checkin}</p>}
+        {err.checkin && <p className="mt-1 text-xs text-[#B3261E]">{err.checkin}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-6">
@@ -177,7 +177,7 @@ function Fields({
         </div>
         <div>
           <label htmlFor="guests" className={label}>
-            {t.guests}<span className="ml-1 text-moon">*</span>
+            {t.guests}<span className="ml-1 text-sea">*</span>
           </label>
           <select
             id="guests"
@@ -193,7 +193,7 @@ function Fields({
               </option>
             ))}
           </select>
-          {err.guests && <p className="mt-1 text-xs text-red-700">{err.guests}</p>}
+          {err.guests && <p className="mt-1 text-xs text-[#B3261E]">{err.guests}</p>}
         </div>
       </div>
 
@@ -220,27 +220,27 @@ function Fields({
             );
           })}
         </select>
-        {err.room && <p className="mt-1 text-xs text-red-700">{err.room}</p>}
+        {err.room && <p className="mt-1 text-xs text-[#B3261E]">{err.room}</p>}
       </div>
 
-      <section className="sm:col-span-2 border border-line bg-white px-5 py-5" aria-labelledby="avail-title" aria-live="polite">
+      <section className="sm:col-span-2 rounded-[22px] border border-frost bg-mist px-5 py-5" aria-labelledby="avail-title" aria-live="polite">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id="avail-title" className="text-[13px] font-bold">
             {t.availTitle}
           </h3>
           {showStatus && freeCount > 0 && (
-            <p className="text-[13px] font-bold text-green">{fmt(t.availCount, { n: freeCount })}</p>
+            <p className="text-[13px] font-bold text-pine">{fmt(t.availCount, { n: freeCount })}</p>
           )}
         </div>
         {!checkin ? (
-          <p className="mt-2 text-[13px] text-sub">{t.availPick}</p>
+          <p className="mt-2 text-[13px] text-slate">{t.availPick}</p>
         ) : avail.status === "error" ? (
-          <p className="mt-2 text-[13px] text-sub">{t.availError}</p>
+          <p className="mt-2 text-[13px] text-slate">{t.availError}</p>
         ) : !showStatus ? (
-          <p className="mt-2 text-[13px] text-sub">{t.availLoading}</p>
+          <p className="mt-2 text-[13px] text-slate">{t.availLoading}</p>
         ) : (
           <>
-            {!anyOpen && <p className="mt-2 text-[13px] font-bold text-moon">{t.availNone}</p>}
+            {!anyOpen && <p className="mt-2 text-[13px] font-bold text-sea-deep">{t.availNone}</p>}
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {rooms.map((r) => {
                 const st = statuses[r.name] ?? "unknown";
@@ -253,16 +253,16 @@ function Fields({
                       disabled={!can}
                       aria-pressed={on}
                       onClick={() => setRoom(on ? "" : r.name)}
-                      className={`flex w-full items-center justify-between gap-3 border px-3 py-2.5 text-left text-[14px] transition-colors ${
+                      className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-3.5 py-3 text-left text-[14px] transition-colors ${
                         on
-                          ? "border-green bg-green-soft"
+                          ? "border-2 border-sea bg-sel"
                           : can
-                            ? "border-line hover:border-green"
-                            : "cursor-not-allowed border-line bg-surface text-sub"
+                            ? "border-steel bg-white hover:border-sea"
+                            : "cursor-not-allowed border-dashed border-dash bg-navy/[0.04] text-slate"
                       }`}
                     >
                       <span>{fmt(t.roomOption, { room: roomNames[r.name] ?? r.name, n: r.capacity })}</span>
-                      <span className={`shrink-0 text-[12px] font-bold ${st === "free" ? "text-green" : "text-sub"}`}>
+                      <span className={`shrink-0 rounded-lg px-2 py-0.5 text-[12px] font-bold ${st === "free" ? "bg-mint text-pine" : "text-slate"}`}>
                         {t[STATUS_LABEL[st]]}
                       </span>
                     </button>
@@ -270,7 +270,7 @@ function Fields({
                 );
               })}
             </ul>
-            <p className="mt-3 text-xs leading-6 text-sub">{t.availNote}</p>
+            <p className="mt-3 text-xs leading-6 text-slate">{t.availNote}</p>
           </>
         )}
       </section>
@@ -284,7 +284,7 @@ function Fields({
             ["both", t.mealBoth],
           ].map(([value, text]) => (
             <label key={value} className="flex cursor-pointer items-center gap-2">
-              <input type="radio" name="meal" value={value} defaultChecked={value === (v.meal || "none")} className="accent-moon" />
+              <input type="radio" name="meal" value={value} defaultChecked={value === (v.meal || "none")} className="accent-sea" />
               {text}
             </label>
           ))}
@@ -305,18 +305,18 @@ function Fields({
 
       <div className="sm:col-span-2">
         {state.status === "error" && state.message && (
-          <p className="mb-4 text-sm text-red-700" role="alert">
+          <p className="mb-4 text-sm text-[#B3261E]" role="alert">
             {state.message}
           </p>
         )}
         <button
           type="submit"
           disabled={pending}
-          className="w-full bg-green px-10 py-4 text-sm font-bold text-white transition-opacity hover:opacity-85 disabled:opacity-50 sm:w-auto"
+          className="h-14 w-full rounded-2xl bg-grad px-10 text-[15px] font-bold text-white shadow-cta transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 sm:w-auto"
         >
           {pending ? t.sending : t.submit}
         </button>
-        <p className="mt-4 text-xs leading-6 text-sub">
+        <p className="mt-4 text-xs leading-6 text-slate">
           {t.disclaimer}
         </p>
       </div>

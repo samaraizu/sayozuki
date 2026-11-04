@@ -80,3 +80,40 @@ html:lang(th) .font-serif {
 html:lang(th) body * {
   letter-spacing: normal;
 }
+
+/*
+ * 宿のHP（青緑）。客室オーダー（order/public/app.css の :root）と同じ値。
+ * お取り寄せ（/shop）は白×緑のままなので、上の --color-green などは変えずに別の名前で持つ
+ */
+@theme inline {
+  --color-sea: #2b6bd3;
+  --color-sea-deep: #1e5fc2;
+  --color-teal: #138a74;
+  --color-navy: #1d2a3b;
+  --color-slate: #536479;
+  --color-sky: #eef4fb;
+  --color-mist: #f6fafe;
+  --color-sel: #e3eefc;
+  --color-frost: #e2ebf5;
+  --color-frost-2: #d5e1ee;
+  --color-steel: #c3d3e5;
+  --color-dash: #93a8bf;
+  --color-mint: #d9f2e8;
+  --color-pine: #145e4b;
+}
+
+.bg-grad {
+  background-image: linear-gradient(135deg, #2b6bd3 0%, #138a74 100%);
+}
+.bg-page {
+  background-image: linear-gradient(180deg, #eaf2fd 0%, #edf8f4 100%);
+}
+.shadow-soft {
+  box-shadow: 0 6px 20px rgba(43, 107, 211, 0.08);
+}
+.shadow-lift {
+  box-shadow: 0 12px 30px rgba(43, 107, 211, 0.18);
+}
+.shadow-cta {
+  box-shadow: 0 10px 24px rgba(43, 107, 211, 0.3);
+}

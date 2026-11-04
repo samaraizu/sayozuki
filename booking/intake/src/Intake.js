@@ -1,9 +1,8 @@
 /**
  * 小夜月 予約受付（HP ⇄ 予約台帳）
  *
- * HP（Cloudflare Workers）から POST で呼ばれる受け口。できることは2つだけ。
- * - action なし          : ご予約フォームの申し込みを「問い合わせ」タブに1行足す
- * - action: availability : 部屋ごとの「埋まっている夜」を返す（HPの空室表示用。名前などは返さない）
+ * HP（Cloudflare Workers）から POST で呼ばれる受け口。お問い合わせフォームの申し込みを
+ * 「問い合わせ」タブに1行足すことだけをする。（空室は予約管理の Worker から取る）
  *
  * Googleログインのないサーバーから呼ぶので「自分として実行・全員がアクセス可」で配信し、
  * 中身の合言葉（INTAKE_SECRET）で照合する。予約管理の Webアプリとは別のプロジェクトにして、
@@ -25,18 +24,12 @@ var INQUIRY_HEADERS = [
 ];
 var MEAL_TEXT = { none: '素泊まり', breakfast: '朝食付き', both: '1泊2食付き' };
 var LIMITS = { name: 100, email: 200, tel: 50, room: 50, message: 2000, lang: 10 };
-var AVAILABILITY_DAYS = 180; // 今日から何日先まで返すか
-var CANCELLED = 'キャンセル';
 
 function doPost(e) {
   try {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
     var secret = PropertiesService.getScriptProperties().getProperty('INTAKE_SECRET');
     if (!secret || !sameText_(String(body.secret || ''), secret)) return json_({ ok: false, message: 'forbidden' });
-
-    if (body.action === 'availability') {
-      return json_(availability_(SpreadsheetApp.openById(prop_('SPREADSHEET_ID'))));
-    }
 
     var record = cleanRecord_(body.record || {});
     if (!record) return json_({ ok: false, message: 'bad record' });
@@ -122,57 +115,6 @@ function inquiryRow_(headers, r, now) {
   return headers.map(function (h) { return Object.prototype.hasOwnProperty.call(values, h) ? values[h] : ''; });
 }
 
-/**
- * 空室表示用。部屋ごとに、状態・定員と「埋まっている夜」（チェックイン日〜チェックアウト前日）を返す。
- * rooms   : 部屋タブの行 {部屋, 定員, 状態}
- * bookings: 予約タブの行 {部屋, ステータス, チェックイン, チェックアウト}
- * キャンセル以外はすべて埋まっている扱い（仮も含む）。部屋が空の予約は数えない
- */
-function occupancy_(rooms, bookings, todayIso, days) {
-  var until = addDays_(todayIso, days);
-  var out = {};
-  rooms.forEach(function (r) {
-    var name = String(r['部屋'] || '').trim();
-    if (!name) return;
-    out[name] = { capacity: parseInt(r['定員'], 10) || 0, state: String(r['状態'] || '').trim() || '停止', booked: {} };
-  });
-  bookings.forEach(function (b) {
-    var room = String(b['部屋'] || '').trim();
-    if (!out[room] || String(b['ステータス'] || '').trim() === CANCELLED) return;
-    var inIso = toIso_(b['チェックイン']), outIso = toIso_(b['チェックアウト']);
-    if (!inIso || !outIso || inIso >= outIso) return;
-    var night = inIso < todayIso ? todayIso : inIso;
-    for (var i = 0; night < outIso && night < until && i < 400; i++) {
-      out[room].booked[night] = true;
-      night = addDays_(night, 1);
-    }
-  });
-  return {
-    ok: true,
-    today: todayIso,
-    until: until,
-    rooms: Object.keys(out).map(function (name) {
-      var r = out[name];
-      return { name: name, capacity: r.capacity, state: r.state, booked: Object.keys(r.booked).sort() };
-    })
-  };
-}
-
-// "2026/11/07(土)" / "2026-11-07" を yyyy-MM-dd に。読めなければ ''
-function toIso_(value) {
-  var m = String(value === undefined || value === null ? '' : value).match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
-  if (!m) return '';
-  var y = +m[1], mo = +m[2], d = +m[3];
-  var dt = new Date(Date.UTC(y, mo - 1, d));
-  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return '';
-  return dt.toISOString().slice(0, 10);
-}
-
-function addDays_(iso, n) {
-  var p = iso.split('-');
-  return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)).toISOString().slice(0, 10);
-}
-
 // 合言葉の照合（長さ以外で早く抜けない）
 function sameText_(a, b) {
   if (a.length !== b.length) return false;
@@ -187,22 +129,6 @@ function prop_(key) {
   var v = PropertiesService.getScriptProperties().getProperty(key);
   if (!v) throw new Error('スクリプトプロパティ ' + key + ' が未設定');
   return v;
-}
-
-function availability_(ss) {
-  function table(name) {
-    var sheet = ss.getSheetByName(name);
-    if (!sheet) throw new Error('タブ「' + name + '」がない');
-    var values = sheet.getDataRange().getDisplayValues();
-    var headers = values[0] || [];
-    return values.slice(1).map(function (row) {
-      var o = {};
-      headers.forEach(function (h, i) { if (h) o[h] = row[i]; });
-      return o;
-    });
-  }
-  var today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
-  return occupancy_(table('部屋'), table('予約'), today, AVAILABILITY_DAYS);
 }
 
 function inquirySheet_(ss) {

@@ -1,6 +1,6 @@
-import { getAvailability } from "@/lib/booking-intake";
+import { getAvailability } from "@/lib/booking-api";
 
-// 予約台帳の空室（部屋ごとの埋まっている夜だけ。名前などは含まない）。ご予約フォームが読む
+// 予約管理（D1）の空室（部屋ごとの埋まっている夜だけ。名前などは含まない）。ご予約フォームが読む
 export const dynamic = "force-dynamic";
 
 export async function GET() {

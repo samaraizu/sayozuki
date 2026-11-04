@@ -7,6 +7,14 @@ export interface Env {
   ALLOWED_EMAILS?: string;
   SYNC_TOKEN?: string;
   DEV_EMAIL?: string; // 手元の wrangler dev だけ（.dev.vars）。本番には入れない
+  // HPの事前決済（src/hp.ts）
+  SQUARE_ACCESS_TOKEN?: string; // 客室オーダーと同じ Square アカウント
+  SQUARE_LOCATION_ID?: string;
+  SQUARE_ENV?: string; // production / sandbox
+  SQUARE_MOCK?: string; // 1 = Square を呼ばずに払ったことにする（手元だけ）
+  RESEND_API_KEY?: string; // 確認メール
+  MAIL_FROM?: string;
+  MAIL_TO?: string; // 宿への通知先（カンマ区切り）
 }
 
 export class UserError extends Error {}
