@@ -13,7 +13,10 @@ export interface MenuItem {
   tracked: boolean;
   stock: number | null; // 追跡していない商品は null
   soldOut: boolean;
+  /** スタッフ画面で一時停止中（soldOut にも含めている） */
+  paused: boolean;
   images: string[];
+  imageIds: string[];
 }
 
 export interface Menu {

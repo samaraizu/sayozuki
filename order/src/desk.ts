@@ -26,7 +26,7 @@ export class OrderDesk extends DurableObject<Env> {
 
   async getMenu(force = false): Promise<Menu> {
     if (!force && this.menu && Date.now() - this.menu.fetchedAt < MENU_TTL_MS) return this.menu;
-    this.menu = isMock(this.env) ? mockMenu() : await fetchSquareMenu(this.env);
+    this.menu = isMock(this.env) ? await mockMenu(this.env) : await fetchSquareMenu(this.env);
     return this.menu;
   }
 

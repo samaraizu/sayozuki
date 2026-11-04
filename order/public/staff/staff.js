@@ -38,6 +38,18 @@ const ERRORS = {
   not_pending: 'お支払い待ちの精算はありません。',
   square_error: 'Squareとの通信でエラーが出ました。',
   unauthorized: 'PINが違います。',
+  name_required: '商品名を入れてください。',
+  name_too_long: '商品名は60文字までです。',
+  desc_too_long: '説明は300文字までです。',
+  bad_price: '価格は0以上の整数（円）で入れてください。',
+  bad_category: 'カテゴリを選んでください。',
+  bad_stock: '在庫数は0以上の整数で入れてください。',
+  category_missing: 'Squareにこのカテゴリがありません。Squareの管理画面でカテゴリを作ってください。',
+  price_locked: 'この商品は精算前の注文に入っているので、今は価格を変えられません。精算が済んでから変えてください。',
+  item_in_use: 'この商品は精算前の注文に入っているので、今は掲載をやめられません。精算が済んでからにしてください。',
+  bad_image: '写真は JPEG / PNG / GIF にしてください。',
+  image_too_large: '写真が大きすぎます。',
+  item_not_found: 'この商品が見つかりません。一覧を読み込み直してください。',
   staff_pin_not_set: 'サーバーにSTAFF_PINが設定されていません。'
 };
 
@@ -179,7 +191,7 @@ function render(fresh = new Set()) {
 
   root.innerHTML = `<div class="wrap">
     <header><div class="logo">小夜月<small>スタッフ</small> ${b.mock ? '<span class="pill">モック動作中（Square未接続）</span>' : ''}</div>
-      <div class="btns"><button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu">メニュー再読込</button><button class="b" data-act="logout">ログアウト</button></div></header>
+      <div class="btns"><button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu-open">メニュー</button><button class="b" data-act="logout">ログアウト</button></div></header>
     <section style="margin-bottom:16px"><h2>チャット <span class="n${unreadTotal ? ' hot' : ''}">${unreadTotal}</span></h2>${chats}</section>
     <div class="grid">
       <section><h2>新しい注文 <span class="n">${b.orders.length}</span></h2>${orders}</section>
@@ -250,9 +262,231 @@ dlg.addEventListener('submit', (e) => {
   sendChat(e.target);
 });
 dlg.addEventListener('close', () => {
-  dlg.classList.remove('chat-dlg');
+  dlg.classList.remove('chat-dlg', 'menu-dlg');
+  menuData = null;
   if (chatRoom) { chatRoom = null; load(); }
 });
+
+// ---------- メニューの管理 ----------
+let menuData = null; // { categories, items, held, mock }
+let menuEditId = null; // 編集中の商品（null = 新規）
+const TR_LANGS = [['en', '英語'], ['zht', '中国語（繁体字）'], ['zhs', '中国語（簡体字）'], ['ko', '韓国語']];
+
+async function openMenu() {
+  dlg.classList.add('menu-dlg');
+  dlg.innerHTML = '<div class="empty" style="padding:24px">読み込み中…</div>';
+  if (!dlg.open) dlg.showModal();
+  menuData = await api('/menu');
+  showMenuList();
+}
+
+function itemStatus(i) {
+  const held = menuData.held[i.id] || 0;
+  const tags = [];
+  if (i.paused) tags.push('<span class="tag w">一時停止中</span>');
+  else if (i.tracked) {
+    const left = Math.max(0, (i.stock || 0) - held);
+    tags.push(left > 0 ? `<span class="tag">残り ${left}</span>` : '<span class="tag w">売り切れ（残り0）</span>');
+  } else if (i.soldOut) tags.push('<span class="tag w">売り切れ（Square）</span>');
+  else tags.push('<span class="tag">掲載中</span>');
+  return tags.join(' ');
+}
+
+function showMenuList() {
+  menuEditId = null;
+  const d = menuData;
+  const groups = d.categories
+    .map((c) => {
+      const items = d.items.filter((i) => i.category === c.name);
+      const cards = items.length
+        ? items
+            .map(
+              (i) => `<button class="item mitem" data-act="menu-edit" data-id="${esc(i.itemId)}">
+          <span class="thumb">${i.images[0] ? `<img src="${esc(i.images[0].url)}" alt="" loading="lazy">` : '<span class="noimg">写真なし</span>'}</span>
+          <span class="minfo"><span class="mname">${esc(i.name)}</span><span class="muted">${esc(i.desc)}</span><span>${itemStatus(i)}</span></span>
+          <span class="mprice">${yen(i.price)}</span></button>`
+            )
+            .join('')
+        : '<div class="empty">このカテゴリの商品はありません</div>';
+      return `<section class="mgroup"><h2>${esc(c.name)} <span class="n">${items.length}</span>${c.cutoff ? `<span class="muted" style="font-weight:400">当日${esc(c.cutoff)}締め</span>` : ''}</h2>${cards}</section>`;
+    })
+    .join('');
+  dlg.innerHTML = `<div class="chat-head"><button class="b" data-act="close">← 戻る</button><span class="room">メニュー</span><button class="b p" data-act="menu-new">＋ 追加</button></div>
+    <div class="mbody">${d.mock ? '<p class="muted">モック動作中：変更はこの環境のデータベースにだけ入ります。</p>' : ''}${groups}
+    <p class="muted">ここでの変更は Square の商品にそのまま入り、お客様の画面には数十秒以内に出ます。</p></div>`;
+}
+
+function trFields(kind, label, values) {
+  return `<fieldset class="trset"><legend>${label}</legend>${TR_LANGS.map(
+    ([l, n]) => `<label>${n}<input name="${kind}_${l}" value="${esc(values?.[l] || '')}" maxlength="300" data-tr="${kind}_${l}"></label>`
+  ).join('')}</fieldset>`;
+}
+
+function showMenuEdit(itemId) {
+  const i = itemId ? menuData.items.find((x) => x.itemId === itemId) : null;
+  if (itemId && !i) return showMenuList();
+  menuEditId = itemId;
+  const cats = menuData.categories.map((c) => `<option${(i ? i.category : menuData.categories[0].name) === c.name ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
+  const held = i ? menuData.held[i.id] || 0 : 0;
+  const photos = i
+    ? `<div class="photos">${i.images
+        .map(
+          (img, n) => `<div class="ph"><img src="${esc(img.url)}" alt="">${n === 0 ? '<span class="tag">1枚目（一覧に出る）</span>' : `<button type="button" class="b" data-act="menu-img-first" data-img="${esc(img.id)}">1枚目にする</button>`}<button type="button" class="b d" data-act="menu-img-remove" data-img="${esc(img.id)}">外す</button></div>`
+        )
+        .join('')}<label class="b addph">＋ 写真を追加<input type="file" accept="image/*" multiple hidden data-upload></label></div>`
+    : '<p class="muted">写真は、保存したあとに追加できます。</p>';
+  dlg.innerHTML = `<div class="chat-head"><button class="b" data-act="menu-list">← 一覧</button><span class="room">${i ? '商品を編集' : '商品を追加'}</span><span></span></div>
+    <form class="mbody medit" data-form="menu">
+      <label>商品名（日本語）<input name="name" required maxlength="60" value="${esc(i?.name || '')}"></label>
+      <label>説明（日本語・任意）<textarea name="desc" rows="2" maxlength="300">${esc(i?.desc || '')}</textarea></label>
+      <div class="two"><label>価格（円・税込）<input name="price" type="number" inputmode="numeric" min="0" step="1" required value="${i ? i.price : ''}"></label>
+      <label>カテゴリ<select name="category">${cats}</select></label></div>
+      <label class="chk"><input type="checkbox" name="tracked"${i?.tracked ? ' checked' : ''}> 数を決めて売る（在庫を数える）</label>
+      <label class="stockrow"${i?.tracked ? '' : ' hidden'}>いまの在庫数<input name="stock" type="number" inputmode="numeric" min="0" step="1" value="${i?.tracked ? i.stock ?? 0 : ''}">
+        <span class="muted">${held ? `精算前の注文で ${held} 個押さえ中。お客様には「在庫数 − ${held}」が残りとして出ます。` : '0にすると売り切れになります。'}</span></label>
+      <label class="chk"><input type="checkbox" name="paused"${i?.paused ? ' checked' : ''}> 一時停止（お客様の画面では「売り切れ」）</label>
+      <h3>写真</h3>${photos}
+      <h3>ほかの言語</h3>
+      <p class="muted">空欄は保存のときに日本語から自動で訳します。直した訳はそのまま使います。</p>
+      ${trFields('names', '商品名', i?.names)}${trFields('descs', '説明', i?.descs)}
+      <button type="button" class="b" data-act="menu-tr">日本語から訳し直す</button>
+      <div class="mactions">${i ? '<button type="button" class="b d" data-act="menu-archive">掲載をやめる</button>' : '<span></span>'}<button type="submit" class="b p">保存</button></div>
+    </form>`;
+  const f = dlg.querySelector('[data-form="menu"]');
+  f.dataset.origName = i?.name || '';
+  f.dataset.origDesc = i?.desc || '';
+  dlg.scrollTop = 0;
+  dlg.querySelector('.mbody').scrollTop = 0;
+}
+
+function formBody(f) {
+  const v = (n) => f.elements[n].value;
+  const touched = (n) => f.querySelector(`[data-tr="${n}"]`)?.dataset.touched === '1';
+  const tr = (kind, changed) =>
+    Object.fromEntries(TR_LANGS.map(([l]) => [l, changed && !touched(`${kind}_${l}`) ? '' : v(`${kind}_${l}`).trim()]));
+  const tracked = f.elements.tracked.checked;
+  return {
+    name: v('name').trim(),
+    desc: v('desc').trim(),
+    price: Number(v('price')),
+    category: v('category'),
+    tracked,
+    stock: tracked && v('stock') !== '' ? Number(v('stock')) : null,
+    paused: f.elements.paused.checked,
+    // 日本語を変えたのに訳を手で直していなければ、古い訳は捨てて訳し直す
+    names: tr('names', v('name').trim() !== f.dataset.origName),
+    descs: tr('descs', v('desc').trim() !== f.dataset.origDesc)
+  };
+}
+
+async function saveMenu(f) {
+  const btn = f.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = '保存中…';
+  try {
+    const body = formBody(f);
+    if (menuEditId) {
+      menuData = await api(`/menu/${menuEditId}`, { method: 'PUT', body });
+      toast('保存しました');
+      showMenuEdit(menuEditId);
+    } else {
+      const r = await api('/menu', { method: 'POST', body });
+      menuData = r;
+      toast('追加しました。写真を追加できます');
+      showMenuEdit(r.id);
+    }
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '保存';
+    if (e.message !== 'unauthorized') fail(e);
+  }
+}
+
+async function retranslate(el) {
+  const f = el.closest('form');
+  el.disabled = true;
+  el.textContent = '訳しています…';
+  try {
+    const r = await api('/menu/translate', { method: 'POST', body: { name: f.elements.name.value, desc: f.elements.desc.value } });
+    for (const [l] of TR_LANGS) {
+      f.elements[`names_${l}`].value = r.names[l] || '';
+      f.elements[`descs_${l}`].value = r.descs[l] || '';
+    }
+    f.querySelectorAll('[data-tr]').forEach((x) => (x.dataset.touched = '1'));
+    toast('訳を入れました。保存すると反映されます');
+  } finally {
+    el.disabled = false;
+    el.textContent = '日本語から訳し直す';
+  }
+}
+
+async function archiveMenu(el) {
+  const i = menuData.items.find((x) => x.itemId === menuEditId);
+  if (!i || !confirm(`「${i.name}」の掲載をやめますか？\nお客様の画面から消えます。Square ではアーカイブになるので、Squareの管理画面から戻せます。`)) return;
+  el.disabled = true;
+  menuData = await api(`/menu/${menuEditId}/archive`, { method: 'POST' });
+  toast('掲載をやめました');
+  showMenuList();
+}
+
+async function imageOp(el, op) {
+  if (op === 'remove' && !confirm('この写真を外しますか？')) return;
+  el.disabled = true;
+  const img = el.dataset.img;
+  menuData = await api(`/menu/${menuEditId}/images/${img}${op === 'first' ? '/first' : ''}`, { method: op === 'first' ? 'POST' : 'DELETE' });
+  showMenuEdit(menuEditId);
+}
+
+// スマホの写真は大きいので、長い辺1600pxのJPEGに縮めてから送る
+function shrink(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.round(im.naturalWidth * k);
+      c.height = Math.round(im.naturalHeight * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error('shrink'))), 'image/jpeg', 0.85);
+    };
+    im.onerror = () => { URL.revokeObjectURL(url); reject(Object.assign(new Error('bad_image'), { code: 'bad_image' })); };
+    im.src = url;
+  });
+}
+
+async function uploadPhotos(input) {
+  const files = [...input.files];
+  if (!files.length) return;
+  const label = input.closest('.addph');
+  label.classList.add('busy');
+  label.firstChild.textContent = `アップロード中…（${files.length}枚）`;
+  try {
+    for (const file of files) {
+      const blob = await shrink(file);
+      const res = await fetch(`/staff/api/menu/${menuEditId}/images`, { method: 'POST', headers: { authorization: 'Bearer ' + pin, 'content-type': 'image/jpeg' }, body: blob });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw Object.assign(new Error(data.error), { code: data.error, detail: data.detail });
+      menuData = data;
+    }
+    toast('写真を追加しました');
+  } catch (e) {
+    fail(e);
+  }
+  showMenuEdit(menuEditId);
+}
+
+dlg.addEventListener('submit', (e) => {
+  if (!e.target.matches('[data-form="menu"]')) return;
+  e.preventDefault();
+  saveMenu(e.target);
+});
+dlg.addEventListener('change', (e) => {
+  if (e.target.matches('[data-upload]')) return uploadPhotos(e.target);
+  if (e.target.name === 'tracked') dlg.querySelector('.stockrow').hidden = !e.target.checked;
+});
+dlg.addEventListener('input', (e) => { if (e.target.dataset.tr) e.target.dataset.touched = '1'; });
 
 // ---------- スマホへの通知 ----------
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
@@ -354,7 +588,14 @@ document.addEventListener('click', async (ev) => {
         return toast('会話を終えました');
       }
       case 'push': return pushOn ? disablePush() : enablePush();
-      case 'menu': await api('/menu/refresh', { method: 'POST' }); return toast('メニューを読み込み直しました');
+      case 'menu-open': return openMenu();
+      case 'menu-list': return showMenuList();
+      case 'menu-new': return showMenuEdit(null);
+      case 'menu-edit': return showMenuEdit(id);
+      case 'menu-tr': return retranslate(el);
+      case 'menu-archive': return archiveMenu(el);
+      case 'menu-img-first': return imageOp(el, 'first');
+      case 'menu-img-remove': return imageOp(el, 'remove');
       case 'deliver': el.disabled = true; await api(`/orders/${id}/deliver`, { method: 'POST' }); await flick(el); return load();
       case 'cancel': if (!confirm('この注文を取り消しますか？')) return; await api(`/orders/${id}/cancel`, { method: 'POST' }); return load();
       case 'reqdone': el.disabled = true; await api(`/requests/${id}/done`, { method: 'POST' }); await flick(el); return load();

@@ -25,3 +25,23 @@ export async function sq<T = any>(env: Env, path: string, init: { method?: strin
   }
   return data as T;
 }
+
+/** 画像のアップロード（multipart）。Squareの CreateCatalogImage */
+export async function sqUpload<T = any>(env: Env, path: string, request: unknown, file: Blob, filename: string): Promise<T> {
+  if (!env.SQUARE_ACCESS_TOKEN) throw new HttpError(500, 'square_not_configured');
+  const form = new FormData();
+  form.append('request', new Blob([JSON.stringify(request)], { type: 'application/json' }));
+  form.append('image_file', file, filename);
+  const res = await fetch(base(env) + path, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${env.SQUARE_ACCESS_TOKEN}`, 'square-version': SQUARE_VERSION },
+    body: form
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!res.ok) {
+    console.error('square error', path, res.status, text);
+    throw new HttpError(502, 'square_error', data?.errors?.[0]?.detail ?? `HTTP ${res.status}`);
+  }
+  return data as T;
+}
