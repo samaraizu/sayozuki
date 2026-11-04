@@ -138,8 +138,8 @@ export const pricingNotes = [
 export const stay = {
   checkIn: "15:00" as string | null,
   checkOut: "10:00" as string | null,
-  /** 大浴場を使える時間。例 { from: "15:00", to: "24:00" } */
-  bathHours: null as { from: string; to: string } | null,
+  /** 大浴場を使える時間。"24h" = 24時間いつでも。時間を区切るときは { from: "15:00", to: "24:00" } */
+  bathHours: "24h" as "24h" | { from: string; to: string } | null,
   /** 駐車場の案内（例 "無料・6台"）。未確認のあいだは null */
   parking: null as string | null,
   /** 入湯税（上山市・大人1人1泊、円）。フロントで徴収。予約台帳（booking/）と客室オーダーの BATH_TAX_YEN も同じ額に */
