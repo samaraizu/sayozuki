@@ -836,12 +836,21 @@ function loadTable_(sheet, requiredCols, dateCols, tz, fixedWidth) {
       Object.keys(idx).forEach(function (h) {
         let x = arr[idx[h]];
         if (dateCols.indexOf(h) >= 0) x = toIso_(x, tz);
+        else x = timeText_(h, x, tz);
         v[h] = x;
       });
       rows.push({ _row: i + 2, v: v, dirty: {}, isNew: false });
     });
   }
   return { sheet: sheet, headers: headers, idx: idx, rows: rows, dateCols: dateCols };
+}
+
+// 時刻だけの列（到着予定）。スプシは「15:00」を 1899/12/30 15:00 の日時として返すので、
+// そのまま文字にすると「Sat Dec 30 1899 15:00:00 GMT+0900 …」になる。読むときに「15:00」に直す
+const TIME_COLS = ['到着予定'];
+function timeText_(h, x, tz) {
+  if (TIME_COLS.indexOf(h) < 0 || Object.prototype.toString.call(x) !== '[object Date]') return x;
+  return Utilities.formatDate(x, tz, 'HH:mm');
 }
 
 function saveTable_(t, tz) {
