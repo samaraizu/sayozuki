@@ -510,7 +510,7 @@ function viewBill() {
     <div class="bill">
       ${lines || `<div class="lead" style="padding:8px 0">${esc(t('noOrders'))}</div>`}
       <div class="bill-total"><span style="font-weight:700">${esc(t('total'))}</span><span class="v">${yen(b.total)}</span></div>
-    </div>${action}</main>`;
+    </div>${action}${s.bathTaxYen ? `<p class="lead" style="margin-top:14px">${esc(t('bathTax').replace('{yen}', yen(s.bathTaxYen)))}</p>` : ''}</main>`;
 }
 
 function guideLinks() {

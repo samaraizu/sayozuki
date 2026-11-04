@@ -102,6 +102,7 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
       guideBase: env.GUIDE_BASE_URL,
       lastOrder: env.LAST_ORDER,
       // Wi-Fiは客室QRで開いた人にだけ渡す（公開ページやリポジトリには載せない）
+      bathTaxYen: Number(env.BATH_TAX_YEN) > 0 ? Number(env.BATH_TAX_YEN) : null,
       wifi: env.WIFI_SSID ? { ssid: env.WIFI_SSID, password: env.WIFI_PASSWORD ?? '' } : null
     });
   }

@@ -16,6 +16,7 @@ export interface Env {
 
   ORDER_OPEN: string;
   LAST_ORDER: string;
+  BATH_TAX_YEN?: string;
   PUBLIC_ORIGIN: string;
   GUIDE_BASE_URL: string;
   COMPANY_NAME: string;

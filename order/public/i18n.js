@@ -94,6 +94,7 @@ const T = {
   orderSub: { ja: 'お部屋までお届け・ラストオーダー {t}', en: 'Delivered to your room · last order {t}', zht: '送到客房・最後點餐 {t}', zhs: '送到客房・最后点餐 {t}', ko: '객실로 배달・라스트 오더 {t}' },
   reqShort: { ja: '無料でお持ちします', en: 'Free items', zht: '免費提供', zhs: '免费提供', ko: '무료 제공' },
   chatShort: { ja: 'スタッフに連絡', en: 'Message staff', zht: '聯絡工作人員', zhs: '联系工作人员', ko: '직원에게 연락' },
+  bathTax: { ja: '入湯税は大人おひとり1泊{yen}です。人数をおうかがいして、チェックアウトのときにフロントでいただきます。', en: 'A bathing tax of {yen} per adult per night is collected at the front desk at check-out.', zht: '入湯稅為每位成人每晚{yen}，退房時於櫃台依人數收取。', zhs: '入汤税为每位成人每晚{yen}，退房时在前台按人数收取。', ko: '입탕세는 성인 1인 1박 {yen}이며, 체크아웃 때 프런트에서 인원을 여쭤본 뒤 받습니다.' },
   billShort: { ja: 'お部屋付けの明細', en: 'Room charges', zht: '房帳明細', zhs: '房账明细', ko: '객실 청구 내역' },
   aboutTitle: { ja: 'ご案内', en: 'About your stay', zht: '住宿指南', zhs: '住宿指南', ko: '숙박 안내' },
   aboutLead: { ja: 'ご滞在中に役立つ情報をまとめています。', en: 'Everything you need during your stay.', zht: '彙整住宿期間的實用資訊。', zhs: '汇总住宿期间的实用信息。', ko: '머무시는 동안 필요한 정보를 모았습니다.' },
