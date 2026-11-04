@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { GuidePage } from "@/components/GuidePage";
-import { guideDoc, guideSlugs, isGuideLocale, isGuideSlug } from "@/lib/guide";
+import { guideDoc, guideLocales, guideSlugs, isGuideLocale, isGuideSlug } from "@/lib/guide";
 import { site } from "@/lib/site";
 
 export const dynamicParams = false;
 
-export function generateStaticParams({ params }: { params: { lang: string } }) {
-  return isGuideLocale(params.lang) ? guideSlugs.map((slug) => ({ slug })) : [];
+// 親の [lang] から params を受け取る形だと、本番ビルドで英中韓の個別ページが作られず404になったため、言語×ページを自分で全部並べる
+export function generateStaticParams() {
+  return guideLocales.filter((lang) => lang !== "ja").flatMap((lang) => guideSlugs.map((slug) => ({ lang, slug })));
 }
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/guide/[slug]">): Promise<Metadata> {
