@@ -29,6 +29,8 @@
     "MOCK_SQUARE": "0",
     "ORDER_OPEN": "06:00",
     "LAST_ORDER": "22:30",
+    // 入湯税（大人1人1泊）。お会計の画面に案内として出すだけで、徴収はフロント
+    "BATH_TAX_YEN": "300",
     "PUBLIC_ORIGIN": "https://sayozuki-order.toneclown17.workers.dev", // Square Webhookの署名に使う。order.sayozuki.com を繋いだら戻し、Webhookの通知先も変える
     "GUIDE_BASE_URL": "https://sayozuki.toneclown17.workers.dev/guide", // HP（Worker「sayozuki」）。sayozuki.com を繋いだら https://sayozuki.com/guide に戻す
     "COMPANY_NAME": "小夜月株式会社",

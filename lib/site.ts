@@ -108,6 +108,8 @@ export const stay = {
   bathHours: null as { from: string; to: string } | null,
   /** 駐車場の案内（例 "無料・6台"）。未確認のあいだは null */
   parking: null as string | null,
+  /** 入湯税（上山市・大人1人1泊、円）。フロントで徴収。予約台帳（booking/）と客室オーダーの BATH_TAX_YEN も同じ額に */
+  bathTaxYen: 300,
   /** 泉質の正式表記と源泉（温泉分析書より） */
   onsenFull: "ナトリウム・カルシウム－塩化物・硫酸塩温泉（低張性弱アルカリ性高温泉）",
   onsenSources: ["葉山地区1号源泉", "葉山地区2号源泉"],

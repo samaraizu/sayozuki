@@ -8,6 +8,7 @@ import { notifyStaff } from '../lib/notify';
 import { vapid } from '../lib/push';
 import { markSettled, syncPendingPayments } from '../lib/settle';
 import { createCheckoutLink, deletePaymentLink } from '../square/checkout';
+import { addImage, archiveItem, changeImage, createItem, heldCounts, parseInput, suggestTr, updateItem } from '../square/admin';
 import { desk, pendingSettlement, roomBill, type RoomRow } from './guest';
 
 function authStaff(req: Request, env: Env) {
@@ -234,5 +235,66 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
     return json({ ok: true });
   }
 
+  // メニューの管理：一覧・追加・編集・掲載をやめる・写真
+  if (p === '/menu' && m === 'GET') return json(await staffMenu(env));
+
+  if (p === '/menu' && m === 'POST') {
+    const id = await createItem(env, parseInput(await readJson(req)));
+    return json({ id, ...(await staffMenu(env)) });
+  }
+
+  if (p === '/menu/translate' && m === 'POST') {
+    const b = await readJson<{ name?: string; desc?: string }>(req);
+    return json(await suggestTr(env, String(b.name ?? '').slice(0, 60), String(b.desc ?? '').slice(0, 300)));
+  }
+
+  if ((mt = p.match(/^\/menu\/([\w-]+)$/)) && m === 'PUT') {
+    await updateItem(env, mt[1], parseInput(await readJson(req)));
+    return json(await staffMenu(env));
+  }
+
+  if ((mt = p.match(/^\/menu\/([\w-]+)\/archive$/)) && m === 'POST') {
+    await archiveItem(env, mt[1]);
+    return json(await staffMenu(env));
+  }
+
+  if ((mt = p.match(/^\/menu\/([\w-]+)\/images$/)) && m === 'POST') {
+    const type = (req.headers.get('content-type') ?? '').split(';')[0].trim();
+    await addImage(env, mt[1], new Blob([await req.arrayBuffer()], { type }));
+    return json(await staffMenu(env));
+  }
+
+  if ((mt = p.match(/^\/menu\/([\w-]+)\/images\/([\w-]+)(\/first)?$/)) && (m === 'DELETE' || (m === 'POST' && mt[3]))) {
+    await changeImage(env, mt[1], mt[2], m === 'DELETE' ? 'remove' : 'first');
+    return json(await staffMenu(env));
+  }
+
   throw new HttpError(404, 'not_found');
+}
+
+/** スタッフ画面のメニュー一覧（Squareから読み直す。精算前の注文で押さえている数も添える） */
+async function staffMenu(env: Env) {
+  const d = desk(env);
+  await d.purgeMenu();
+  const menu = await d.getMenu(true);
+  return {
+    categories: menu.categories.map((c) => ({ name: c.name, cutoff: c.cutoff ?? null })),
+    items: menu.items.map((i) => ({
+      itemId: i.itemId,
+      id: i.id,
+      name: i.name,
+      desc: i.desc,
+      names: i.names,
+      descs: i.descs,
+      price: i.price,
+      category: i.category,
+      tracked: i.tracked,
+      stock: i.stock,
+      paused: i.paused,
+      soldOut: i.soldOut,
+      images: i.images.map((url, n) => ({ id: i.imageIds[n], url }))
+    })),
+    held: await heldCounts(env),
+    mock: isMock(env)
+  };
 }

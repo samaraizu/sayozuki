@@ -7,8 +7,7 @@ export const LANGS = [
   { id: 'ko', code: 'ko', label: '한국어', short: '한국어', font: 'Noto+Sans+KR' }
 ];
 
-// Wi-Fiなど館内で変わる情報はここを書き換える
-export const STAY_INFO = { wifiSsid: '[SSID]', wifiPass: '[PASSWORD]' };
+// Wi-Fiは公開リポジトリに書かず、サーバー（Secret の WIFI_SSID / WIFI_PASSWORD）から /api/session で受け取る
 
 export const ABOUT = [
   { slug: 'faq', name: { ja: '宿泊のよくあるご質問', en: 'FAQ for guests', zht: '住宿常見問題', zhs: '住宿常见问题', ko: '숙박 자주 묻는 질문' }, sub: { ja: '食事・アメニティ・お支払い', en: 'Meals, amenities, payment', zht: '餐飲・備品・付款', zhs: '餐饮・备品・付款', ko: '식사・어메니티・결제' } },
@@ -78,6 +77,25 @@ const T = {
   chatRead: { ja: '既読', en: 'Read', zht: '已讀', zhs: '已读', ko: '읽음' },
   chatNew: { ja: 'スタッフから返信が届きました', en: 'New message from our staff', zht: '工作人員已回覆您', zhs: '工作人员已回复您', ko: '직원이 답장을 보냈습니다' },
   errTooMany: { ja: '続けて送信されています。少し待ってからお試しください', en: 'Too many messages. Please wait a moment.', zht: '傳送次數過多，請稍候再試。', zhs: '发送次数过多，请稍后再试。', ko: '메시지가 너무 많습니다. 잠시 후 다시 시도해 주세요.' },
+  navHome: { ja: 'ホーム', en: 'Home', zht: '首頁', zhs: '首页', ko: '홈' },
+  welcomeTitle: { ja: 'ようこそ、小夜月へ', en: 'Welcome to Sayozuki', zht: '歡迎來到小夜月', zhs: '欢迎来到小夜月', ko: '사요즈키에 오신 것을 환영합니다' },
+  welcomeLead: { ja: '静かな夜を、ごゆっくりお過ごしください。', en: 'We hope you enjoy a quiet, restful night.', zht: '願您在此度過一個寧靜的夜晚。', zhs: '愿您在此度过一个宁静的夜晚。', ko: '조용하고 편안한 밤 보내시길 바랍니다.' },
+  welcomeHint: { ja: 'このページから、Wi-Fiの確認、お食事やお飲み物のご注文、スタッフへの連絡ができます。', en: 'From here you can find the Wi-Fi, order food and drinks, and message our staff.', zht: '在這裡可以查看Wi-Fi、點餐點飲品，也能聯絡工作人員。', zhs: '在这里可以查看Wi-Fi、点餐点饮品，也能联系工作人员。', ko: '여기에서 Wi-Fi 확인, 식사・음료 주문, 직원과의 연락을 하실 수 있습니다.' },
+  welcomeStart: { ja: 'はじめる', en: 'Get started', zht: '開始', zhs: '开始', ko: '시작하기' },
+  greetMorning: { ja: 'おはようございます', en: 'Good morning', zht: '早安', zhs: '早上好', ko: '좋은 아침입니다' },
+  greetDay: { ja: 'こんにちは', en: 'Good afternoon', zht: '午安', zhs: '下午好', ko: '안녕하세요' },
+  greetEvening: { ja: 'こんばんは', en: 'Good evening', zht: '晚安', zhs: '晚上好', ko: '좋은 저녁입니다' },
+  homeLead: { ja: '{r}へようこそ。ご滞在中のご用は、ここからどうぞ。', en: 'Welcome to {r}. Everything for your stay starts here.', zht: '歡迎入住{r}。住宿期間的需求都可以從這裡開始。', zhs: '欢迎入住{r}。住宿期间的需求都可以从这里开始。', ko: '{r}에 오신 것을 환영합니다. 머무시는 동안 필요한 것은 여기에서 시작하세요.' },
+  wifiNet: { ja: 'ネットワーク名', en: 'Network', zht: '網路名稱', zhs: '网络名称', ko: '네트워크 이름' },
+  wifiSoon: { ja: '準備中です。スタッフにおたずねください。', en: 'Coming soon. Please ask our staff.', zht: '準備中，請洽詢工作人員。', zhs: '准备中，请咨询工作人员。', ko: '준비 중입니다. 직원에게 문의해 주세요.' },
+  copy: { ja: 'コピー', en: 'Copy', zht: '複製', zhs: '复制', ko: '복사' },
+  copied: { ja: 'コピーしました', en: 'Copied', zht: '已複製', zhs: '已复制', ko: '복사했습니다' },
+  orderTitle: { ja: 'お食事・お飲み物を注文', en: 'Order food & drinks', zht: '點餐・飲品', zhs: '点餐・饮品', ko: '식사・음료 주문' },
+  orderSub: { ja: 'お部屋までお届け・ラストオーダー {t}', en: 'Delivered to your room · last order {t}', zht: '送到客房・最後點餐 {t}', zhs: '送到客房・最后点餐 {t}', ko: '객실로 배달・라스트 오더 {t}' },
+  reqShort: { ja: '無料でお持ちします', en: 'Free items', zht: '免費提供', zhs: '免费提供', ko: '무료 제공' },
+  chatShort: { ja: 'スタッフに連絡', en: 'Message staff', zht: '聯絡工作人員', zhs: '联系工作人员', ko: '직원에게 연락' },
+  bathTax: { ja: '入湯税は大人おひとり1泊{yen}です。人数をおうかがいして、チェックアウトのときにフロントでいただきます。', en: 'A bathing tax of {yen} per adult per night is collected at the front desk at check-out.', zht: '入湯稅為每位成人每晚{yen}，退房時於櫃台依人數收取。', zhs: '入汤税为每位成人每晚{yen}，退房时在前台按人数收取。', ko: '입탕세는 성인 1인 1박 {yen}이며, 체크아웃 때 프런트에서 인원을 여쭤본 뒤 받습니다.' },
+  billShort: { ja: 'お部屋付けの明細', en: 'Room charges', zht: '房帳明細', zhs: '房账明细', ko: '객실 청구 내역' },
   aboutTitle: { ja: 'ご案内', en: 'About your stay', zht: '住宿指南', zhs: '住宿指南', ko: '숙박 안내' },
   aboutLead: { ja: 'ご滞在中に役立つ情報をまとめています。', en: 'Everything you need during your stay.', zht: '彙整住宿期間的實用資訊。', zhs: '汇总住宿期间的实用信息。', ko: '머무시는 동안 필요한 정보를 모았습니다.' },
   wifiPass: { ja: 'パスワード', en: 'Password', zht: '密碼', zhs: '密码', ko: '비밀번호' },

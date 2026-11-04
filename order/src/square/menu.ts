@@ -1,7 +1,27 @@
 import type { Env } from '../env';
 import { CATEGORIES, ITEMS } from '../config/i18n-menu';
 import { sq } from './client';
+import type { Tr } from '../config/i18n-menu';
 import type { Menu, MenuItem } from './types';
+
+export interface MenuMeta {
+  names: Tr | null;
+  descs: Tr | null;
+  paused: boolean;
+}
+
+/** スタッフ画面で入れた訳と一時停止（D1）。表がまだ無い環境でも止まらないように空で返す */
+export async function loadMenuMeta(env: Env): Promise<Map<string, MenuMeta>> {
+  try {
+    const r = await env.DB.prepare('SELECT item_id, names, descs, paused FROM menu_meta').all<{ item_id: string; names: string | null; descs: string | null; paused: number }>();
+    return new Map(
+      (r.results ?? []).map((x) => [x.item_id, { names: x.names ? JSON.parse(x.names) : null, descs: x.descs ? JSON.parse(x.descs) : null, paused: Boolean(x.paused) }])
+    );
+  } catch (e) {
+    console.error('menu_meta', e);
+    return new Map();
+  }
+}
 
 /** Squareのカタログ＋在庫から、売り切れ判定込みのメニューを組み立てる */
 export async function fetchSquareMenu(env: Env): Promise<Menu> {
@@ -22,6 +42,7 @@ export async function fetchSquareMenu(env: Env): Promise<Menu> {
     if (o.type === 'CATEGORY' && o.category_data?.name) categories.set(o.id, o.category_data.name);
   }
 
+  const meta = await loadMenuMeta(env);
   const loc = env.SQUARE_LOCATION_ID;
   const items: MenuItem[] = [];
   for (const o of objects) {
@@ -40,19 +61,24 @@ export async function fetchSquareMenu(env: Env): Promise<Menu> {
     const tracked = Boolean(ov.track_inventory ?? vd.track_inventory);
     const name: string = d.name;
     const tr = ITEMS[name];
+    const m = meta.get(o.id);
+    const imageIds: string[] = (d.image_ids ?? []).filter((id: string) => images.has(id));
     items.push({
       id: v.id,
       itemId: o.id,
       name,
-      names: tr?.name ?? {},
+      names: m?.names ?? tr?.name ?? {},
       desc: d.description_plaintext ?? d.description ?? '',
-      descs: tr?.desc ?? {},
+      descs: m?.descs ?? tr?.desc ?? {},
       price,
       category,
       tracked,
       stock: null,
-      soldOut: Boolean(ov.sold_out),
-      images: (d.image_ids ?? []).map((id: string) => images.get(id)).filter(Boolean)
+      // 数を数えている商品は残り数で判断する（Square側の「売り切れ」表示は数を足しても残ることがあるため見ない）
+      soldOut: (!tracked && Boolean(ov.sold_out)) || Boolean(m?.paused),
+      paused: Boolean(m?.paused),
+      images: imageIds.map((id) => images.get(id)!),
+      imageIds
     });
   }
 

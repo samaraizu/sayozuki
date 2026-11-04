@@ -225,4 +225,53 @@ button:active, a.row-card:active { transform: scale(0.93); transition-duration: 
 @keyframes bubble-r { from { opacity: 0; transform: translate(12px, 8px) scale(0.85); } to { opacity: 1; transform: none; } }
 @keyframes bubble-l { from { opacity: 0; transform: translate(-12px, 8px) scale(0.85); } to { opacity: 1; transform: none; } }
 
+/* ---------- ホーム ---------- */
+.home { gap: 12px; }
+.hello { padding: 6px 2px 2px; }
+.hello .greet { margin: 0; font-family: var(--mincho); font-size: 22px; font-weight: 700; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hello .hello-lead { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.wifi-card { padding: 16px; border-radius: 22px; background: var(--surface); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px; }
+.wifi-head { display: flex; align-items: center; gap: 10px; }
+.wifi-head .wi { width: 40px; height: 40px; border-radius: 14px; background: var(--sel); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.wifi-head .t { font-size: 16px; font-weight: 700; }
+.wifi-rows { display: flex; flex-direction: column; gap: 8px; }
+.wifi-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--step); }
+.wifi-row .k { display: block; font-size: 11px; color: var(--muted); }
+.wifi-row .v { display: block; font-size: 16px; font-weight: 700; word-break: break-all; font-variant-numeric: tabular-nums; }
+.copy { flex-shrink: 0; min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--accent); font-size: 13px; font-weight: 700; }
+.order-card { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 96px; padding: 18px; border: none; border-radius: 24px; background: var(--grad); color: #fff; text-align: left; box-shadow: 0 14px 30px rgba(43,107,211,0.32); position: relative; overflow: hidden; }
+.order-card::after { content: ''; position: absolute; right: -40px; top: -50px; width: 160px; height: 160px; border-radius: 50%; background: rgba(255,255,255,0.12); pointer-events: none; }
+.order-card .oi { width: 52px; height: 52px; border-radius: 18px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.order-card .ot { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.order-card .t { font-size: 17px; font-weight: 700; }
+.order-card .s { font-size: 12px; opacity: 0.92; }
+.order-card .oa { flex-shrink: 0; width: 40px; height: 40px; border-radius: 20px; background: rgba(255,255,255,0.22); display: flex; align-items: center; justify-content: center; }
+.quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.quick-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 12px; border: none; border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); text-align: left; min-height: 112px; }
+.quick-btn .qi { position: relative; width: 38px; height: 38px; border-radius: 13px; background: var(--sel); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.quick-btn .qi .dot { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 5px; background: #C0392B; border: 2px solid #fff; }
+.quick-btn .t { font-size: 13px; font-weight: 700; line-height: 1.3; }
+.quick-btn .s { font-size: 11px; color: var(--muted); line-height: 1.35; }
+
+/* ---------- ようこそ（初めてQRを読んだとき） ---------- */
+.welcome { position: fixed; inset: 0; z-index: 18; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(24px + env(safe-area-inset-top, 0px)) 28px calc(28px + var(--safe-b)); color: #fff; text-align: center; background: var(--grad); overflow: hidden; }
+.welcome::before, .welcome::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255,255,255,0.09); pointer-events: none; }
+.welcome::before { width: 380px; height: 380px; top: -140px; right: -150px; animation: drift 9s ease-in-out infinite alternate; }
+.welcome::after { width: 260px; height: 260px; bottom: -90px; left: -110px; animation: drift 11s ease-in-out infinite alternate-reverse; }
+@keyframes drift { to { transform: translate(-24px, 18px) scale(1.06); } }
+.wl-lang { align-self: flex-end; position: relative; z-index: 1; }
+.wl-body { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 360px; }
+.wl-moon { color: #fff; margin-bottom: 6px; }
+.wl-moon path { stroke-dasharray: 260; stroke-dashoffset: 260; animation: draw 1.6s ease-out 0.2s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.wl-en { margin: 0; font-family: var(--mincho); font-size: 12px; letter-spacing: 0.4em; opacity: 0.9; }
+.wl-title { margin: 0; font-family: var(--mincho); font-size: 28px; font-weight: 700; letter-spacing: 0.06em; line-height: 1.35; }
+.wl-room { margin: 2px 0 0; padding: 4px 14px; border-radius: 14px; background: rgba(255,255,255,0.2); font-size: 13px; font-weight: 700; }
+.wl-lead { margin: 6px 0 0; font-size: 15px; line-height: 1.7; }
+.wl-hint { margin: 6px 0 0; font-size: 12px; line-height: 1.7; opacity: 0.88; }
+.wl-start { position: relative; z-index: 1; width: 100%; max-width: 360px; height: 56px; border: none; border-radius: 28px; background: #fff; color: var(--accent); font-size: 16px; font-weight: 700; box-shadow: 0 12px 30px rgba(0,0,0,0.18); }
+.wl-s1, .wl-s2, .wl-s3, .wl-s4, .wl-s5 { animation: rise 0.7s var(--spring) both; }
+.wl-s1 { animation-delay: 0.5s; } .wl-s2 { animation-delay: 0.7s; } .wl-s3 { animation-delay: 0.9s; } .wl-s4 { animation-delay: 1.1s; } .wl-s5 { animation-delay: 1.3s; }
+
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { .wl-moon path { stroke-dashoffset: 0; } }

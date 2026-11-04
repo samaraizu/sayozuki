@@ -187,7 +187,7 @@
           h('strong', null, 'HPからの問い合わせ ' + b.inquiries.length + '件'),
           h('span', { class: 's' }, '空室を見て、予約にするか見送る')
         ),
-        svg(ICON_NEXT, 18, '#F3DDA0')
+        svg(ICON_NEXT, 18, '#B9E0FF')
       ));
     }
 
@@ -484,7 +484,7 @@
       step(2, 'Room', null,
         refs.rooms = h('div', { class: 'rooms' }),
         refs.tight = h('div', { class: 'warnbox', hidden: true },
-          svg(ICON_WARN, 18, '#E6C877'),
+          svg(ICON_WARN, 18, '#7CC4FF'),
           h('span', null, '2名以上で2泊以上。この部屋だと窮屈になりやすい（予約は止めない）'))
       ),
       step(3, 'Guest', null,
@@ -545,7 +545,7 @@
       refs.rooms.textContent = '';
       avail.forEach(function (a) {
         var on = picked === a.name;
-        var color = on ? 'var(--gold)' : a.available ? 'var(--text)' : 'var(--faint)';
+        var color = on ? 'var(--accent)' : a.available ? 'var(--text)' : 'var(--faint)';
         append(refs.rooms, h('button', {
           type: 'button', class: 'rcard' + (a.state !== Lib.SELLABLE ? ' off' : ''),
           'aria-label': a.name + '、定員' + a.capacity + '、' + (on ? '選択中' : a.status) + (a.why ? '、' + a.why : ''),

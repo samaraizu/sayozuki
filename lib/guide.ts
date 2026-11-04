@@ -128,7 +128,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "お部屋で注文したものはいつ払いますか？", a: "お部屋付けにして、チェックアウトのときにまとめてお支払いいただきます。ご自身のスマートフォンでのお支払い（クレジットカードなど）か、フロントでの現金でお受けします。" },
                   { q: "領収書はもらえますか？", a: "お支払いのあと、客室のQRコードの「お会計」から宛名入りの領収書を表示できます。" },
-                  { q: "入湯税はかかりますか？", a: "温泉地のため、入湯税をフロントでいただきます。人数をおうかがいしますので、チェックアウトの際にお申し付けください。" },
+                  { q: "入湯税はかかりますか？", a: `温泉地のため、入湯税（大人おひとり1泊${stay.bathTaxYen.toLocaleString("ja-JP")}円）をフロントでいただきます。人数をおうかがいしますので、チェックアウトの際にお申し付けください。` },
                 ],
               },
             ],
@@ -276,7 +276,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   "お部屋で注文したものがある場合は、フロントで精算をお伝えください。",
                   "客室のQRコードの「お会計」にお支払いボタンが出ます。ご自身のスマートフォンでお支払いいただけます（現金はフロントで）。",
-                  "入湯税は人数をおうかがいして、フロントでいただきます。",
+                  `入湯税（大人おひとり1泊${stay.bathTaxYen.toLocaleString("ja-JP")}円）は人数をおうかがいして、フロントでいただきます。`,
                   "お部屋の鍵をお渡ししている場合は、フロントにお返しください。",
                 ],
               },
@@ -315,7 +315,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "When do I pay for in-room orders?", a: "Orders are charged to your room and settled at check-out — on your own phone (credit card, etc.) or in cash at the front desk." },
                   { q: "Can I get a receipt?", a: "After paying, open “Bill” on the in-room QR code to show a receipt with your name." },
-                  { q: "Is there a bathing tax?", a: "As a hot spring area, a bathing tax is collected at the front desk. We will ask the number of guests at check-out." },
+                  { q: "Is there a bathing tax?", a: `As a hot spring area, a bathing tax of ¥${stay.bathTaxYen.toLocaleString("ja-JP")} per adult per night is collected at the front desk. We will ask the number of guests at check-out.` },
                 ],
               },
             ],
@@ -445,7 +445,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   "If you ordered anything to your room, let the front desk know you would like to settle.",
                   "A pay button appears under “Bill” on the in-room QR code. Pay on your own phone (or in cash at the front desk).",
-                  "The bathing tax is collected at the front desk based on the number of guests.",
+                  `The bathing tax (¥${stay.bathTaxYen.toLocaleString("ja-JP")} per adult per night) is collected at the front desk based on the number of guests.`,
                   "If you were given a room key, please return it to the front desk.",
                 ],
               },
@@ -484,7 +484,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "客房点的餐什么时候付款？", a: "记入房账，退房时统一结算。可用自己的手机付款（信用卡等），或在前台支付现金。" },
                   { q: "可以开收据吗？", a: "付款后，在客房二维码的“账单”中可显示带抬头的收据。" },
-                  { q: "需要支付入汤税吗？", a: "本地为温泉区，入汤税在前台收取。退房时我们会询问入住人数。" },
+                  { q: "需要支付入汤税吗？", a: `本地为温泉区，入汤税（每位成人每晚${stay.bathTaxYen.toLocaleString("ja-JP")}日元）在前台收取。退房时我们会询问入住人数。` },
                 ],
               },
             ],
@@ -589,7 +589,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
               {
                 type: "list",
                 ordered: true,
-                items: ["如有客房点餐，请告知前台需要结算。", "客房二维码的“账单”中会出现付款按钮，可用自己的手机付款（现金请在前台支付）。", "入汤税将根据人数在前台收取。", "如领取了房间钥匙，请交还前台。"],
+                items: ["如有客房点餐，请告知前台需要结算。", "客房二维码的“账单”中会出现付款按钮，可用自己的手机付款（现金请在前台支付）。", `入汤税（每位成人每晚${stay.bathTaxYen.toLocaleString("ja-JP")}日元）将根据人数在前台收取。`, "如领取了房间钥匙，请交还前台。"],
               },
             ],
           },
@@ -626,7 +626,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "객실에서 주문한 것은 언제 결제하나요?", a: "객실에 달아 두었다가 체크아웃 때 한꺼번에 결제합니다. 본인의 스마트폰으로 결제(신용카드 등)하시거나 프런트에서 현금으로 결제하실 수 있습니다." },
                   { q: "영수증을 받을 수 있나요?", a: "결제 후 객실 QR 코드의 '계산'에서 이름이 들어간 영수증을 표시할 수 있습니다." },
-                  { q: "입탕세가 있나요?", a: "온천 지역이므로 입탕세를 프런트에서 받습니다. 체크아웃 때 인원을 여쭤보겠습니다." },
+                  { q: "입탕세가 있나요?", a: `온천 지역이므로 입탕세(성인 1인 1박 ${stay.bathTaxYen.toLocaleString("ja-JP")}엔)를 프런트에서 받습니다. 체크아웃 때 인원을 여쭤보겠습니다.` },
                 ],
               },
             ],
@@ -731,7 +731,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
               {
                 type: "list",
                 ordered: true,
-                items: ["객실에서 주문한 것이 있으면 프런트에 정산을 말씀해 주세요.", "객실 QR 코드의 '계산'에 결제 버튼이 나타납니다. 본인의 스마트폰으로 결제하실 수 있습니다(현금은 프런트에서).", "입탕세는 인원을 여쭤본 뒤 프런트에서 받습니다.", "객실 열쇠를 받으셨다면 프런트에 반납해 주세요."],
+                items: ["객실에서 주문한 것이 있으면 프런트에 정산을 말씀해 주세요.", "객실 QR 코드의 '계산'에 결제 버튼이 나타납니다. 본인의 스마트폰으로 결제하실 수 있습니다(현금은 프런트에서).", `입탕세(성인 1인 1박 ${stay.bathTaxYen.toLocaleString("ja-JP")}엔)는 인원을 여쭤본 뒤 프런트에서 받습니다.`, "객실 열쇠를 받으셨다면 프런트에 반납해 주세요."],
               },
             ],
           },

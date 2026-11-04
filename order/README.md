@@ -24,7 +24,8 @@ Cloudflare Workers（無料枠）＋ Square（無料プラン・端末なし）�
 | `src/desk.ts` | 注文の受付窓口（Durable Object）。旅館全体で1つ、注文を1件ずつ処理して**二重受注を防ぐ**。メニューのキャッシュも持つ |
 | `src/square/` | カタログ・在庫の読み込み、支払いリンク作成、Square未接続時のモック |
 | `src/config/i18n-menu.ts` | **商品名・カテゴリ名の4言語訳**と、カテゴリごとの受付締め切り |
-| `public/i18n.js` | 画面文言の5言語、**Wi-Fi情報**、ご案内リンク、リクエスト項目 |
+| `public/i18n.js` | 画面文言の5言語、ご案内リンク、リクエスト項目 |
+| Wi-Fi情報 | Cloudflare の Secret `WIFI_SSID` `WIFI_PASSWORD`（公開リポジトリに書かない。客室QRで開いた人にだけ /api/session で渡す） |
 | `migrations/` | D1（データベース）の表定義 |
 
 ## 最初のセットアップ
@@ -62,9 +63,15 @@ npm run deploy
    - Webhookが未登録でも、支払い完了は `src/lib/settle.ts` が拾う（毎分のcron・スタッフ画面の一覧・お客様のお会計タブ・スタッフの「支払いを確認」ボタンから Orders API で確認）。Webhookは即時反映と取りこぼし防止のため
 4. Sandboxで通しテスト → 問題なければ `SQUARE_ENV` を `production` にして本番トークンへ差し替え
 
-### 3. 商品を増やしたとき
+### 3. 商品の追加・編集・掲載をやめる
 
-`src/config/i18n-menu.ts` の `ITEMS` に、**Squareに登録した日本語名そのまま**をキーにして4言語の訳を足す。足さなければ日本語で表示される。
+スタッフ画面の「**メニュー**」から行う（`src/square/admin.ts`）。
+
+- 名前・説明・価格・カテゴリ・写真・在庫数は Square のカタログにそのまま書く
+- 英語・中国語・韓国語の訳と「一時停止」は D1 の `menu_meta` に置く。訳の空欄は保存時に Workers AI が日本語から訳す
+- 「掲載をやめる」は Square のアーカイブ（Squareの管理画面から戻せる）
+- 精算前の注文に入っている商品は、価格の変更と掲載をやめることができない（Squareの請求額が明細とずれるため）
+- `src/config/i18n-menu.ts` の `ITEMS` は最初に入れた12品の訳。スタッフ画面で一度保存した商品は `menu_meta` の訳が優先される
 
 ## ローカルで試す（Square未接続のモック）
 

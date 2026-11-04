@@ -23,6 +23,13 @@
  * スクリプトプロパティ（コードは公開リポジトリにも置くので、アドレスはここに書かない）
  *   NOTIFY_TO  … 通知メールを足す宛先（カンマ区切り）。スクリプトを作ったアカウントには何もしなくても送る
  *   calendarId … setupCalendar が自動で入れる。手で触らない
+ *   CF_SYNC_URL   … Cloudflare版の予約管理（例 https://sayozuki-booking.xxx.workers.dev）。空なら同期しない
+ *   CF_SYNC_TOKEN … Cloudflare版と同じ合言葉（Worker の Secret SYNC_TOKEN と同じ値）
+ *
+ * Cloudflare版への移行中は、毎回の実行で
+ *   はじめに：Cloudflare版のアプリで入れた予約のうち、まだ台帳にないものを台帳の末尾に足す
+ *   おわりに：台帳（予約・部屋）の中身をまるごと Cloudflare版のD1に送る
+ * 台帳に書くのはこのGASだけのまま。泊数・入湯税・要確認・カレンダー・通知はアプリの予約にもかかる。
  */
 
 // ===== 設定 =====
@@ -167,6 +174,10 @@ function runCore_(opts) {
     const log = loadTable_(mustSheet_(ss, SHEETS.LOG), LOG_COLS, [], tz, LOG_COLS.length);
     const ctx = makeCtx_(res, airbnb, rooms);
     const notes = [];
+    const cf = cfConfig_();
+
+    // 0. Cloudflare版のアプリで入れた予約を台帳に足す
+    if (cf) pullFromCloudflare_(cf, ctx, todayIso, notes);
 
     const processed = {};
     log.rows.forEach(function (r) { const id = str_(r.v['メッセージID']); if (id) processed[id] = true; });
@@ -215,6 +226,9 @@ function runCore_(opts) {
     saveTable_(airbnb, tz);
     saveTable_(log, tz);
     log.sheet.getRange('I1:J1').setValues([['最終実行', now]]);
+
+    // 6. 台帳の中身を Cloudflare版に送る
+    if (cf) pushToCloudflare_(cf, res, rooms, Utilities.formatDate(now, tz, 'yyyy/MM/dd HH:mm'), todayIso, notes);
 
     if (!opts.silent) sendNotes_(ss, notes);
     return { mails: found.length, notes: notes, calendar: calResult };
@@ -568,6 +582,88 @@ function alertOnce_(props, key, todayIso, notes, msg) {
   notes.push(msg);
 }
 
+// ===== Cloudflare版の予約管理との同期（移行中だけ） =====
+
+// 台帳の見出し → Cloudflare版の名前
+const CF_FIELDS = {
+  '媒体': 'channel', '予約番号': 'no', 'ステータス': 'status', '要確認': 'flag', '部屋': 'room',
+  'チェックイン': 'checkIn', 'チェックアウト': 'checkOut', '大人': 'adults', '子ども': 'children', '乳幼児': 'infants',
+  '代表者名': 'name', '連絡先': 'contact', '到着予定': 'arrival', '食事': 'meals', 'ゲスト支払額': 'guestPaid',
+  '支払い状況': 'payment', '入湯税': 'tax', '入湯税の徴収': 'taxCollected', '予約URL': 'url', 'メモ': 'memo', '予約日': 'bookedOn',
+};
+const CF_NUMBER_COLS = ['大人', '子ども', '乳幼児', 'ゲスト支払額'];
+
+function cfConfig_() {
+  const props = PropertiesService.getScriptProperties();
+  const url = str_(props.getProperty('CF_SYNC_URL')).replace(/\/+$/, '');
+  const token = str_(props.getProperty('CF_SYNC_TOKEN'));
+  if (!url || !token) return null;
+  return { url: url, token: token, props: props };
+}
+
+function cfFetch_(cf, path, payload) {
+  const opts = { muteHttpExceptions: true, followRedirects: false, headers: { Authorization: 'Bearer ' + cf.token } };
+  if (payload) { opts.method = 'post'; opts.contentType = 'application/json'; opts.payload = JSON.stringify(payload); }
+  const resp = UrlFetchApp.fetch(cf.url + path, opts);
+  const code = resp.getResponseCode();
+  let body = null;
+  try { body = JSON.parse(resp.getContentText()); } catch (e) { body = null; }
+  if (code !== 200 || !body || !body.ok) {
+    throw new Error('Cloudflare版 ' + path + ' が ' + code + '：' + (body && body.message ? body.message : resp.getContentText().slice(0, 120)));
+  }
+  return body;
+}
+
+// アプリで入れて、まだ台帳にない予約を末尾に足す（予約番号で重複を防ぐ）
+function pullFromCloudflare_(cf, ctx, todayIso, notes) {
+  try {
+    const got = cfFetch_(cf, '/api/sync/pending');
+    cfAppendPending_(ctx, got.bookings || []);
+  } catch (e) {
+    alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
+  }
+}
+
+function cfAppendPending_(ctx, list) {
+  let added = 0;
+  list.forEach(function (b) {
+    const no = str_(b['予約番号']);
+    if (!no || ctx.byCode[no]) return;
+    const vals = {};
+    Object.keys(CF_FIELDS).forEach(function (h) {
+      if (b[h] === undefined || b[h] === '') return;
+      vals[h] = CF_NUMBER_COLS.indexOf(h) >= 0 && /^\d+$/.test(String(b[h])) ? Number(b[h]) : b[h];
+    });
+    ctx.byCode[no] = newRow_(ctx.res, vals);
+    added++;
+  });
+  return added;
+}
+
+// 台帳の予約・部屋をまるごと送る（D1側は1回のトランザクションで置き換える）
+function pushToCloudflare_(cf, res, rooms, lastImport, todayIso, notes) {
+  try {
+    cfFetch_(cf, '/api/sync/sheet', cfPayload_(res, rooms, lastImport));
+    cf.props.deleteProperty('cfPushAlert');
+  } catch (e) {
+    alertOnce_(cf.props, 'cfPushAlert', todayIso, notes, 'Cloudflare版に台帳を送れなかった：' + String((e && e.message) || e));
+  }
+}
+
+function cfPayload_(res, rooms, lastImport) {
+  return {
+    lastImport: lastImport,
+    rooms: rooms.rows
+      .filter(function (r) { return str_(r.v['部屋']); })
+      .map(function (r) { return { name: str_(r.v['部屋']), capacity: num_(r.v['定員']), state: str_(r.v['状態']) }; }),
+    bookings: res.rows.filter(hasData_).map(function (r) {
+      const o = {};
+      Object.keys(CF_FIELDS).forEach(function (h) { o[CF_FIELDS[h]] = str_(r.v[h]); });
+      return o;
+    }),
+  };
+}
+
 // ===== メールの中身を台帳に反映 =====
 
 function applyMail_(ctx, p, refIso, notes) {
@@ -740,12 +836,21 @@ function loadTable_(sheet, requiredCols, dateCols, tz, fixedWidth) {
       Object.keys(idx).forEach(function (h) {
         let x = arr[idx[h]];
         if (dateCols.indexOf(h) >= 0) x = toIso_(x, tz);
+        else x = timeText_(h, x, tz);
         v[h] = x;
       });
       rows.push({ _row: i + 2, v: v, dirty: {}, isNew: false });
     });
   }
   return { sheet: sheet, headers: headers, idx: idx, rows: rows, dateCols: dateCols };
+}
+
+// 時刻だけの列（到着予定）。スプシは「15:00」を 1899/12/30 15:00 の日時として返すので、
+// そのまま文字にすると「Sat Dec 30 1899 15:00:00 GMT+0900 …」になる。読むときに「15:00」に直す
+const TIME_COLS = ['到着予定'];
+function timeText_(h, x, tz) {
+  if (TIME_COLS.indexOf(h) < 0 || Object.prototype.toString.call(x) !== '[object Date]') return x;
+  return Utilities.formatDate(x, tz, 'HH:mm');
 }
 
 function saveTable_(t, tz) {

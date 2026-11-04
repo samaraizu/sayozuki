@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sayozuki-booking",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // 画面（index.html・login.html）は静的に配る。中身のデータは /api/* だけで、そこはログインを確かめる
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "sayozuki-booking",
+      "database_id": "d5ab357e-205d-435e-8a9f-ea9f7aa3fade",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Secrets（公開リポジトリに書かない。ダッシュボードか npx wrangler secret put で入れる。手順は README.md）
+  //   GOOGLE_CLIENT_ID      Google Cloud の OAuth クライアント（ウェブ アプリケーション）
+  //   GOOGLE_CLIENT_SECRET  同じクライアントのシークレット
+  //   SESSION_SECRET        ログイン状態のクッキーの署名（長い乱数）
+  //   ALLOWED_EMAILS        使う人のGoogleアカウント（カンマ区切り）
+  //   SYNC_TOKEN            取り込みGASとの同期の合言葉（長い乱数）
+  "observability": { "enabled": true }
+}
