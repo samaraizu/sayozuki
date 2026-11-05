@@ -23,6 +23,9 @@ window.google = { script: { run: (function () {
     getBoard: function () { return fetch('/api/board', { credentials: 'same-origin' }); },
     createBooking: function (form) {
       return fetch('/api/bookings', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
+    },
+    closeInquiry: function (arg) {
+      return fetch('/api/inquiries/close', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(arg) });
     }
   };
   function runner(ok, ng) {

@@ -19,8 +19,11 @@ import {
   readCookie,
   startLogin,
 } from './auth';
+import { WorkerEntrypoint } from 'cloudflare:workers';
 import { createBooking, getBoard, pendingForSheet, syncFromSheet, type ManualForm, type SyncPayload } from './db';
 import { UserError, json, type Env } from './env';
+import { calendar, checkoutStatus, startCheckout, sweep, type CheckoutInput } from './hp';
+import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -91,13 +94,47 @@ async function handle(req: Request, env: Env): Promise<Response> {
       if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
       return json(await createBooking(env, email, (await req.json()) as ManualForm));
     }
+    if (path === '/api/inquiries/close' && req.method === 'POST') {
+      const origin = req.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
+      return json(await closeInquiry(env, email, (await req.json()) as { id?: string; reason?: string }));
+    }
     return json({ ok: false, message: 'not found' }, 404);
   }
 
   return env.ASSETS.fetch(req);
 }
 
+/**
+ * HP（Worker「sayozuki」）専用の入口。サービスバインディング（entrypoint: "HpApi"）でしか呼べず、
+ * インターネットからは届かない。空室・予約と事前決済の開始・完了画面の確認・お問い合わせの受け取りだけ。
+ */
+export class HpApi extends WorkerEntrypoint<Env> {
+  async calendar(days?: number) {
+    return calendar(this.env, days);
+  }
+  async startCheckout(input: CheckoutInput) {
+    return startCheckout(this.env, input);
+  }
+  async checkoutStatus(no: string, key: string) {
+    return checkoutStatus(this.env, no, key);
+  }
+  async addInquiry(input: InquiryInput) {
+    return addInquiry(this.env, input);
+  }
+}
+
 export default {
+  // 毎分：HPの決済待ちを Square に聞いて確定し、期限切れなら部屋を戻す
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(
+      sweep(env).then(
+        (r) => (r.paid || r.expired ? console.log('HP予約の見回り', JSON.stringify(r)) : undefined),
+        (e) => console.error('HP予約の見回りに失敗', e),
+      ),
+    );
+  },
+
   async fetch(req: Request, env: Env): Promise<Response> {
     try {
       return await handle(req, env);

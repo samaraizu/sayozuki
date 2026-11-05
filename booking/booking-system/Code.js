@@ -70,7 +70,7 @@ const LOG_COLS = ['日時', '種類', '予約番号', '件名', '結果', 'メ�
 
 const CHANNELS = ['Airbnb', '楽天', '直販'];
 const STATUSES = ['仮', '確定', '滞在中', 'チェックアウト済', 'キャンセル'];
-const PAY_STATUSES = ['媒体で決済済', '現地でSquare', '未収'];
+const PAY_STATUSES = ['媒体で決済済', '現地でSquare', 'HPで決済済', '未収'];
 const TAX_STATUSES = ['未', '徴収済', '対象外'];
 const ROOM_STATES = ['販売可', '準備中', '停止'];
 

@@ -12,7 +12,10 @@
   },
   "services": [
     // OpenNext が自分自身を呼ぶための参照。service は name と同じにする
-    { "binding": "WORKER_SELF_REFERENCE", "service": "sayozuki" }
+    { "binding": "WORKER_SELF_REFERENCE", "service": "sayozuki" },
+    // 予約管理（booking/worker の sayozuki-booking）。HP専用の入口 HpApi だけを呼ぶ。
+    // 空室カレンダー・HPからの予約と事前決済（Square）・完了画面の確認。インターネットには出ていない
+    { "binding": "BOOKING", "service": "sayozuki-booking", "entrypoint": "HpApi" }
   ],
   // next/image の最適化（components/Photo.tsx など）
   "images": { "binding": "IMAGES" },

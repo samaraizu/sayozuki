@@ -26,6 +26,9 @@ export const htmlLang: Record<Locale, string> = {
 
 export const pathFor = (l: Locale) => (l === "ja" ? "/" : `/${l}`);
 
+/** 言語つきのパス。localePath("en", "/reserve") → /en/reserve */
+export const localePath = (l: Locale, sub = "") => (sub ? (l === "ja" ? sub : `/${l}${sub}`) : pathFor(l));
+
 /** hreflang。検索エンジンに各言語版の場所を伝える */
 export const languageAlternates = Object.fromEntries([
   ...locales.map((l) => [htmlLang[l], pathFor(l)]),

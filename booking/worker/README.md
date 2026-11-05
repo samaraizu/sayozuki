@@ -124,6 +124,51 @@ npm run dev
 クライアントのリダイレクト URI に `http://localhost:8787/api/auth/callback` を足す。
 中身は空なので、`/api/sync/sheet` に部屋と予約のJSONを送って入れる。
 
+## HPの事前決済
+
+HP（Worker「sayozuki」）の `/reserve` から入る予約。HPからはサービスバインディングの `HpApi`（`src/index.ts`）だけを呼ぶ。インターネットには出していない入口。
+
+| 場所 | 中身 |
+| --- | --- |
+| `src/hp.ts` | 空室カレンダー、部屋の押さえ（「仮」で1行）と支払いリンク、完了画面の確認、毎分の見回り |
+| `src/square.ts` | Square の支払いリンク・注文の確認・リンクの削除。`SQUARE_MOCK=1` で払ったことにする（手元だけ） |
+| `src/mail.ts` | 確認メール（Resend） |
+| `migrations/0002_hp_checkout.sql` | `hp_checkouts`（決済待ち・済み・期限切れ） |
+
+- 押さえてから30分（`HOLD_MINUTES`）で払われなければ、毎分の cron が支払いリンクを消して仮の行を消す
+- 払われたら `bookings` を「確定」・支払い状況「HPで決済済」にし、お客様と `MAIL_TO` に確認メールを1回だけ送る
+- 決済待ちは `/api/sync/pending` に出さない（台帳には払われてから載る）
+- 期限切れのあとに払われたら（ふつうは起きない）、操作ログと `MAIL_TO` に「返金か手で予約」を知らせる
+
+Secrets（Worker「sayozuki-booking」→ 設定 → 変数とシークレット、種類は **シークレット**）
+
+| 名前 | 値 |
+| --- | --- |
+| `SQUARE_ACCESS_TOKEN` | 客室オーダー（sayozuki-order）と同じ Square の本番アクセストークン |
+| `SQUARE_LOCATION_ID` | 同じロケーションID |
+| `RESEND_API_KEY` | HPのお問い合わせと同じ Resend のキー |
+| `MAIL_FROM` | 確認メールの送信元（例 `小夜月 <info@sayozuki.com>`。Resend で認証したドメイン） |
+| `MAIL_TO` | 新しいHP予約の通知先（カンマ区切り） |
+
+`SQUARE_ENV` は `wrangler.jsonc` の vars で `production`。sandbox で試すときだけ `sandbox` にする。
+台帳の取り込みGAS（`../booking-system/Code.js`）の支払い状況の選択肢に「HPで決済済」を足したので、GASにも貼り直す。
+
+手元で HP と一緒に動かす（HPのルートで）：
+
+```bash
+npx opennextjs-cloudflare build && npx opennextjs-cloudflare populateCache local
+```
+
+```bash
+npx wrangler d1 migrations apply sayozuki-booking --local -c booking/worker/wrangler.jsonc --persist-to .wrangler/state
+```
+
+```bash
+npx wrangler dev -c wrangler.jsonc -c booking/worker/wrangler.jsonc --local
+```
+
+`booking/worker/.dev.vars` に `SQUARE_MOCK=1` を入れておくと、Square を呼ばずに完了画面まで通る。部屋は `wrangler d1 execute` で入れる。
+
 ## この先（第2段・第3段）
 
 - 取り込みGASの Gmail 読み取り・iCal 照合・入湯税・要確認の計算を Worker に移し、台帳スプシを使わなくする

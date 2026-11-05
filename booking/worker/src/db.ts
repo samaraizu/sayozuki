@@ -1,5 +1,6 @@
 import { Lib, type Room } from './lib.gen.js';
 import { UserError, nowText, todayIso, type Env } from './env';
+import { openInquiries } from './inquiries';
 
 // 画面・同期で使う名前 → D1の列 → スプシの見出し
 export const FIELDS = [
@@ -55,13 +56,14 @@ export async function readBookings(db: D1Database, sinceIso: string): Promise<Bo
 
 export async function getBoard(env: Env, email: string) {
   const today = todayIso();
-  const [rooms, bookings, meta] = await Promise.all([
+  const [rooms, bookings, meta, inquiries] = await Promise.all([
     readRooms(env.DB),
     // カレンダーは今日から先しか出さない。重なりの判定に足りるよう少し前から
     readBookings(env.DB, Lib.addDays(today, -62)),
     env.DB.prepare("SELECT value FROM meta WHERE key = 'lastImport'").first<{ value: string }>(),
+    openInquiries(env.DB),
   ]);
-  return { ok: true, today, user: email, rooms, bookings, lastImport: meta ? meta.value : '' };
+  return { ok: true, today, user: email, rooms, bookings, lastImport: meta ? meta.value : '', inquiries };
 }
 
 // ---------- 手動入力 ----------
@@ -70,6 +72,8 @@ export interface ManualForm {
   checkIn?: string; checkOut?: string; people?: number | string; room?: string;
   name?: string; contact?: string; arrival?: string; price?: string | number;
   payment?: string; breakfast?: boolean; dinner?: boolean; memo?: string;
+  /** HPのお問い合わせから「予約にする」で来たとき。保存と同時に 予約済み にする */
+  inquiryId?: string;
 }
 
 export async function createBooking(env: Env, email: string, form: ManualForm, random?: () => number) {
@@ -89,6 +93,12 @@ export async function createBooking(env: Env, email: string, form: ManualForm, r
   const contact = String(form.contact || '').trim();
   const memo = String(form.memo || '').trim();
   const room = String(form.room);
+  const inquiryId = String(form.inquiryId || '').trim().slice(0, 40);
+  if (inquiryId) {
+    const q = await env.DB.prepare('SELECT status FROM inquiries WHERE id = ?').bind(inquiryId).first<{ status: string }>();
+    if (!q) throw new UserError(`問い合わせ ${inquiryId} が見つからない`);
+    if (q.status !== '未対応') throw new UserError(`この問い合わせはもう「${q.status}」になってる。画面を開き直して`);
+  }
 
   const prefix = 'SZ-' + today.replace(/-/g, '') + '-';
   const { results } = await env.DB.prepare('SELECT no FROM bookings WHERE no LIKE ?').bind(prefix + '%').all<{ no: string }>();
@@ -113,10 +123,15 @@ export async function createBooking(env: Env, email: string, form: ManualForm, r
   );
   const audit = env.DB.prepare(
     `INSERT INTO op_log (actor, action, no, detail)
-     SELECT ?1, '手動入力', ?2, ?3 WHERE EXISTS (SELECT 1 FROM bookings WHERE no = ?2 AND source = 'app' AND created_by = ?1)`,
-  ).bind(email, no, `${room} ${inIso}〜${outIso} ${people}名 ${name}`);
+     SELECT ?1, ?4, ?2, ?3 WHERE EXISTS (SELECT 1 FROM bookings WHERE no = ?2 AND source = 'app' AND created_by = ?1)`,
+  ).bind(email, no, `${room} ${inIso}〜${outIso} ${people}名 ${name}${inquiryId ? `（${inquiryId}）` : ''}`, inquiryId ? '問い合わせから予約' : '手動入力');
+  // 問い合わせから来たなら、予約が入ったときだけ 予約済み にする
+  const markInquiry = env.DB.prepare(
+    `UPDATE inquiries SET status = '予約済み', booking_no = ?2, handled_at = ?3, handled_by = ?4
+     WHERE id = ?1 AND status = '未対応' AND EXISTS (SELECT 1 FROM bookings WHERE no = ?2 AND source = 'app' AND created_by = ?4)`,
+  ).bind(inquiryId, no, nowText(), email);
 
-  const [res] = await env.DB.batch([insert, audit]);
+  const [res] = await env.DB.batch(inquiryId ? [insert, audit, markInquiry] : [insert, audit]);
   if (!res.meta.changes) {
     // なぜ入らなかったかを、画面と同じ言い方で返す
     const bookings = await readBookings(env.DB, Lib.addDays(today, -62));
@@ -138,7 +153,10 @@ export interface SyncPayload {
 /** アプリで入れて、まだスプシに載っていない予約（GASがスプシに足す）。スプシの見出し名で返す */
 export async function pendingForSheet(env: Env) {
   const { results } = await env.DB.prepare(
-    `SELECT ${SELECT_COLS}, created_at AS createdAt FROM bookings WHERE source = 'app' AND in_sheet = 0 ORDER BY id`,
+    `SELECT ${SELECT_COLS}, created_at AS createdAt FROM bookings WHERE source = 'app' AND in_sheet = 0
+       -- HPの予約は払われるまで送らない（決済待ちの仮でカレンダーや通知が出ないように）
+       AND NOT EXISTS (SELECT 1 FROM hp_checkouts h WHERE h.no = bookings.no AND h.status <> 'paid')
+     ORDER BY id`,
   ).all<Row>();
   return {
     ok: true,

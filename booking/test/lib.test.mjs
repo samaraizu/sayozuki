@@ -113,3 +113,37 @@ test('validateManual', () => {
   assert.match(Lib.validateManual({ ...ok, payment: '現金' }, rooms, '2026-10-31'), /支払い/);
   assert.match(Lib.validateManual({ ...ok, checkIn: '2026-10-01' }, rooms, '2026-10-31'), /過ぎた日/);
 });
+
+test('matchRoom はHPの「201号室」を台帳の「201」に合わせる', () => {
+  assert.equal(Lib.matchRoom('201号室', rooms), '201');
+  assert.equal(Lib.matchRoom('月山', rooms), '月山');
+  assert.equal(Lib.matchRoom('蔵王', rooms), '');
+  assert.equal(Lib.matchRoom('', rooms), '');
+});
+
+test('inquiryToForm は問い合わせを手動入力の初期値にする', () => {
+  const q = {
+    id: 'HP-20261201-a1b2c3', lang: 'en', name: ' Test Guest ', email: 'g@example.com', tel: '090-0000-0000',
+    checkIn: '2026/12/10', nights: '2', guests: '3', room: '201号室', meal: '1泊2食付き', message: 'Parking?',
+  };
+  const f = Lib.inquiryToForm(q, rooms, '2026-12-01');
+  assert.equal(f.inquiryId, 'HP-20261201-a1b2c3');
+  assert.equal(f.checkIn, '2026-12-10');
+  assert.equal(f.checkOut, '2026-12-12');
+  assert.equal(f.people, 3);
+  assert.equal(f.room, '201');
+  assert.equal(f.name, 'Test Guest');
+  assert.equal(f.contact, '090-0000-0000 / g@example.com');
+  assert.equal(f.breakfast, true);
+  assert.equal(f.dinner, true);
+  assert.equal(f.memo, 'HP問い合わせ HP-20261201-a1b2c3（en）\nParking?');
+
+  // 過ぎた到着日・未定は入れない。電話なしはメールだけ
+  const past = Lib.inquiryToForm({ ...q, checkIn: '2026-11-01', tel: '', meal: '朝食付き', lang: 'ja', message: '' }, rooms, '2026-12-01');
+  assert.equal(past.checkIn, '');
+  assert.equal(past.checkOut, '');
+  assert.equal(past.contact, 'g@example.com');
+  assert.equal(past.breakfast, true);
+  assert.equal(past.dinner, false);
+  assert.equal(past.memo, 'HP問い合わせ HP-20261201-a1b2c3');
+});
