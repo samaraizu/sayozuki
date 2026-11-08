@@ -114,7 +114,9 @@ export async function notify(env: Env, title: string, body: string, link = '/', 
 export function summarizeNotes(notes: unknown): { title: string; body: string } | null {
   const lines = (Array.isArray(notes) ? notes : [])
     .map((n) => String(n ?? '').split('\n')[0].trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    // HPで決済された予約は、入金を確かめた時点で Worker がもう知らせている（hp.ts）
+    .filter((l) => !l.startsWith('新しい予約（HP）'));
   if (!lines.length) return null;
   if (lines.length === 1) return { title: '小夜月 予約', body: lines[0] };
   return { title: `小夜月 予約（${lines.length}件）`, body: lines.join('\n') };

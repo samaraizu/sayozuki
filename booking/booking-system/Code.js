@@ -620,13 +620,13 @@ function pullFromCloudflare_(cf, ctx, todayIso, notes) {
   try {
     const got = cfFetch_(cf, '/api/sync/pending');
     cfAppendPending_(ctx, got.bookings || [], notes);
-    cfApplyCancels_(ctx, got.cancels || []);
+    cfApplyCancels_(ctx, got.cancels || [], notes);
   } catch (e) {
     alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
   }
 }
 
-// notes があれば、アプリで入れた直販を通知に足す（HPで決済済みの予約は Cloudflare版がもう知らせているので足さない）
+// notes を渡すと、足した予約を「新しい予約」として通知メールに載せる（Airbnbの取り込みと同じメール・同じ宛先）
 function cfAppendPending_(ctx, list, notes) {
   let added = 0;
   list.forEach(function (b) {
@@ -637,18 +637,19 @@ function cfAppendPending_(ctx, list, notes) {
       if (b[h] === undefined || b[h] === '') return;
       vals[h] = CF_NUMBER_COLS.indexOf(h) >= 0 && /^\d+$/.test(String(b[h])) ? Number(b[h]) : b[h];
     });
-    ctx.byCode[no] = newRow_(ctx.res, vals);
+    const r = newRow_(ctx.res, vals);
+    ctx.byCode[no] = r;
     added++;
-    if (notes && str_(b['支払い状況']) !== 'HPで決済済') {
-      notes.push('直販の予約（アプリで入力）：' + str_(b['部屋']) + ' ' + md_(str_(b['チェックイン'])) + '〜' + md_(str_(b['チェックアウト'])) +
-        ' ' + str_(b['大人']) + '名 ' + str_(b['代表者名']) + '（' + no + '）');
+    if (notes && CONFIG.NOTIFY_NEW_BOOKING) {
+      const from = str_(vals['支払い状況']) === 'HPで決済済' ? 'HP' : 'アプリ';
+      notes.push('新しい予約（' + from + '）：' + rowLabel_(r));
     }
   });
   return added;
 }
 
 // アプリの「キャンセル」を台帳に反映する（ステータスをキャンセルにし、メモに1行足す。行は消さない）
-function cfApplyCancels_(ctx, list) {
+function cfApplyCancels_(ctx, list, notes) {
   let done = 0;
   list.forEach(function (c) {
     const r = ctx.byCode[str_(c['予約番号'])];
@@ -657,6 +658,7 @@ function cfApplyCancels_(ctx, list) {
     const note = str_(c['メモ']);
     if (note && str_(r.v['メモ']).indexOf(note) < 0) set_(r, 'メモ', str_(r.v['メモ']) ? str_(r.v['メモ']) + '\n' + note : note);
     done++;
+    if (notes) notes.push('キャンセル（アプリ）：' + rowLabel_(r) + (note ? '\n  ' + note : ''));
   });
   return done;
 }

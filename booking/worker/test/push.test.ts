@@ -9,7 +9,8 @@ describe('通知の文', () => {
       title: '小夜月 予約',
       body: '新しい予約：Airbnb 月山 11/12〜11/14 2名',
     });
-    expect(summarizeNotes(['[重複] 301 11/20', '', '[定員超え] 302 11/21\n詳細'])).toEqual({
+    expect(summarizeNotes(['新しい予約（HP）：蔵王 11/20〜11/21'])).toBeNull();
+    expect(summarizeNotes(['[重複] 301 11/20', '', '新しい予約（HP）：x', '[定員超え] 302 11/21\n詳細'])).toEqual({
       title: '小夜月 予約（2件）',
       body: '[重複] 301 11/20\n[定員超え] 302 11/21',
     });
