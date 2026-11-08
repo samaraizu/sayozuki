@@ -67,10 +67,6 @@ export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
     name: { en: 'Morning coffee', zht: '隔日早晨咖啡', zhs: '次日早晨咖啡', ko: '다음날 아침 커피' },
     desc: { en: 'At your door when you wake', zht: '於起床時間送到門前', zhs: '于起床时间送到门前', ko: '기상 시간에 문 앞으로' }
   },
-  芋煮と山形の夕膳: {
-    name: { en: 'Imoni dinner set', zht: '芋煮山形晚膳', zhs: '芋煮山形晚膳', ko: '이모니 저녁 정식' },
-    desc: { en: 'For 1', zht: '1人份', zhs: '1人份', ko: '1인분' }
-  },
   クロワッサンサンドの朝食: {
     name: { en: 'Croissant sandwich breakfast', zht: '可頌三明治早餐', zhs: '可颂三明治早餐', ko: '크루아상 샌드위치 아침 식사' },
     desc: { en: 'For 1, with a drink', zht: '1人份・附飲品', zhs: '1人份・附饮品', ko: '1인분・음료 포함' }
@@ -78,14 +74,6 @@ export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
   おにぎりと漬物の朝食: {
     name: { en: 'Rice ball breakfast with pickles', zht: '飯糰與醬菜早餐', zhs: '饭团与酱菜早餐', ko: '주먹밥과 절임 반찬 아침 식사' },
     desc: { en: 'For 1, with a drink', zht: '1人份・附飲品', zhs: '1人份・附饮品', ko: '1인분・음료 포함' }
-  },
-  紅干し柿: {
-    name: { en: 'Dried persimmons', zht: '紅柿乾', zhs: '红柿饼', ko: '홍시 곶감' },
-    desc: { en: '2 pcs with tea', zht: '2個・附茶', zhs: '2个・附茶', ko: '2개・차 포함' }
-  },
-  のし梅: {
-    name: { en: 'Noshiume plum sweet', zht: '梅子羊羹片', zhs: '梅子羊羹片', ko: '노시우메(매실 과자)' },
-    desc: { en: '2 sheets', zht: '2片', zhs: '2片', ko: '2장' }
   },
   レイトチェックアウト: {
     name: { en: 'Late check-out', zht: '延遲退房', zhs: '延迟退房', ko: '레이트 체크아웃' },
