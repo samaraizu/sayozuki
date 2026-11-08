@@ -143,6 +143,12 @@ export const en: Dict = {
       "Thank you for contacting Sayozuki.\nWe have received your inquiry under the reference number below.\n\nReference number: {no}\n\nWe will check availability and get back to you by email.\nPlease note that your booking is not confirmed at this stage.\nIf you would like to add or change anything, simply reply to this email.\n\nIf you did not send this inquiry, please disregard this email.",
   },
   book: {
+    bestRateBadge: "Book direct: {pct}% off room rates",
+    bestRateTitle: "Best rate when you book on our official site",
+    bestRateBody: "Booking here is always cheaper than other booking sites: room rates are {pct}% off.",
+    listPrice: "Regular {price}",
+    discountLine: "Official site discount ({pct}% off room)",
+    officialPrice: "Official site price",
     navLabel: "Availability & Booking",
     title: "Availability & Booking",
     heroCta: "Check availability",

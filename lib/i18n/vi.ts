@@ -143,6 +143,12 @@ export const vi: Dict = {
       "Cảm ơn bạn đã liên hệ với Sayozuki.\nChúng tôi đã nhận được yêu cầu của bạn với mã tiếp nhận dưới đây.\n\nMã tiếp nhận: {no}\n\nSau khi kiểm tra phòng trống, chúng tôi sẽ liên hệ lại với bạn qua email.\nXin lưu ý rằng đặt phòng chưa được xác nhận ở thời điểm này.\nNếu muốn bổ sung hoặc thay đổi nội dung, vui lòng trả lời trực tiếp email này.\n\nNếu bạn không gửi yêu cầu này, vui lòng bỏ qua email này.",
   },
   book: {
+    bestRateBadge: "Đặt trực tiếp: giảm {pct}% tiền phòng",
+    bestRateTitle: "Giá tốt nhất khi đặt trên trang chính thức",
+    bestRateBody: "Luôn rẻ hơn các trang đặt phòng khác: giảm {pct}% tiền phòng khi đặt tại đây.",
+    listPrice: "Giá thường {price}",
+    discountLine: "Ưu đãi trang chính thức (giảm {pct}% tiền phòng)",
+    officialPrice: "Giá trang chính thức",
     navLabel: "Phòng trống & Đặt phòng",
     title: "Phòng trống & Đặt phòng",
     heroCta: "Xem phòng trống",

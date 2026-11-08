@@ -6,7 +6,7 @@ import { addDays, ledgerName, roomStatus } from "@/lib/availability";
 import { bookingApi, forgetAvailability, getAvailability } from "@/lib/booking-api";
 import { dictionaries, fmt, formatYen, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { mealPlans, payLines, quote, type MealPlan } from "@/lib/pricing";
-import { site } from "@/lib/site";
+import { bookingRules, site } from "@/lib/site";
 import { ARRIVAL_TIMES, HOLD_MINUTES } from "@/lib/reserve-config";
 
 export type ReserveState = {
@@ -75,6 +75,8 @@ export async function startReservation(_prev: ReserveState, formData: FormData):
     `${d.book.summaryDates}：${checkIn} → ${out}（${fmt(d.form.nightUnit, { n: nights })}）`,
     `${d.book.summaryGuests}：${fmt(d.form.guestUnit, { n: guests })}`,
     `${d.book.summaryMeal}：${mealLabel(d)}`,
+    `${fmt(d.book.stay, { n: nights })}：${y(q.roomList)}`,
+    `${fmt(d.book.discountLine, { pct: bookingRules.directDiscount })}：−${y(q.discount)}`,
     `${d.book.total}：${y(q.total)}`,
     fmt(d.book.bathTax, { price: y(q.bathTax) }),
   ];

@@ -13,6 +13,7 @@ export function Moon({ className = "" }: { className?: string }) {
 
 /**
  * 宿のHPのヘッダー。生成りの地に、苔色の丸い屋号印。
+ * 画面上に追従し、半透明＋ぼかしで下の写真や帯が透けて見える
  * onTop：トップページの中なら #about などのページ内リンク、ほかのページからはトップへ戻るリンクにする
  */
 export function SiteHeader({ lang, onTop = false, sub = "" }: { lang: Locale; onTop?: boolean; sub?: string }) {
@@ -27,7 +28,7 @@ export function SiteHeader({ lang, onTop = false, sub = "" }: { lang: Locale; on
     [at("#access"), t.nav.access],
   ] as const;
   return (
-    <header className="relative z-40 bg-cream text-navy">
+    <header className="sticky top-0 z-40 border-b border-frost/70 bg-cream/70 text-navy backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pt-4 pb-3 md:px-6 md:py-5">
         <a href={onTop ? "#top" : home} className="flex items-center gap-2.5">
           <span className="flex size-10 items-center justify-center rounded-full bg-sea text-cream">

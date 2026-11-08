@@ -204,6 +204,12 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
 
   return (
     <form action={action} className="grid gap-4 lg:grid-cols-[1fr_360px] lg:items-start">
+      {/* 公式サイト最安値のお知らせ。割引率は lib/site.ts の bookingRules.directDiscount */}
+      <div className="flex flex-col gap-1 rounded-[20px] border border-wood/40 bg-kinari/60 px-5 py-4 lg:col-span-2 md:flex-row md:items-center md:gap-4">
+        <span className="self-start rounded-full bg-wood px-3 py-1 text-[12px] font-bold text-white md:self-auto">{fmt(b.bestRateBadge, { pct: bookingRules.directDiscount })}</span>
+        <span className="font-mincho text-[17px] font-bold">{b.bestRateTitle}</span>
+        <span className="text-[13px] text-slate">{fmt(b.bestRateBody, { pct: bookingRules.directDiscount })}</span>
+      </div>
       <input type="hidden" name="lang" value={lang} />
       <input type="hidden" name="room" value={pickedRoom} />
       <input type="hidden" name="checkIn" value={checkIn ?? ""} />
@@ -306,6 +312,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
                       <span className="text-[12px] text-slate">{fmt(t.rooms.capacity, { n: r.capacity })}</span>
                       {rq && (
                         <span className="text-[17px] font-bold tabular-nums">
+                          <s className="mr-2 text-[12px] font-medium text-slate">{fmt(b.listPrice, { price: yen(rq.roomList) })}</s>
                           {yen(rq.roomTotal)}
                           <span className="ml-2 text-[12px] font-medium text-slate">{fmt(b.perStay, { n: nights, guests })}</span>
                         </span>
@@ -413,10 +420,16 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
           <div className="flex flex-col gap-1.5 border-t border-frost pt-4 text-[14px]">
             <p className="flex justify-between gap-3">
               <span>{fmt(b.stay, { n: q.nights })}</span>
-              <span className="tabular-nums">{yen(q.roomTotal)}</span>
+              <span className="tabular-nums">{yen(q.roomList)}</span>
             </p>
             {q.extraGuests > 0 && <p className="text-[12px] text-slate">{fmt(b.extra, { n: q.extraGuests })}</p>}
             {q.busyNights > 0 && <p className="text-[12px] text-slate">{fmt(b.busy, { n: q.busyNights })}</p>}
+            {q.discount > 0 && (
+              <p className="flex justify-between gap-3 font-bold text-umber">
+                <span>{fmt(b.discountLine, { pct: bookingRules.directDiscount })}</span>
+                <span className="tabular-nums">−{yen(q.discount)}</span>
+              </p>
+            )}
             {q.breakfast > 0 && (
               <p className="flex justify-between gap-3">
                 <span>{b.breakfast}</span>

@@ -3,7 +3,7 @@
  * 決まりは lib/site.ts の rooms・meals・bookingRules。
  */
 import { addDays } from "@/lib/availability";
-import { bookingRules, meals as mealPrices, rooms, type Room } from "@/lib/site";
+import { bookingRules, directPrice, meals as mealPrices, rooms, type Room } from "@/lib/site";
 
 export type MealPlan = "none" | "breakfast" | "dinner" | "both";
 export const mealPlans: MealPlan[] = ["none", "breakfast", "dinner", "both"];
@@ -12,8 +12,13 @@ export type Quote = {
   room: Room;
   nights: number;
   guests: number;
-  /** 1泊ずつの室料（追加人数・繁忙期込み） */
-  perNight: { date: string; amount: number; busy: boolean }[];
+  /** 1泊ずつの室料（追加人数・繁忙期込み）。list は定価、amount は公式サイト割引後 */
+  perNight: { date: string; list: number; amount: number; busy: boolean }[];
+  /** 室料の定価の合計 */
+  roomList: number;
+  /** 公式サイト割引の額 */
+  discount: number;
+  /** 割引後の室料 */
   roomTotal: number;
   extraGuests: number;
   busyNights: number;
@@ -43,8 +48,10 @@ export function quote(roomName: string, checkIn: string, nights: number, guests:
   const perNight = Array.from({ length: nights }, (_, i) => {
     const date = addDays(checkIn, i);
     const busy = isBusyNight(date);
-    return { date, busy, amount: room.price + extraGuests * extraGuestPrice(room) + (busy ? bookingRules.busySurcharge : 0) };
+    const list = room.price + extraGuests * extraGuestPrice(room) + (busy ? bookingRules.busySurcharge : 0);
+    return { date, busy, list, amount: directPrice(list) };
   });
+  const roomList = perNight.reduce((s, n) => s + n.list, 0);
   const roomTotal = perNight.reduce((s, n) => s + n.amount, 0);
   const breakfast = plan === "breakfast" || plan === "both" ? mealPrices.breakfast * guests * nights : 0;
   const dinner = plan === "dinner" || plan === "both" ? mealPrices.dinner * guests * nights : 0;
@@ -53,6 +60,8 @@ export function quote(roomName: string, checkIn: string, nights: number, guests:
     nights,
     guests,
     perNight,
+    roomList,
+    discount: roomList - roomTotal,
     roomTotal,
     extraGuests,
     busyNights: perNight.filter((n) => n.busy).length,
@@ -64,7 +73,7 @@ export function quote(roomName: string, checkIn: string, nights: number, guests:
   };
 }
 
-/** Square に出す明細。同じ額の夜はまとめる */
+/** Square に出す明細（室料は割引後の額）。同じ額の夜はまとめる */
 export function payLines(q: Quote, labels: { stay: string; busy: string; breakfast: string; dinner: string }) {
   const lines: { name: string; quantity: number; unitAmount: number }[] = [];
   const normal = q.perNight.filter((n) => !n.busy);

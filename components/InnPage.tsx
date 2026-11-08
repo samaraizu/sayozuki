@@ -6,7 +6,7 @@ import { Heading, SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { dictionaries, fmt, formatYen, localePath, type Locale } from "@/lib/i18n";
 import { products } from "@/lib/shop";
-import { intlPhone, meals, otaLinks, photos, rooms, site, telHref } from "@/lib/site";
+import { bookingRules, directPrice, intlPhone, meals, otaLinks, photos, rooms, site, telHref } from "@/lib/site";
 import { shopUrl } from "@/lib/urls";
 
 const field =
@@ -66,6 +66,10 @@ export function InnPage({ lang }: { lang: Locale }) {
               <br />
               {t.about.lead[1]}
             </h1>
+            <a href={reserveHref} className="flex flex-wrap items-center gap-x-3 gap-y-1 self-start rounded-2xl border border-wood/40 bg-white/70 px-4 py-2.5">
+              <span className="rounded-full bg-wood px-3 py-0.5 text-[12px] font-bold text-white">{fmt(t.book.bestRateBadge, { pct: bookingRules.directDiscount })}</span>
+              <span className="text-[14px] font-bold">{t.book.bestRateTitle}</span>
+            </a>
 
             {/* 空室を見る：日程を下の空室カレンダー（#reserve）へ持っていく */}
             <form
@@ -165,9 +169,13 @@ export function InnPage({ lang }: { lang: Locale }) {
                   <span className="rounded-lg bg-mint px-2.5 py-0.5 text-[12px] font-bold text-pine">{fmt(t.rooms.capacity, { n: r.capacity })}</span>
                 </div>
                 {r.note && <p className="text-[13px] text-slate">{t.rooms.familyNote}</p>}
-                <p className="text-lg font-bold tabular-nums">
-                  {yen(r.price)}
-                  <span className="ml-2 text-[12px] font-medium text-slate">{t.price.caption}</span>
+                <p className="text-[12px] text-slate tabular-nums">
+                  <s>{fmt(t.book.listPrice, { price: yen(r.price) })}</s>
+                  <span className="ml-2">{t.price.caption}</span>
+                </p>
+                <p className="flex items-baseline gap-2 text-lg font-bold tabular-nums">
+                  <span className="text-[11px] font-bold text-umber">{t.book.officialPrice}</span>
+                  {yen(directPrice(r.price))}
                 </p>
               </li>
             ))}
