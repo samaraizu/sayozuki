@@ -138,6 +138,9 @@ export const en: Dict = {
     availNone: "No rooms are available for these dates. Please try other dates.",
     availNote: "Availability is a guide. Your booking is confirmed when the inn replies to your inquiry.",
     errRoomFull: "The room you chose is not available for these dates. Please choose another room or other dates.",
+    replySubject: "[Sayozuki] We have received your inquiry ({no})",
+    replyBody:
+      "Thank you for contacting Sayozuki.\nWe have received your inquiry under the reference number below.\n\nReference number: {no}\n\nWe will check availability and get back to you by email.\nPlease note that your booking is not confirmed at this stage.\nIf you would like to add or change anything, simply reply to this email.\n\nIf you did not send this inquiry, please disregard this email.",
   },
   book: {
     navLabel: "Availability & Booking",
