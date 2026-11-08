@@ -14,9 +14,10 @@ GitHub は `samaraizu/sayozuki`。**public リポジトリなので、原価・�
 - HP は Cloudflare Workers（Worker「sayozuki」、OpenNext）で公開する。Vercel からは移行済み。
   デプロイは `npm run deploy`、設定は `wrangler.jsonc` / `open-next.config.ts`。
 - 宿のドメインは sayozuki.com、お取り寄せは shop.sayozuki.com。`proxy.ts` で振り分ける。
-  `NEXT_PUBLIC_SPLIT_DOMAINS=true` は **DNS がつながってから** 入れる
-  （先に入れると本番のアクセスが仮ページへ飛ぶ）。
-  ビルド時の値なので Worker の変数ではなくビルド環境に入れる。
+  2026-11-08 に DNS を Cloudflare へ移して接続済み。`NEXT_PUBLIC_SPLIT_DOMAINS=true` は
+  Worker「sayozuki」の Builds の変数に入れてある（ビルド時の値なので Worker の変数ではない）。
+- 本番ビルドは `next build --webpack`。Turbopack だと Workers Builds で `next/font/google` の
+  Noto Sans JP が落ちるため（README の「公開」）。`--webpack` を外さないこと。
 - HPの予約（`/reserve`、空室カレンダーと Square の事前決済）は、予約管理の Worker「sayozuki-booking」（`booking/worker/`）を
   サービスバインディング `BOOKING`（entrypoint `HpApi`）で呼ぶ。料金の決まりは `lib/site.ts` の `bookingRules`、計算は `lib/pricing.ts`。
   HPの見た目は客室オーダーと同じ青緑（`app/globals.css` の `--color-sea` など）。お取り寄せ（/shop）は白×緑のまま。
