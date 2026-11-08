@@ -29,7 +29,7 @@ export async function ReserveDone({ lang, no, keyParam }: { lang: Locale; no: st
           <span className={`flex size-16 items-center justify-center rounded-full ${s.status === "paid" ? "bg-grad text-white" : "bg-sky text-sea"}`}>
             <Moon className="size-8" />
           </span>
-          <h1 className="font-serif text-2xl font-semibold">{title}</h1>
+          <h1 className="font-mincho text-2xl font-semibold">{title}</h1>
           <p className="text-[15px] leading-8 text-slate">{body}</p>
           {s.no && (s.status === "paid" || s.status === "pending") && (
             <dl className="mt-2 grid w-full grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-2xl bg-sky px-5 py-4 text-left text-[14px]">
@@ -66,7 +66,7 @@ export async function ReserveDone({ lang, no, keyParam }: { lang: Locale; no: st
           {s.status === "pending" && (
             <>
               {s.payUrl && (
-                <a href={s.payUrl} className="flex h-12 items-center rounded-2xl bg-grad px-6 font-bold text-white shadow-cta">
+                <a href={s.payUrl} className="flex h-12 items-center rounded-2xl bg-wood px-6 font-bold text-white shadow-cta">
                   {b.resume}
                 </a>
               )}
