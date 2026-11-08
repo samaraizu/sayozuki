@@ -23,7 +23,7 @@
  * スクリプトプロパティ（コードは公開リポジトリにも置くので、アドレスはここに書かない）
  *   NOTIFY_TO  … 通知メールを足す宛先（カンマ区切り）。スクリプトを作ったアカウントには何もしなくても送る
  *   calendarId … setupCalendar が自動で入れる。手で触らない
- *   CF_SYNC_URL   … Cloudflare版の予約管理（例 https://sayozuki-booking.xxx.workers.dev）。空なら同期しない
+ *   CF_SYNC_URL   … Cloudflare版の予約管理（https://booking.sayozuki.com）。空なら同期しない
  *   CF_SYNC_TOKEN … Cloudflare版と同じ合言葉（Worker の Secret SYNC_TOKEN と同じ値）
  *
  * Cloudflare版への移行中は、毎回の実行で
