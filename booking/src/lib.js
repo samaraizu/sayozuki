@@ -273,7 +273,64 @@ function sayozukiLib() {
     };
   }
 
+  // ---------- 食事（あとから手で入れる。Airbnb はメッセージで聞いた結果を入れる） ----------
+  // plan は泊ごと：plan[k] = { dinner: k泊目の夕食の人数, breakfast: その翌朝の朝食の人数 }
+  var MEAL_MAX = 20;
+  var MEAL_NONE = 'なし（確認済み）';
+
+  function md(iso) { var p = iso.split('-'); return (+p[1]) + '/' + (+p[2]); }
+
+  function cleanMealPlan(plan, nights) {
+    var out = [];
+    for (var k = 0; k < nights; k++) {
+      var x = (plan && plan[k]) || {};
+      out.push({
+        dinner: Math.min(Math.max(toInt(x.dinner), 0), MEAL_MAX),
+        breakfast: Math.min(Math.max(toInt(x.breakfast), 0), MEAL_MAX)
+      });
+    }
+    return out;
+  }
+
+  /** 台帳の「食事」列に入れる1行。毎泊同じなら「夕食2名・朝食2名」、泊で違えば日付ごと */
+  function mealText(checkIn, plan, note) {
+    var n = plan.length;
+    var memo = String(note || '').replace(/\s+/g, ' ').trim();
+    var tail = memo ? '（' + memo + '）' : '';
+    var any = plan.some(function (x) { return x.dinner > 0 || x.breakfast > 0; });
+    if (!any) return MEAL_NONE + tail;
+    var same = plan.every(function (x) { return x.dinner === plan[0].dinner && x.breakfast === plan[0].breakfast; });
+    if (same) {
+      var parts = [];
+      if (plan[0].dinner) parts.push('夕食' + plan[0].dinner + '名');
+      if (plan[0].breakfast) parts.push('朝食' + plan[0].breakfast + '名');
+      return (n > 1 ? '毎泊 ' : '') + parts.join('・') + tail;
+    }
+    var dn = [], bf = [];
+    plan.forEach(function (x, k) {
+      if (x.dinner) dn.push(md(addDays(checkIn, k)) + '×' + x.dinner);
+      if (x.breakfast) bf.push(md(addDays(checkIn, k + 1)) + '×' + x.breakfast);
+    });
+    return [dn.length ? '夕食 ' + dn.join('・') : '', bf.length ? '朝食 ' + bf.join('・') : ''].filter(Boolean).join('／') + tail;
+  }
+
+  /** 前に保存した内容が無いときの初期値。「朝食」「夕食」の文字があれば毎泊の人数分にする */
+  function mealPlanFrom(meals, nights, peopleCount) {
+    var m = String(meals || '');
+    var none = m.indexOf('なし') >= 0;
+    var d = !none && m.indexOf('夕食') >= 0 ? peopleCount : 0;
+    var b = !none && m.indexOf('朝食') >= 0 ? peopleCount : 0;
+    var out = [];
+    for (var k = 0; k < nights; k++) out.push({ dinner: d, breakfast: b });
+    return out;
+  }
+
   return {
+    MEAL_MAX: MEAL_MAX,
+    MEAL_NONE: MEAL_NONE,
+    cleanMealPlan: cleanMealPlan,
+    mealText: mealText,
+    mealPlanFrom: mealPlanFrom,
     CANCELLED: CANCELLED,
     SELLABLE: SELLABLE,
     PAYMENTS: PAYMENTS,

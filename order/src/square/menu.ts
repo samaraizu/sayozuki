@@ -3,6 +3,7 @@ import { CATEGORIES, ITEMS } from '../config/i18n-menu';
 import { sq } from './client';
 import type { Tr } from '../config/i18n-menu';
 import type { Menu, MenuItem } from './types';
+import { loadDetails } from './detail';
 
 export interface MenuMeta {
   names: Tr | null;
@@ -43,6 +44,7 @@ export async function fetchSquareMenu(env: Env): Promise<Menu> {
   }
 
   const meta = await loadMenuMeta(env);
+  const details = await loadDetails(env);
   const loc = env.SQUARE_LOCATION_ID;
   const items: MenuItem[] = [];
   for (const o of objects) {
@@ -78,7 +80,8 @@ export async function fetchSquareMenu(env: Env): Promise<Menu> {
       soldOut: (!tracked && Boolean(ov.sold_out)) || Boolean(m?.paused),
       paused: Boolean(m?.paused),
       images: imageIds.map((id) => images.get(id)!),
-      imageIds
+      imageIds,
+      detail: details.get(o.id) ?? null
     });
   }
 
@@ -111,5 +114,5 @@ const availableAt = (o: any, loc: string) => {
 
 export const categoryList = () =>
   Object.entries(CATEGORIES)
-    .map(([name, c]) => ({ name, names: c.names, order: c.order, cutoff: c.cutoff }))
+    .map(([name, c]) => ({ name, names: c.names, order: c.order, cutoff: c.cutoff, preorder: Boolean(c.preorder) }))
     .sort((a, b) => a.order - b.order);

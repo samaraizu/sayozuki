@@ -429,9 +429,127 @@
         rows.map(function (r) { return h('div', null, h('dt', null, r[0]), h('dd', null, r[1])); }),
         b.url ? h('div', null, h('dt', null, '媒体の画面'), h('dd', null, h('a', { href: b.url, target: '_blank', rel: 'noopener' }, '開く'))) : null
       ),
+      mealBox(b),
       cancelBox(b)
     );
     if ($detail.showModal) $detail.showModal(); else $detail.setAttribute('open', '');
+  }
+
+  // ---------- 食事（あとから手で入れる） ----------
+  // Airbnb には食事の申込欄がないので、予約が入った時点でメッセージで聞き、その答えをここに入れる。
+  // HP・ほかのサイトは申込のときにお客様が選んでいるので、直すときだけ使う。当日言われても用意できないので、お客様が自分で足す入口は無い
+  var MENU_URL = 'https://order.sayozuki.com/menu'; // 料理の写真と内容（客室オーダーの紹介ページ）
+  var MEAL_DEADLINE_DAYS = 3; // 何日前までに答えてもらうか（仕入れと仕込みの都合）
+
+  function hearingText(b, lang) {
+    var due = Lib.addDays(b.checkIn, -MEAL_DEADLINE_DAYS);
+    var hasDue = due >= state.board.today;
+    var name = displayName(b) === 'Reserved' ? '' : displayName(b);
+    if (lang === 'ja') {
+      return (name ? name + '様\n\n' : '') +
+        'ご予約ありがとうございます。小夜月です。\n' +
+        '当館では、お部屋で夕食・朝食をお召し上がりいただけます（事前予約制）。仕込みの都合で当日のお申し込みはお受けできないため、' +
+        (hasDue ? md(due) + 'までに' : 'お早めに') + '、ご希望の有無と人数をこのメッセージでお知らせください。\n\n' +
+        '料理の写真と内容：' + MENU_URL + '?lang=ja\n\n' +
+        '例）「夕食2名・朝食2名」「朝食だけ2名」「食事はなし」';
+    }
+    return (name ? 'Hi ' + name + ',\n\n' : '') +
+      'Thank you for booking Sayozuki. We can serve dinner and breakfast in your room, but they must be booked in advance — we cannot prepare them on the day. ' +
+      'Please reply to this message ' + (hasDue ? 'by ' + md(due) : 'as soon as you can') + ' to let us know whether you would like them, and for how many guests.\n\n' +
+      'Photos and details of each dish: ' + MENU_URL + '?lang=en\n\n' +
+      'e.g. "Dinner for 2, breakfast for 2", "Breakfast only for 2", or "No meals"';
+  }
+
+  function copyText(text, label) {
+    var done = function () { toast(label + 'をコピーした。Airbnb のメッセージに貼って送って'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { window.prompt('コピーして', text); });
+    } else {
+      window.prompt('コピーして', text);
+    }
+  }
+
+  function mealBox(b) {
+    var today = state.board.today;
+    var nights = Lib.nightsBetween(b.checkIn, b.checkOut);
+    if (!b.no || b.status === Lib.CANCELLED || b.status === '仮' || nights < 1 || nights > 60 || b.checkOut < today) return null;
+    var airbnb = b.channel === 'Airbnb';
+    var saved = (state.board.mealPlans || []).filter(function (m) { return m.no === b.no; })[0];
+    var ppl = Math.max(1, Lib.people(b));
+    var plan = saved && Array.isArray(saved.plan) && saved.plan.length === nights
+      ? Lib.cleanMealPlan(saved.plan, nights)
+      : Lib.mealPlanFrom(b.meals, nights, ppl);
+    var note = saved ? saved.note : '';
+    var open = false, saving = false;
+    var box = h('div', { class: 'cancelbox mealbox' });
+
+    function setAll(dinner, breakfast) {
+      plan = plan.map(function () { return { dinner: dinner, breakfast: breakfast }; });
+      draw();
+    }
+    function counter(k, key, label) {
+      var v = plan[k][key];
+      return h('div', { class: 'mcount' },
+        h('span', { class: 'ml' }, label),
+        h('div', { class: 'stepper mini', role: 'group', 'aria-label': label },
+          h('button', { type: 'button', 'aria-label': label + 'を1人減らす', disabled: v <= 0, onclick: function () { plan[k][key] = v - 1; draw(); } }, '−'),
+          h('output', null, v + '名'),
+          h('button', { type: 'button', 'aria-label': label + 'を1人増やす', disabled: v >= Lib.MEAL_MAX, onclick: function () { plan[k][key] = v + 1; draw(); } }, '＋')));
+    }
+    function save(btn) {
+      if (saving) return;
+      saving = true;
+      btn.disabled = true;
+      call('setMeals', { no: b.no, plan: plan, note: note }).then(function (res) {
+        saving = false;
+        if (!res.ok) { btn.disabled = false; toast(res.message, true); return; }
+        $detail.close();
+        toast(displayName(b) + ' の食事を「' + res.meals + '」にした。台帳には5分以内に反映');
+        load();
+      });
+    }
+
+    function draw() {
+      box.textContent = '';
+      var current = b.meals || (airbnb ? '未確認' : '素泊まり');
+      append(box,
+        h('h3', null, '食事'),
+        h('p', { class: 'mnow' + (airbnb && !b.meals ? ' missing' : '') }, current),
+        airbnb ? h('p', { class: 'pn' }, 'Airbnbは食事の申込欄がない。予約が入ったら下の文面をメッセージで送って聞き、答えをここに入れる。当日の申し込みは受けない') : null,
+        airbnb ? h('div', { class: 'qactions' },
+          h('button', { type: 'button', class: 'ghost', onclick: function () { copyText(hearingText(b, 'ja'), '聞く文面（日本語）'); } }, '聞く文面をコピー（日本語）'),
+          h('button', { type: 'button', class: 'ghost', onclick: function () { copyText(hearingText(b, 'en'), '聞く文面（英語）'); } }, 'English')) : null
+      );
+      if (!open) {
+        append(box, h('div', { class: 'qactions' },
+          h('button', { type: 'button', class: 'save', onclick: function () { open = true; draw(); } }, b.meals ? '食事を直す' : '食事を入れる')));
+        return;
+      }
+      var rows = plan.map(function (_, k) {
+        return h('div', { class: 'mnight' },
+          h('span', { class: 'mn' }, nights > 1 ? (k + 1) + '泊目' : ''),
+          counter(k, 'dinner', '夕食 ' + Lib.shortLabel(Lib.addDays(b.checkIn, k))),
+          counter(k, 'breakfast', '朝食 ' + Lib.shortLabel(Lib.addDays(b.checkIn, k + 1))));
+      });
+      var preview = h('p', { class: 'mpreview' }, '台帳に入る内容：' + Lib.mealText(b.checkIn, plan, note));
+      append(box,
+        h('div', { class: 'segs' },
+          h('button', { type: 'button', class: 'seg', onclick: function () { setAll(ppl, ppl); } }, '全泊 夕朝 ' + ppl + '名'),
+          h('button', { type: 'button', class: 'seg', onclick: function () { setAll(0, ppl); } }, '朝食だけ'),
+          h('button', { type: 'button', class: 'seg', onclick: function () { setAll(0, 0); } }, 'なし')),
+        rows,
+        h('label', { class: 'field' }, '料理・時間・アレルギー（任意。台帳の食事に括弧で入る）',
+          h('input', { class: 'input', type: 'text', maxlength: '100', value: note, placeholder: 'すき焼き、朝8:00、えびアレルギー など',
+            oninput: function (e) { note = e.target.value; preview.textContent = '台帳に入る内容：' + Lib.mealText(b.checkIn, plan, note); } })),
+        preview,
+        h('div', { class: 'qactions' },
+          h('button', { type: 'button', class: 'ghost', onclick: function () { open = false; draw(); } }, 'やめる'),
+          h('button', { type: 'button', class: 'save', onclick: function (e) { save(e.currentTarget); } }, 'この内容で入れる')),
+        h('p', { class: 'pn' }, '夕食はその日の夜、朝食はその翌朝。台帳の「食事」列には5分以内に反映')
+      );
+    }
+    draw();
+    return box;
   }
 
   // ---------- キャンセル（直販だけ） ----------

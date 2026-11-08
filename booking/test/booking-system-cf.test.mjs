@@ -6,7 +6,7 @@ import { test } from 'node:test';
 
 const src = fs.readFileSync(new URL('../booking-system/Code.js', import.meta.url), 'utf8');
 const ctx = vm.createContext({ console });
-vm.runInContext(src + '\n;this.__x = { cfAppendPending_, cfApplyCancels_, cfPayload_, makeCtx_, newRow_ };', ctx);
+vm.runInContext(src + '\n;this.__x = { cfAppendPending_, cfApplyCancels_, cfApplyMeals_, cfPayload_, makeCtx_, newRow_ };', ctx);
 const X = ctx.__x;
 
 const table = (rows) => ({ rows: rows.map((v, i) => ({ _row: i + 2, v, dirty: {}, isNew: false })) });
@@ -83,4 +83,24 @@ test('アプリのキャンセルを台帳に反映：ステータスをキャ�
   assert.strictEqual(r.v['メモ'], 'HP予約・事前決済 27,000円\n2026/12/01 10:00 キャンセル（7日前まで・規定0%）支払27,000円・返金27,000円');
   assert.strictEqual(r.dirty['ステータス'], true);
   assert.strictEqual(X.cfApplyCancels_(c, list), 0);
+});
+
+test('アプリで入れた食事を台帳の「食事」列に書く（同じ値・キャンセル済み・台帳にない予約は何もしない）', () => {
+  const res = table([
+    { '媒体': 'Airbnb', '予約番号': 'HMAAAA2222', 'ステータス': '確定', '部屋': '301', 'チェックイン': '2026-12-05', 'チェックアウト': '2026-12-06', '代表者名': 'Alex', '食事': '' },
+    { '媒体': 'Airbnb', '予約番号': 'HMAAAA3333', 'ステータス': 'キャンセル', '食事': '' },
+  ]);
+  const c = X.makeCtx_(res, table([]), table([]));
+  const notes = [];
+  const list = [
+    { '予約番号': 'HMAAAA2222', '食事': '夕食2名・朝食2名' },
+    { '予約番号': 'HMAAAA3333', '食事': '朝食1名' },
+    { '予約番号': 'HMNOTHERE', '食事': '朝食1名' },
+  ];
+  assert.strictEqual(X.cfApplyMeals_(c, list, notes), 1);
+  assert.strictEqual(res.rows[0].v['食事'], '夕食2名・朝食2名');
+  assert.strictEqual(res.rows[0].dirty['食事'], true);
+  assert.strictEqual(res.rows[1].v['食事'], '');
+  assert.deepStrictEqual(notes, ['食事（アプリ）：301 12/5〜12/6 Alex（Airbnb）\n  夕食2名・朝食2名']);
+  assert.strictEqual(X.cfApplyMeals_(c, list), 0);
 });

@@ -1,6 +1,7 @@
 import { Lib, type Room } from './lib.gen.js';
 import { UserError, nowText, todayIso, type Env } from './env';
 import { openInquiries } from './inquiries';
+import { readMealPlans } from './meals';
 import { notify, summarizeNotes } from './push';
 
 // 画面・同期で使う名前 → D1の列 → スプシの見出し
@@ -57,14 +58,15 @@ export async function readBookings(db: D1Database, sinceIso: string): Promise<Bo
 
 export async function getBoard(env: Env, email: string) {
   const today = todayIso();
-  const [rooms, bookings, meta, inquiries] = await Promise.all([
+  const [rooms, bookings, meta, inquiries, mealPlans] = await Promise.all([
     readRooms(env.DB),
     // カレンダーは今日から先しか出さない。重なりの判定に足りるよう少し前から
     readBookings(env.DB, Lib.addDays(today, -62)),
     env.DB.prepare("SELECT value FROM meta WHERE key = 'lastImport'").first<{ value: string }>(),
     openInquiries(env.DB),
+    readMealPlans(env.DB, today),
   ]);
-  return { ok: true, today, user: email, rooms, bookings, lastImport: meta ? meta.value : '', inquiries };
+  return { ok: true, today, user: email, rooms, bookings, lastImport: meta ? meta.value : '', inquiries, mealPlans };
 }
 
 // ---------- 手動入力 ----------
@@ -166,6 +168,10 @@ export async function pendingForSheet(env: Env) {
     `SELECT c.no AS no, c.note AS note FROM cancellations c JOIN bookings b ON b.no = c.no
      WHERE c.applied = 0 AND b.in_sheet = 1 ORDER BY c.at`,
   ).all<{ no: string; note: string }>();
+  const meals = await env.DB.prepare(
+    `SELECT m.no AS no, m.meals AS meals FROM meal_plans m JOIN bookings b ON b.no = m.no
+     WHERE m.applied = 0 AND b.in_sheet = 1 AND b.status <> 'キャンセル' ORDER BY m.at`,
+  ).all<{ no: string; meals: string }>();
   return {
     ok: true,
     bookings: results.map((r) => {
@@ -175,6 +181,8 @@ export async function pendingForSheet(env: Env) {
       return out;
     }),
     cancels: cancels.results.map((c) => ({ '予約番号': c.no, 'メモ': c.note })),
+    // アプリで入れた・直した食事。GASが台帳の「食事」列に書く
+    meals: meals.results.map((m) => ({ '予約番号': m.no, '食事': m.meals })),
   };
 }
 
@@ -233,6 +241,15 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
        WHERE applied = 0 AND no IN (SELECT no FROM bookings WHERE status = 'キャンセル' AND in_sheet = 1)`,
     ),
     env.DB.prepare("UPDATE bookings SET status = 'キャンセル' WHERE no IN (SELECT no FROM cancellations WHERE applied = 0)"),
+    // アプリで入れた食事：台帳が同じ値になっていれば反映済み。まだなら台帳の値で戻さない
+    env.DB.prepare(
+      `UPDATE meal_plans SET applied = 1
+       WHERE applied = 0 AND EXISTS (SELECT 1 FROM bookings b WHERE b.no = meal_plans.no AND b.in_sheet = 1 AND b.meals = meal_plans.meals)`,
+    ),
+    env.DB.prepare(
+      `UPDATE bookings SET meals = (SELECT m.meals FROM meal_plans m WHERE m.no = bookings.no)
+       WHERE no IN (SELECT no FROM meal_plans WHERE applied = 0)`,
+    ),
     env.DB.prepare('DELETE FROM rooms'),
     env.DB.prepare(
       `INSERT INTO rooms (name, capacity, state, sort)

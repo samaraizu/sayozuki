@@ -155,7 +155,7 @@ export const stay = {
   onsenFull: "ナトリウム・カルシウム－塩化物・硫酸塩温泉（低張性弱アルカリ性高温泉）",
   onsenSources: ["葉山地区1号源泉", "葉山地区2号源泉"],
   /** 客室オーダーの受付時間。order/wrangler.jsonc の ORDER_OPEN・LAST_ORDER と合わせる */
-  roomOrder: { open: "6:00", lastOrder: "22:30", dinnerCutoff: "18:00" },
+  roomOrder: { open: "6:00", lastOrder: "22:30" }, // 夕食・朝食は事前予約制で、客室オーダーでは受けない
 };
 
 /** 国内表記の番号を国際表記（+81-23-…）にする。外国語のページと tel: リンク用 */

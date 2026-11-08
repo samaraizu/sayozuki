@@ -107,6 +107,18 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
     });
   }
 
+  // 商品の紹介ページ（/menu・/menu/<slug>）用。客室QRなしで読めるので、名前・価格・写真・売り切れだけ渡す（在庫数は出さない）
+  if (path === '/api/public/menu' && method === 'GET') {
+    const m = await desk(env).guestMenu();
+    // 一時停止中の品も返す（詳細ページを URL で開いて下見できるように）。一覧には出さない（paused）
+    const items = m.items.map((i) => ({
+      name: i.name, names: i.names, desc: i.desc, descs: i.descs, price: i.price, category: i.category, images: i.images,
+      soldOut: i.soldOut, paused: i.paused, detail: i.detail
+    }));
+    const categories = m.categories.map((c) => ({ name: c.name, names: c.names, order: c.order, preorder: Boolean(c.preorder) }));
+    return json({ items, categories }, 200, { 'cache-control': 'public, max-age=60' });
+  }
+
   if (path === '/api/menu' && method === 'GET') {
     await roomFromHeader(req, env);
     return json(await desk(env).guestMenu());

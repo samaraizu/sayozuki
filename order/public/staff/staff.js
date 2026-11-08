@@ -1,4 +1,5 @@
 // スタッフ画面：注文・リクエスト・チャットの受付、精算、スマホへの通知
+import { ALLERGENS, dishByKey } from '../dishes.js';
 const root = document.getElementById('root');
 const dlg = document.getElementById('dlg');
 const PIN_KEY = 'syz_staff_pin';
@@ -48,6 +49,8 @@ const ERRORS = {
   item_in_use: 'この商品は精算前の注文に入っているので、今は掲載をやめられません。精算が済んでからにしてください。',
   bad_image: '写真は JPEG / PNG / GIF にしてください。',
   image_too_large: '写真が大きすぎます。',
+  bad_slug: '詳細ページのURLは、英小文字・数字・ハイフン（-）で41文字までにしてください。',
+  slug_taken: 'その詳細ページのURLは、ほかの商品が使っています。別のURLにしてください。',
   item_not_found: 'この商品が見つかりません。一覧を読み込み直してください。',
   staff_pin_not_set: 'サーバーにSTAFF_PINが設定されていません。'
 };
@@ -321,6 +324,69 @@ function trFields(kind, label, values) {
   ).join('')}</fieldset>`;
 }
 
+// ---------- 詳細ページ（お客様が商品をタップしたときの紹介・/menu/<URL>） ----------
+const DETAIL_TEXT = [
+  ['kicker', 'ひとこと（料理名の下に出るキャッチ）', 60, 'input', '部屋で炊く山形牛の割下鍋'],
+  ['story', '紹介文', 600, 'textarea', '料理の魅力・食べ方・産地など'],
+  ['contents', '内容（1行に1つ）', 1000, 'textarea', '山形牛（すき焼き用）\n焼き豆腐・白菜・春菊'],
+  ['serve', 'お届け', 60, 'input', '18:00〜19:30 のお好きな時間'],
+  ['portion', '量', 30, 'input', '2人前'],
+  ['note', '補足（注意書きなど）', 200, 'input', '事前予約制です']
+];
+let detailOrig = {}; // 開いたときの日本語・英語（日本語を直して英語をそのままにしたら、英語は訳し直す）
+
+/** 保存済みの詳細 → 画面の値。まだ無ければ public/dishes.js に書いてある分を初期値にする */
+function detailValues(i) {
+  const d = i?.detail;
+  if (d) return { on: true, slug: d.slug, allergens: d.allergens || [], v: (f, l) => (f === 'contents' ? (d.contents?.[l] || []).join('\n') : d[f]?.[l] || '') };
+  const s = i ? dishByKey(i.name) : null;
+  if (s)
+    return {
+      on: false, slug: s.slug, allergens: s.allergens || [], fromFile: true,
+      v: (f, l) => (f === 'contents' ? (s.contents || []).map((c) => c[l] || '').join('\n') : s[f]?.[l] || '')
+    };
+  return { on: false, slug: '', allergens: [], v: () => '' };
+}
+
+function detailFields(i) {
+  const x = detailValues(i);
+  detailOrig = {};
+  const field = ([f, label, max, kind, ph], l) => {
+    const val = x.v(f, l);
+    detailOrig[`${f}_${l}`] = val;
+    const attrs = `name="d_${f}_${l}" maxlength="${max}" placeholder="${l === 'ja' ? esc(ph) : '空欄なら日本語から訳します'}"`;
+    return `<label>${label}${kind === 'textarea' ? `<textarea ${attrs} rows="${f === 'story' ? 4 : 3}">${esc(val)}</textarea>` : `<input ${attrs} value="${esc(val)}">`}</label>`;
+  };
+  const link = i?.detail ? `<a class="b" href="/menu/${encodeURIComponent(i.detail.slug)}" target="_blank" rel="noopener">詳細ページを開く ↗</a>` : '';
+  return `<h3>詳細ページ</h3>
+    <label class="chk"><input type="checkbox" name="d_on"${x.on ? ' checked' : ''}> 詳細ページを作る</label>
+    <p class="muted">お客様が商品をタップしたときの紹介と、URLで共有できるページ。写真は上の商品写真を使います。一時停止中でもURLを開けば見られるので、公開前の下見に使えます。${x.fromFile && !x.on ? '<br>用意してある文章を入れてあります。チェックを入れて保存すると使われます。' : ''}</p>
+    <div class="dfields"${x.on ? '' : ' hidden'}>
+      <label>URL（英小文字・数字・ハイフン。空欄なら英語名から作ります）<span class="slug"><span>/menu/</span><input name="d_slug" value="${esc(x.slug)}" maxlength="41" pattern="[a-z0-9][a-z0-9\\-]*" autocapitalize="off" spellcheck="false"></span></label>
+      ${DETAIL_TEXT.map((d) => field(d, 'ja')).join('')}
+      <fieldset class="trset"><legend>アレルゲン</legend><div class="alg">${Object.entries(ALLERGENS)
+        .map(([k, n]) => `<label class="chk"><input type="checkbox" name="d_alg" value="${k}"${x.allergens.includes(k) ? ' checked' : ''}> ${esc(n.ja)}</label>`)
+        .join('')}</div></fieldset>
+      <details class="trset"><summary>英語（空欄は保存のときに日本語から訳します。中国語・韓国語の画面にも英語で出ます）</summary>
+        ${DETAIL_TEXT.map((d) => field(d, 'en')).join('')}</details>
+      ${link}
+    </div>`;
+}
+
+function detailBody(f) {
+  if (!f.elements.d_on.checked) return null;
+  const v = (n) => f.elements[n].value.trim();
+  const out = { slug: v('d_slug').toLowerCase(), allergens: [...f.querySelectorAll('[name="d_alg"]:checked')].map((x) => x.value) };
+  for (const [k] of DETAIL_TEXT) {
+    const ja = v(`d_${k}_ja`);
+    let en = v(`d_${k}_en`);
+    // 日本語を直したのに英語が開いたときのままなら、古い英語は捨てて訳し直す
+    if (ja !== detailOrig[`${k}_ja`] && en === detailOrig[`${k}_en`]) en = '';
+    out[k] = k === 'contents' ? { ja: ja.split('\n'), en: en ? en.split('\n') : [] } : { ja, en };
+  }
+  return out;
+}
+
 function showMenuEdit(itemId) {
   const i = itemId ? menuData.items.find((x) => x.itemId === itemId) : null;
   if (itemId && !i) return showMenuList();
@@ -345,6 +411,7 @@ function showMenuEdit(itemId) {
         <span class="muted">${held ? `精算前の注文で ${held} 個押さえ中。お客様には「在庫数 − ${held}」が残りとして出ます。` : '0にすると売り切れになります。'}</span></label>
       <label class="chk"><input type="checkbox" name="paused"${i?.paused ? ' checked' : ''}> 一時停止（お客様の画面では「売り切れ」）</label>
       <h3>写真</h3>${photos}
+      ${detailFields(i)}
       <h3>ほかの言語</h3>
       <p class="muted">空欄は保存のときに日本語から自動で訳します。直した訳はそのまま使います。</p>
       ${trFields('names', '商品名', i?.names)}${trFields('descs', '説明', i?.descs)}
@@ -374,7 +441,8 @@ function formBody(f) {
     paused: f.elements.paused.checked,
     // 日本語を変えたのに訳を手で直していなければ、古い訳は捨てて訳し直す
     names: tr('names', v('name').trim() !== f.dataset.origName),
-    descs: tr('descs', v('desc').trim() !== f.dataset.origDesc)
+    descs: tr('descs', v('desc').trim() !== f.dataset.origDesc),
+    detail: detailBody(f)
   };
 }
 
@@ -484,6 +552,7 @@ dlg.addEventListener('submit', (e) => {
 dlg.addEventListener('change', (e) => {
   if (e.target.matches('[data-upload]')) return uploadPhotos(e.target);
   if (e.target.name === 'tracked') dlg.querySelector('.stockrow').hidden = !e.target.checked;
+  if (e.target.name === 'd_on') dlg.querySelector('.dfields').hidden = !e.target.checked;
 });
 dlg.addEventListener('input', (e) => { if (e.target.dataset.tr) e.target.dataset.touched = '1'; });
 

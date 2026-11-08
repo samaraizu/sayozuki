@@ -278,7 +278,7 @@ async function staffMenu(env: Env) {
   await d.purgeMenu();
   const menu = await d.getMenu(true);
   return {
-    categories: menu.categories.map((c) => ({ name: c.name, cutoff: c.cutoff ?? null })),
+    categories: menu.categories.map((c) => ({ name: c.name, cutoff: c.cutoff ?? null, preorder: Boolean(c.preorder) })),
     items: menu.items.map((i) => ({
       itemId: i.itemId,
       id: i.id,
@@ -292,7 +292,8 @@ async function staffMenu(env: Env) {
       stock: i.stock,
       paused: i.paused,
       soldOut: i.soldOut,
-      images: i.images.map((url, n) => ({ id: i.imageIds[n], url }))
+      images: i.images.map((url, n) => ({ id: i.imageIds[n], url })),
+      detail: i.detail
     })),
     held: await heldCounts(env),
     mock: isMock(env)

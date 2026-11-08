@@ -14,6 +14,8 @@ export default {
       if (url.pathname === '/webhooks/square' && req.method === 'POST') return await handleSquareWebhook(req, env, url, ctx);
       if (url.pathname.startsWith('/staff/api/')) return await handleStaff(req, env, url, ctx);
       if (url.pathname.startsWith('/api/')) return await handleGuest(req, env, url, ctx);
+      // 商品ごとの紹介ページ /menu/<slug>。中身は同じ menu.html で、slug を見て描き分ける
+      if (url.pathname.startsWith('/menu/')) return env.ASSETS.fetch(new Request(new URL('/menu', url), req));
       return env.ASSETS.fetch(req);
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.code, detail: e.message !== e.code ? e.message : undefined }, e.status);

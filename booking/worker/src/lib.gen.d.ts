@@ -20,4 +20,10 @@ export declare const Lib: {
   CANCEL_POLICY: { minDays: number; rate: number; label: string }[];
   cancelPolicy(checkInIso: string, todayIso: string): { daysBefore: number; rate: number; label: string };
   cancelAmounts(paid: unknown, rate: number): { paid: number; fee: number; refund: number };
+  MEAL_MAX: number;
+  MEAL_NONE: string;
+  cleanMealPlan(plan: unknown, nights: number): MealNight[];
+  mealText(checkInIso: string, plan: MealNight[], note?: string): string;
+  mealPlanFrom(meals: string, nights: number, people: number): MealNight[];
 };
+export interface MealNight { dinner: number; breakfast: number }

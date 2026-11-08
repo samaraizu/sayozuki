@@ -1,4 +1,5 @@
 import type { Tr } from '../config/i18n-menu';
+import type { MenuDetail } from './detail';
 
 /** ゲスト画面に渡すメニュー1品（Squareの商品バリエーション単位） */
 export interface MenuItem {
@@ -17,10 +18,12 @@ export interface MenuItem {
   paused: boolean;
   images: string[];
   imageIds: string[];
+  /** 詳細ページの読み物（スタッフ画面で入れたもの）。無ければ null */
+  detail: MenuDetail | null;
 }
 
 export interface Menu {
   fetchedAt: number;
   items: MenuItem[];
-  categories: { name: string; names: Tr; order: number; cutoff?: string }[];
+  categories: { name: string; names: Tr; order: number; cutoff?: string; preorder?: boolean }[];
 }

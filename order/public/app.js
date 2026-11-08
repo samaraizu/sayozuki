@@ -1,4 +1,6 @@
 import { LANGS, ABOUT, REQUESTS, makeT, pick } from './i18n.js';
+import { dishFor } from './dishes.js';
+import { slidesOf, galleryHtml, dishBodyHtml, bindGallery } from './dish-view.js';
 
 // ---------- 状態 ----------
 const qs = new URLSearchParams(location.search);
@@ -18,7 +20,7 @@ const S = {
   delivery: 'door',
   sheet: false,
   langOpen: false,
-  viewer: null, // { id, idx }
+  viewer: null, // { id, idx, pushed, fresh } 商品の紹介モーダル
   done: false,
   sending: false,
   session: null,
@@ -159,7 +161,9 @@ const itemDesc = (i) => pick(i.descs, S.lang, i.desc);
 const catName = (c) => pick(c.names, S.lang, c.name);
 const byId = (id) => S.menu && S.menu.items.find((i) => i.id === id);
 const catOf = (i) => S.menu && S.menu.categories.find((c) => c.name === i.category);
-const orderable = (i) => S.menu && S.menu.open && !i.soldOut && !(catOf(i) || {}).closed;
+const dishOf = (i) => dishFor(i, catOf(i));
+// 夕食・朝食（preorder）は仕込みが要るので、注文画面では紹介だけ出して注文は受けない
+const orderable = (i) => S.menu && S.menu.open && !i.soldOut && !(catOf(i) || {}).closed && !(catOf(i) || {}).preorder;
 const maxQty = (i) => (i.left == null ? 20 : i.left);
 const cartCount = () => Object.values(S.cart).reduce((a, b) => a + b, 0);
 const cartTotal = () => Object.entries(S.cart).reduce((a, [id, q]) => a + (byId(id)?.price || 0) * q, 0);
@@ -254,6 +258,7 @@ function render() {
 
   const body = { home: viewHome, menu: viewMenu, request: viewRequest, chat: viewChat, bill: viewBill }[S.tab]();
   const hadCart = Boolean(app.querySelector('.cartbar'));
+  const dmScroll = app.querySelector('.dm-scroll')?.scrollTop || 0;
   app.innerHTML = header(true) + body + cartBar() + composer() + nav() + overlays();
   afterRender(hadCart);
   const chips = app.querySelector('.chips');
@@ -265,7 +270,13 @@ function render() {
     headerRO = 'ResizeObserver' in window ? new ResizeObserver(() => app.style.setProperty('--header-h', h.offsetHeight + 'px')) : null;
     headerRO?.observe(h);
   }
-  if (S.viewer) bindViewerDrag();
+  document.body.style.overflow = S.viewer ? 'hidden' : '';
+  if (S.viewer) {
+    const sc = app.querySelector('.dm-scroll');
+    if (sc && !S.viewer.fresh) sc.scrollTop = dmScroll;
+    S.viewer.fresh = false;
+    bindGallery(app.querySelector('.dmodal'), () => S.viewer.idx, (idx) => { S.viewer.idx = idx; render(); });
+  }
   if (S.tab === 'chat') {
     const nta = app.querySelector('.composer textarea');
     if (nta) {
@@ -442,7 +453,8 @@ function itemCard(i) {
     ? `<img src="${esc(i.images[0])}" alt="" loading="lazy" decoding="async">${i.images.length > 1 ? `<span class="count">${I.stack}${i.images.length}</span>` : ''}`
     : `<span style="color:var(--dim)">${I.photo()}</span>`;
   let action;
-  if (i.soldOut) action = `<span class="tag-sold">${esc(t('soldOut'))}</span>`;
+  if (cat.preorder) action = `<span class="tag-sold">${esc(t('preorder'))}</span>`;
+  else if (i.soldOut) action = `<span class="tag-sold">${esc(t('soldOut'))}</span>`;
   else if (cat.closed || !S.menu.open) action = `<span class="tag-sold">${esc(t('closedCat'))}</span>`;
   else if (!q) action = `<button class="add" data-act="inc" data-id="${esc(i.id)}" aria-label="${esc(t('add', { n: name }))}">${I.plus()}</button>`;
   else
@@ -450,9 +462,9 @@ function itemCard(i) {
   const left = !i.soldOut && i.left != null ? `<span class="left">${esc(t('left', { n: Math.max(0, i.left - q) }))}</span>` : '';
   return `<div class="card${i.soldOut ? ' sold' : ''}" data-key="item:${esc(i.id)}">
     <button class="thumb" data-act="photos" data-id="${esc(i.id)}" aria-label="${esc(t('photos', { n: name }))}">${thumb}</button>
-    <div class="info"><div class="name-row"><span class="name">${esc(name)}</span>${left}</div>
+    <button class="info-btn" data-act="photos" data-id="${esc(i.id)}" aria-label="${esc(t('details', { n: name }))}"><span class="name-row"><span class="name">${esc(name)}</span>${left}</span>
       ${itemDesc(i) ? `<span class="desc">${esc(itemDesc(i))}</span>` : ''}
-      <span class="price">${yen(i.price)}</span></div>
+      <span class="price">${yen(i.price)}${dishOf(i) ? ` <span class="more">${esc(t('more'))}</span>` : ''}</span></button>
     ${action}
   </div>`;
 }
@@ -468,7 +480,7 @@ function viewMenu() {
     .map((c) => {
       const items = S.menu.items.filter((i) => i.category === c.name);
       if (!items.length) return '';
-      const title = S.cat === 'all' ? `<h3 class="cat-title">${esc(catName(c))}${c.cutoff && !c.closed ? `<small>〜${esc(c.cutoff)}</small>` : ''}</h3>` : '';
+      const title = S.cat === 'all' ? `<h3 class="cat-title">${esc(catName(c))}${c.preorder ? `<small>${esc(t('preorderSub'))}</small>` : c.cutoff && !c.closed ? `<small>〜${esc(c.cutoff)}</small>` : ''}</h3>` : '';
       return title + items.map(itemCard).join('');
     })
     .join('');
@@ -635,68 +647,66 @@ function overlays() {
   return h;
 }
 
+// 商品の紹介モーダル：写真スライド＋読み物（dishes.js）。同じ中身が /menu/<slug> の単独ページにもある
 function viewerHtml() {
   const i = byId(S.viewer.id);
   if (!i) return '';
-  const imgs = i.images.length ? i.images : [null];
-  const n = imgs.length;
-  const idx = Math.min(S.viewer.idx, n - 1);
+  const dish = dishOf(i);
+  const slides = slidesOf(dish, i);
+  const idx = Math.min(S.viewer.idx, slides.length - 1);
   const q = S.cart[i.id] || 0;
-  const slides = imgs
-    .map((src) => `<div class="slide">${src ? `<img src="${esc(src)}" alt="" decoding="async">` : `<div class="ph">${I.photo('#8C8476', 44)}<span>${esc(t('photoSoon'))}</span></div>`}</div>`)
-    .join('');
-  let btn;
-  if (i.soldOut) btn = `<span class="vsold">${esc(t('soldOut'))}</span>`;
-  else if (!orderable(i)) btn = `<span class="vsold">${esc(t('closedCat'))}</span>`;
-  else if (q >= maxQty(i)) btn = `<span class="vsold">${esc(t('added', { q }))}</span>`;
-  else btn = `<button class="vbtn" data-act="inc" data-id="${esc(i.id)}">${esc(q ? t('addMore', { q }) : t('addToOrder', { p: yen(i.price) }))}</button>`;
-  return `<div class="viewer" role="dialog" aria-label="${esc(itemName(i))}">
-    <div class="top"><span>${n > 1 ? `${idx + 1} / ${n}` : ''}</span><button class="icon-btn" data-act="viewer-close" aria-label="${esc(t('close'))}">${I.close}</button></div>
-    <div class="stage"><div class="track" style="transform:translateX(${-idx * 100}%)">${slides}</div></div>
-    ${n > 1 ? `<div class="pager"><button class="nb" data-act="vprev" aria-label="${esc(t('prevPhoto'))}" ${idx === 0 ? 'disabled' : ''}>${I.prev}</button>
-      <div class="dots">${imgs.map((_, k) => `<span class="${k === idx ? 'on' : ''}"></span>`).join('')}</div>
-      <button class="nb" data-act="vnext" aria-label="${esc(t('nextPhoto'))}" ${idx === n - 1 ? 'disabled' : ''}>${I.next}</button></div>` : ''}
-    <div class="detail"><div><div class="vname">${esc(itemName(i))}</div>${itemDesc(i) ? `<div class="vdesc">${esc(itemDesc(i))}</div>` : ''}<div style="margin-top:4px">${yen(i.price)}</div></div>${btn}</div>
+  let bar;
+  if ((catOf(i) || {}).preorder) bar = `<span class="vsold">${esc(t('preorderNote'))}</span>`;
+  else if (i.soldOut) bar = `<span class="vsold">${esc(t('soldOut'))}</span>`;
+  else if (!orderable(i)) bar = `<span class="vsold">${esc(t('closedCat'))}</span>`;
+  else if (!q) bar = `<button class="btn-primary" data-act="inc" data-id="${esc(i.id)}">${esc(t('addToOrder', { p: yen(i.price) }))}</button>`;
+  else
+    bar = `<div class="stepper"><button data-act="dec" data-id="${esc(i.id)}" aria-label="${esc(t('dec'))}">${I.minus}</button><span class="q">${q}</span><button class="plus" data-act="inc" data-id="${esc(i.id)}" aria-label="${esc(t('inc'))}" ${q >= maxQty(i) ? 'disabled' : ''}>${I.plus()}</button></div>
+      <button class="btn-primary" data-act="viewer-cart">${esc(t('checkCart'))}・${yen(cartTotal())}</button>`;
+  return `<div class="dmodal" role="dialog" aria-modal="true" aria-label="${esc(itemName(i))}">
+    <button class="backdrop" data-act="viewer-close" aria-label="${esc(t('close'))}"></button>
+    <div class="dm-card"${S.viewer.fresh ? '' : ' style="animation:none"'}>
+      <button class="dm-close" data-act="viewer-close" aria-label="${esc(t('close'))}">${I.close}</button>
+      <div class="dm-scroll">${galleryHtml(slides, idx, S.lang)}${dishBodyHtml(dish, S.lang, { name: (dish && dish.name && dish.name[S.lang]) || itemName(i), desc: itemDesc(i), price: i.price, share: true })}</div>
+      <div class="dm-bar">${bar}</div>
+    </div>
   </div>`;
 }
 
-// スワイプ：指に追従させて、離した位置で前後に送る
-function bindViewerDrag() {
-  const stage = app.querySelector('.stage');
-  const track = app.querySelector('.track');
-  if (!stage || !track) return;
-  const n = track.children.length;
-  let x0 = null;
-  let w = 1;
-  stage.onpointerdown = (e) => {
-    x0 = e.clientX;
-    w = stage.clientWidth || 1;
-    track.classList.add('dragging');
-    stage.setPointerCapture(e.pointerId);
-  };
-  stage.onpointermove = (e) => {
-    if (x0 === null) return;
-    const dx = e.clientX - x0;
-    const base = -S.viewer.idx * 100;
-    track.style.transform = `translateX(calc(${base}% + ${dx}px))`;
-  };
-  const end = (e) => {
-    if (x0 === null) return;
-    const dx = e.clientX - x0;
-    x0 = null;
-    track.classList.remove('dragging');
-    let idx = S.viewer.idx;
-    if (dx < -Math.min(60, w * 0.18) && idx < n - 1) idx++;
-    else if (dx > Math.min(60, w * 0.18) && idx > 0) idx--;
-    S.viewer.idx = idx;
-    render();
-  };
-  stage.onpointerup = end;
-  stage.onpointercancel = end;
+// 紹介を開くとURLの末尾に #<slug> を付ける（戻るボタンで閉じる・そのURLを開き直すと同じ品が開く）
+function openViewer(id) {
+  const i = byId(id);
+  if (!i) return;
+  const dish = dishOf(i);
+  S.viewer = { id, idx: 0, pushed: false, fresh: true };
+  if (dish) {
+    history.pushState({ dish: dish.slug }, '', location.pathname + location.search + '#' + dish.slug);
+    S.viewer.pushed = true;
+  }
+  render();
+}
+function closeViewer() {
+  if (!S.viewer) return;
+  if (S.viewer.pushed) return history.back(); // popstate で閉じる
+  S.viewer = null;
+  render();
+}
+window.addEventListener('popstate', () => {
+  if (!S.viewer) return openFromHash();
+  S.viewer = null;
+  render();
+});
+function openFromHash() {
+  const slug = decodeURIComponent(location.hash.slice(1));
+  const item = slug && S.menu && S.menu.items.find((x) => dishOf(x)?.slug === slug);
+  if (!item) return;
+  S.tab = 'menu';
+  S.viewer = { id: item.id, idx: 0, pushed: false, fresh: true };
+  render();
 }
 
 // ---------- 操作 ----------
-const ERR = { sold_out: 'errSoldOut', category_closed: 'errCatClosed', ordering_closed: 'orderingClosed' };
+const ERR = { sold_out: 'errSoldOut', category_closed: 'errCatClosed', ordering_closed: 'orderingClosed', preorder_only: 'errPreorder' };
 
 async function placeOrder() {
   if (S.sending) return;
@@ -713,7 +723,7 @@ async function placeOrder() {
   } catch (e) {
     const key = ERR[e.code];
     toast(key ? t(key, { n: e.detail || '' }) : t('errNetwork'));
-    if (e.code === 'sold_out' || e.code === 'category_closed') await refreshMenu();
+    if (e.code === 'sold_out' || e.code === 'category_closed' || e.code === 'preorder_only') await refreshMenu();
   } finally {
     S.sending = false;
     render();
@@ -740,10 +750,16 @@ app.addEventListener('click', async (ev) => {
       return;
     }
     case 'dec': return setQty(id, (S.cart[id] || 0) - 1);
-    case 'photos': S.viewer = { id, idx: 0 }; return render();
-    case 'viewer-close': S.viewer = null; return render();
-    case 'vprev': S.viewer.idx = Math.max(0, S.viewer.idx - 1); return render();
-    case 'vnext': S.viewer.idx += 1; return render();
+    case 'photos': return openViewer(id);
+    case 'viewer-close': return closeViewer();
+    case 'viewer-cart': closeViewer(); S.sheet = true; return render();
+    case 'dv-prev': S.viewer.idx = Math.max(0, S.viewer.idx - 1); return render();
+    case 'dv-next': S.viewer.idx += 1; return render();
+    case 'dv-share': {
+      const url = `${location.origin}/menu/${el.dataset.slug}?lang=${S.lang}`;
+      try { await navigator.clipboard.writeText(url); } catch {}
+      return toast(t('linkCopied'));
+    }
     case 'sheet-open': S.sheet = true; return render();
     case 'sheet-close': S.sheet = false; return render();
     case 'delivery': S.delivery = id; return render();
@@ -811,7 +827,7 @@ if (window.visualViewport) {
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (S.viewer) S.viewer = null;
+  if (S.viewer) return closeViewer();
   else if (S.langOpen) S.langOpen = false;
   else if (S.sheet) S.sheet = false;
   else return;
@@ -821,7 +837,7 @@ document.addEventListener('keydown', (e) => {
 // ---------- 起動 ----------
 render();
 if (S.room) {
-  loadAll().then(() => { if (justPaid) toast(t('thanksPaid')); });
+  loadAll().then(() => { if (justPaid) toast(t('thanksPaid')); else if (location.hash) openFromHash(); });
   setInterval(refresh, 20_000);
   // チャットを開いているあいだは、返事をすぐ出すために5秒ごとに見にいく
   setInterval(() => { if (S.tab === 'chat' && !document.hidden) refreshChat(); }, 5_000);

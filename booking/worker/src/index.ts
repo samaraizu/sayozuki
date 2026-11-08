@@ -25,6 +25,7 @@ import { UserError, json, type Env } from './env';
 import { calendar, checkoutStatus, startCheckout, sweep, type CheckoutInput } from './hp';
 import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
 import { cancelBooking, type CancelForm } from './cancel';
+import { setMeals, type MealForm } from './meals';
 import { latest, notify, subscribe, unsubscribe, vapid } from './push';
 
 function redirect(location: string, cookies: string[] = []): Response {
@@ -114,6 +115,11 @@ async function handle(req: Request, env: Env): Promise<Response> {
       const origin = req.headers.get('origin');
       if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
       return json(await cancelBooking(env, email, (await req.json()) as CancelForm));
+    }
+    if (path === '/api/bookings/meals' && req.method === 'POST') {
+      const origin = req.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
+      return json(await setMeals(env, email, (await req.json()) as MealForm));
     }
     if (path === '/api/inquiries/close' && req.method === 'POST') {
       const origin = req.headers.get('origin');
