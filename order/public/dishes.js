@@ -24,6 +24,7 @@ export const ALLERGENS = {
   beef: { ja: '牛肉', en: 'Beef' },
   fish: { ja: '魚介', en: 'Fish' },
   sesame: { ja: 'ごま', en: 'Sesame' },
+  pork: { ja: '豚肉', en: 'Pork' },
   alcohol: { ja: 'アルコール', en: 'Alcohol' }
 };
 
@@ -31,31 +32,25 @@ export const DISHES = [
   {
     slug: 'sukiyaki',
     key: '山形牛すき焼き',
-    name: { ja: '山形牛すき焼き', en: 'Yamagata beef sukiyaki' },
+    name: { ja: '山形牛すき焼き 〆の讃岐うどん付き', en: 'Yamagata beef sukiyaki with udon to finish' },
     cat: 'dinner',
     prep: true,
-    kicker: { ja: '部屋で炊く、山形牛の割下鍋', en: 'Yamagata beef, simmered at your table' },
+    kicker: { ja: '部屋で炊く山形牛の割下鍋。〆はうどんで', en: 'Yamagata beef simmered at your table, finished with udon' },
     story: {
-      ja: '霜の細かい山形牛の肩ロースを、甘さを控えた割下でさっと煮ます。卓上コンロと鍋をお部屋にお持ちし、最初の一枚だけ係が仕上げます。〆は山形のつや姫に溶き卵をからめて。',
-      en: 'Finely marbled Yamagata beef shoulder, briefly simmered in a lightly sweet warishita broth. We bring the burner and pot to your room and cook the first slice for you. Finish with Tsuyahime rice and the leftover egg.'
+      ja: '霜の細かい山形牛を、甘さを控えた割下でさっと煮ます。卓上の鍋はお部屋にお持ちし、溶き卵にくぐらせてどうぞ。肉と野菜の旨みが溶けた割下に、最後はコシの強い讃岐うどんを入れて〆にします。',
+      en: 'Finely marbled Yamagata beef, briefly simmered in a lightly sweet warishita broth at your table — dip each slice in beaten egg. When the broth is rich with beef and vegetables, finish with firm Sanuki udon noodles.'
     },
     contents: [
-      { ja: '山形牛 肩ロース 300g', en: 'Yamagata beef shoulder loin, 300 g' },
-      { ja: '焼き豆腐・春菊・長ねぎ・しらたき・椎茸', en: 'Grilled tofu, shungiku, leek, shirataki, shiitake' },
-      { ja: '平飼い卵 2個', en: '2 free-range eggs' },
-      { ja: 'つや姫ご飯・香の物', en: 'Tsuyahime rice and pickles' }
+      { ja: '山形牛（すき焼き用）', en: 'Yamagata beef, sliced for sukiyaki' },
+      { ja: '焼き豆腐・白菜・春菊・長ねぎ・椎茸', en: 'Grilled tofu, napa cabbage, shungiku, leek, shiitake' },
+      { ja: '卵（1人1個）', en: '1 egg per person' },
+      { ja: '〆の讃岐うどん', en: 'Sanuki udon to finish' }
     ],
     serve: { ja: '18:00〜19:30 のお好きな時間', en: 'Any time 18:00–19:30' },
     portion: { ja: '2人前', en: 'Serves 2' },
     allergens: ['egg', 'wheat', 'soy', 'beef'],
     note: { ja: '仕入れの都合で、ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
-    shots: [
-      { ja: '鍋と肉の皿を真上から', en: 'Pot and beef, overhead' },
-      { ja: '霜降りの肉のアップ', en: 'Close-up of the marbling' },
-      { ja: '割下で煮えた一枚と卵', en: 'A cooked slice dipped in egg' },
-      { ja: 'お部屋で炊いている様子', en: 'Cooking in the room' }
-    ],
-    photos: []
+    photos: ['/images/menu/sukiyaki.jpg', '/images/menu/sukiyaki-udon.jpg']
   },
   {
     slug: 'imoni-zen',
@@ -112,59 +107,47 @@ export const DISHES = [
     photos: []
   },
   {
-    slug: 'asa-gozen',
-    key: '朝ごはん御膳',
-    name: { ja: '朝ごはん御膳', en: 'Japanese breakfast set' },
+    slug: 'croissant',
+    key: 'クロワッサンサンドの朝食',
+    name: { ja: 'クロワッサンサンドの朝食', en: 'Croissant sandwich breakfast' },
     cat: 'breakfast',
     prep: true,
-    kicker: { ja: '湯上がりに、炊きたてのつや姫', en: 'Fresh-cooked Tsuyahime rice after a morning soak' },
+    kicker: { ja: 'バターの香るクロワッサンに、ハムとチーズ', en: 'Buttery croissant with ham and cheese' },
     story: {
-      ja: '朝風呂のあとに、土鍋で炊いたつや姫と、庄内麩の味噌汁、焼き魚、玉子焼き、山形の漬物。ご希望の時間に、お部屋の扉前までお持ちします。',
-      en: 'After your morning bath: clay-pot Tsuyahime rice, miso soup with Shonai wheat gluten, grilled fish, rolled omelette and Yamagata pickles. Delivered to your door at the time you choose.'
+      ja: 'さくっと軽いクロワッサンに、粗挽き胡椒のハム、チーズ、たっぷりのレタスをはさみました。朝風呂のあとに、お好きなお飲み物と一緒にお部屋で。',
+      en: 'A light, flaky croissant filled with pepper-crusted ham, cheese and plenty of lettuce. Enjoy it in your room after a morning soak, with a drink of your choice.'
     },
     contents: [
-      { ja: '土鍋炊きのつや姫', en: 'Clay-pot Tsuyahime rice' },
-      { ja: '庄内麩の味噌汁', en: 'Miso soup with Shonai fu' },
-      { ja: '焼き魚（日替わり）', en: 'Grilled fish of the day' },
-      { ja: '玉子焼き・小鉢2品', en: 'Rolled omelette and 2 small sides' },
-      { ja: '山形の漬物', en: 'Yamagata pickles' }
+      { ja: 'クロワッサンサンド（ハム・チーズ・レタス）', en: 'Croissant sandwich (ham, cheese, lettuce)' },
+      { ja: 'コーヒー・紅茶・抹茶・日本茶から1杯（無料）', en: 'Coffee, black tea, matcha or Japanese green tea (free)' }
     ],
-    serve: { ja: '7:30〜9:00 の15分刻みでお選びください', en: 'Choose a 15-minute slot, 7:30–9:00' },
-    portion: { ja: '1人前', en: 'For 1' },
-    allergens: ['egg', 'wheat', 'soy', 'fish'],
-    note: { ja: 'ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
-    shots: [
-      { ja: 'お膳の全景（窓の光で）', en: 'Full tray in window light' },
-      { ja: '土鍋を開けた瞬間', en: 'Opening the clay pot' },
-      { ja: '扉前に置いた様子', en: 'Left at the door' }
-    ],
-    photos: []
+    serve: { ja: '7:30〜9:00 のご希望の時間に扉前へ', en: 'Left at your door at your chosen time, 7:30–9:00' },
+    portion: { ja: '1人前・お飲み物付き', en: 'For 1, with a drink' },
+    allergens: ['wheat', 'milk', 'egg', 'pork', 'soy'],
+    note: { ja: 'お飲み物はセットで無料です。ご予約のときにお申し込みいただく事前予約制です。', en: 'The drink is included free. Book together with your stay; not available on the day.' },
+    photos: ['/images/menu/breakfast-croissant.jpg']
   },
   {
-    slug: 'okayu',
-    key: '朝がゆと小鉢',
-    name: { ja: '朝がゆと小鉢', en: 'Rice porridge breakfast' },
+    slug: 'onigiri',
+    key: 'おにぎりと漬物の朝食',
+    name: { ja: 'おにぎりと漬物の朝食', en: 'Rice ball breakfast with pickles' },
     cat: 'breakfast',
     prep: true,
-    kicker: { ja: '飲んだ翌朝の、やさしい一杯', en: 'A gentle bowl for the morning after' },
+    kicker: { ja: '菜めしのおにぎりと、ぽりぽりの漬物', en: 'Greens rice balls and crunchy pickles' },
     story: {
-      ja: 'つや姫を時間をかけて炊いたおかゆに、梅干し、だし、温泉卵。前の晩に地酒を楽しんだ方や、軽く済ませたい朝に。',
-      en: 'Slow-cooked Tsuyahime rice porridge with umeboshi, dashi relish and an onsen egg. For the morning after a night of local sake, or when you want something light.'
+      ja: '刻んだ青菜を混ぜ込んだご飯を、ふんわり握ったおにぎり2つ。たくあんとしば漬けを添えました。温かいお茶と一緒に、軽く済ませたい朝に。',
+      en: 'Two softly pressed rice balls mixed with chopped greens, served with takuan and shibazuke pickles. A light breakfast, best with a cup of hot tea.'
     },
     contents: [
-      { ja: 'つや姫のおかゆ', en: 'Tsuyahime rice porridge' },
-      { ja: '温泉卵', en: 'Onsen egg' },
-      { ja: '梅干し・だし・佃煮', en: 'Umeboshi, dashi relish, tsukudani' }
+      { ja: '菜めしのおにぎり 2個', en: '2 rice balls with greens' },
+      { ja: 'たくあん・しば漬け', en: 'Takuan and shibazuke pickles' },
+      { ja: 'コーヒー・紅茶・抹茶・日本茶から1杯（無料）', en: 'Coffee, black tea, matcha or Japanese green tea (free)' }
     ],
-    serve: { ja: '7:30〜9:00 の15分刻みでお選びください', en: 'Choose a 15-minute slot, 7:30–9:00' },
-    portion: { ja: '1人前', en: 'For 1' },
-    allergens: ['egg', 'soy'],
-    note: { ja: 'ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
-    shots: [
-      { ja: '湯気の立つ椀', en: 'Steaming bowl' },
-      { ja: '小鉢と並べて真上から', en: 'With the sides, overhead' }
-    ],
-    photos: []
+    serve: { ja: '7:30〜9:00 のご希望の時間に扉前へ', en: 'Left at your door at your chosen time, 7:30–9:00' },
+    portion: { ja: '1人前・お飲み物付き', en: 'For 1, with a drink' },
+    allergens: [],
+    note: { ja: 'お飲み物はセットで無料です。ご予約のときにお申し込みいただく事前予約制です。', en: 'The drink is included free. Book together with your stay; not available on the day.' },
+    photos: ['/images/menu/breakfast-onigiri.jpg']
   },
   {
     slug: 'jizake',

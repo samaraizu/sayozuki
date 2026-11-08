@@ -666,7 +666,7 @@ function viewerHtml() {
     <button class="backdrop" data-act="viewer-close" aria-label="${esc(t('close'))}"></button>
     <div class="dm-card"${S.viewer.fresh ? '' : ' style="animation:none"'}>
       <button class="dm-close" data-act="viewer-close" aria-label="${esc(t('close'))}">${I.close}</button>
-      <div class="dm-scroll">${galleryHtml(slides, idx, S.lang)}${dishBodyHtml(dish, S.lang, { name: itemName(i), desc: itemDesc(i), price: i.price, share: true })}</div>
+      <div class="dm-scroll">${galleryHtml(slides, idx, S.lang)}${dishBodyHtml(dish, S.lang, { name: (dish && dish.name && dish.name[S.lang]) || itemName(i), desc: itemDesc(i), price: i.price, share: true })}</div>
       <div class="dm-bar">${bar}</div>
     </div>
   </div>`;

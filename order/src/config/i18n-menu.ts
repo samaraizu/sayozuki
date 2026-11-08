@@ -31,7 +31,7 @@ export const CATEGORIES: Record<string, CategoryConf> = {
 export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
   山形牛すき焼き: {
     name: { en: 'Yamagata beef sukiyaki', zht: '山形牛壽喜燒', zhs: '山形牛寿喜烧', ko: '야마가타규 스키야키' },
-    desc: { en: 'For 2', zht: '2人份', zhs: '2人份', ko: '2인분' }
+    desc: { en: 'For 2, udon to finish', zht: '2人份・附讚岐烏龍麵', zhs: '2人份・附赞岐乌冬面', ko: '2인분・마무리 사누키 우동' }
   },
   お造り盛り合わせ: {
     name: { en: 'Assorted sashimi', zht: '生魚片拼盤', zhs: '生鱼片拼盘', ko: '모둠 회' },
@@ -71,13 +71,13 @@ export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
     name: { en: 'Imoni dinner set', zht: '芋煮山形晚膳', zhs: '芋煮山形晚膳', ko: '이모니 저녁 정식' },
     desc: { en: 'For 1', zht: '1人份', zhs: '1人份', ko: '1인분' }
   },
-  朝ごはん御膳: {
-    name: { en: 'Japanese breakfast set', zht: '日式早餐御膳', zhs: '日式早餐御膳', ko: '일본식 아침 정식' },
-    desc: { en: 'For 1, at your door', zht: '1人份・送至門前', zhs: '1人份・送至门前', ko: '1인분・문 앞 배달' }
+  クロワッサンサンドの朝食: {
+    name: { en: 'Croissant sandwich breakfast', zht: '可頌三明治早餐', zhs: '可颂三明治早餐', ko: '크루아상 샌드위치 아침 식사' },
+    desc: { en: 'For 1, with a drink', zht: '1人份・附飲品', zhs: '1人份・附饮品', ko: '1인분・음료 포함' }
   },
-  朝がゆと小鉢: {
-    name: { en: 'Rice porridge breakfast', zht: '早餐粥與小菜', zhs: '早餐粥与小菜', ko: '아침 죽과 반찬' },
-    desc: { en: 'For 1', zht: '1人份', zhs: '1人份', ko: '1인분' }
+  おにぎりと漬物の朝食: {
+    name: { en: 'Rice ball breakfast with pickles', zht: '飯糰與醬菜早餐', zhs: '饭团与酱菜早餐', ko: '주먹밥과 절임 반찬 아침 식사' },
+    desc: { en: 'For 1, with a drink', zht: '1人份・附飲品', zhs: '1人份・附饮品', ko: '1인분・음료 포함' }
   },
   紅干し柿: {
     name: { en: 'Dried persimmons', zht: '紅柿乾', zhs: '红柿饼', ko: '홍시 곶감' },

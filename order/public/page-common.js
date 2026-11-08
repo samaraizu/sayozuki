@@ -51,4 +51,5 @@ export async function loadPublicMenu() {
 }
 
 /** 名前：Squareの訳 → dishes.js の名前 */
-export const dishName = (dish, item, lang) => (item && item.names && item.names[lang]) || (lang === 'ja' ? dish.key : pickD(dish.name, lang));
+export const dishName = (dish, item, lang) =>
+  (dish.name && dish.name[lang]) || (item && item.names && item.names[lang]) || pickD(dish.name, lang) || dish.key;
