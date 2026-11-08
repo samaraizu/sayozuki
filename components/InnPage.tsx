@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { InquiryForm } from "@/components/InquiryForm";
 import { OtaIcon } from "@/components/OtaIcon";
 import { Photo } from "@/components/Photo";
+import { Reservation } from "@/components/Reservation";
 import { Heading, SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { dictionaries, fmt, formatYen, localePath, type Locale } from "@/lib/i18n";
@@ -20,7 +20,9 @@ export function InnPage({ lang }: { lang: Locale }) {
   // 外国語のページでは国際表記にする（海外からかける人向け）
   const phone = (n: string) => (lang === "ja" ? n : intlPhone(n));
   const mapQuery = encodeURIComponent(`${site.address} ${site.name}`);
-  const reserveHref = localePath(lang, "/reserve");
+  // 空室カレンダーはこのページの「ご予約」にある。上の検索は日程をクエリにして同じページの #reserve へ
+  const reserveHref = `${localePath(lang)}#reserve`;
+  const contactHref = localePath(lang, "/contact");
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -72,7 +74,7 @@ export function InnPage({ lang }: { lang: Locale }) {
             </div>
           </div>
 
-          {/* 空室を見る：予約ページへ日程を持っていく */}
+          {/* 空室を見る：日程を下の空室カレンダー（#reserve）へ持っていく */}
           <form
             action={reserveHref}
             method="get"
@@ -211,21 +213,11 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* ご予約 */}
         <section id="reserve" className="scroll-mt-6">
-          <Heading en="RESERVATION" ja={t.reserve.title} />
-          <a
-            href={reserveHref}
-            className="flex flex-col gap-4 rounded-[28px] bg-grad p-6 text-white shadow-cta transition-transform hover:scale-[1.01] md:flex-row md:items-center md:justify-between md:p-8"
-          >
-            <span>
-              <span className="block font-serif text-2xl font-semibold">{t.book.title}</span>
-              <span className="mt-2 block max-w-xl text-[14px] leading-7 text-white/90">{t.book.lead}</span>
-            </span>
-            <span className="flex h-12 shrink-0 items-center justify-center rounded-2xl bg-white px-6 text-[15px] font-bold text-sea-deep">
-              {t.book.heroCta}
-            </span>
-          </a>
+          <Heading en="RESERVATION" ja={t.book.title} lead={t.book.lead} />
+          {/* 空室カレンダーと事前決済。ページを移らずにここで予約まで進める */}
+          <Reservation lang={lang} t={t} roomNames={t.rooms.names} />
 
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="mt-8 grid gap-3 md:grid-cols-3">
             {otaLinks.map((o) => {
               const name = t.reserve.otaNames[o.name] ?? o.name;
               return o.url ? (
@@ -256,10 +248,18 @@ export function InnPage({ lang }: { lang: Locale }) {
             })}
           </div>
 
-          <div className="mt-4 rounded-[28px] bg-white p-6 shadow-soft md:p-10">
-            <h3 className="font-serif text-xl font-semibold">{t.reserve.directTitle}</h3>
-            <p className="mt-3 mb-8 text-sm leading-7 text-slate">{t.reserve.directBody}</p>
-            <InquiryForm lang={lang} t={t.form} roomNames={t.rooms.names} />
+          {/* お問い合わせはフォームを別ページ（/contact）に分けた */}
+          <div className="mt-4 flex flex-col gap-4 rounded-[28px] bg-white p-6 shadow-soft md:flex-row md:items-center md:justify-between md:p-8">
+            <div>
+              <h3 className="font-serif text-xl font-semibold">{t.reserve.directTitle}</h3>
+              <p className="mt-2 max-w-xl text-sm leading-7 text-slate">{t.reserve.directBody}</p>
+            </div>
+            <a
+              href={contactHref}
+              className="flex h-12 shrink-0 items-center justify-center rounded-2xl border border-sea px-6 text-[15px] font-bold text-sea-deep transition-colors hover:bg-sea/5"
+            >
+              {t.reserve.contactCta} →
+            </a>
           </div>
         </section>
 

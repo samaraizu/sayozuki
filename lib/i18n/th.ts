@@ -91,6 +91,7 @@ export const th: Dict = {
     title: "การจอง",
     otaBook: "จองผ่าน {name}",
     otaSoon: "เร็ว ๆ นี้",
+    contactCta: "ติดต่อเรา",
     otaNames: { 楽天トラベル: "Rakuten Travel", じゃらん: "Jalan" },
     directTitle: "ติดต่อเรียวกังโดยตรง",
     directBody:

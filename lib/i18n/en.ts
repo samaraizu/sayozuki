@@ -91,6 +91,7 @@ export const en: Dict = {
     title: "Reservations",
     otaBook: "Book on {name}",
     otaSoon: "Coming soon",
+    contactCta: "Contact us",
     otaNames: { 楽天トラベル: "Rakuten Travel", じゃらん: "Jalan" },
     directTitle: "Contact the inn directly",
     directBody:

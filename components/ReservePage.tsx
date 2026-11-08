@@ -12,7 +12,7 @@ export function ReservePage({ lang }: { lang: Locale }) {
         <Heading en="RESERVATION" ja={t.book.title} lead={t.book.lead} />
         <Reservation lang={lang} t={t} roomNames={t.rooms.names} />
         <p className="mt-6 text-center text-[14px]">
-          <a href={`${localePath(lang)}#reserve`} className="font-bold text-sea-deep underline underline-offset-4">
+          <a href={localePath(lang, "/contact")} className="font-bold text-sea-deep underline underline-offset-4">
             {t.book.questions} →
           </a>
         </p>

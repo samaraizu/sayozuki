@@ -39,7 +39,7 @@ export function SiteHeader({ lang, onTop = false, sub = "" }: { lang: Locale; on
         <div className="flex items-center gap-2 md:order-2">
           <LanguageSwitcher lang={lang} sub={sub} />
           <a
-            href={localePath(lang, "/reserve")}
+            href={onTop ? "#reserve" : `${localePath(lang)}#reserve`}
             className="flex h-10 items-center rounded-full bg-white px-4 text-[13px] font-bold text-sea-deep transition-transform hover:scale-[1.03] md:px-5 md:text-[14px]"
           >
             {t.book.navLabel}

@@ -46,6 +46,7 @@ GitHub の `main` に入ると、Cloudflare の Workers Builds が3つの Worker
 | 宿のページの文章（日本語） | `lib/i18n/ja.ts` |
 | 外国語の文章（英・中・越・泰・韓） | `lib/i18n/en.ts` `zh.ts` `vi.ts` `th.ts` `ko.ts` |
 | 宿のページの構成 | `components/InnPage.tsx` |
+| お問い合わせページ（/contact。フォームはトップから分けた） | `components/ContactPage.tsx`（フォームは `components/InquiryForm.tsx`） |
 | 滞在中のご案内（/guide）のチェックイン・アウト、浴場の時間、駐車場 | `lib/site.ts` の `stay`（未定は null のままで「準備中」と出る） |
 | 滞在中のご案内の文章（日・英・中・韓） | `lib/guide.ts` |
 | お取り寄せの商品・販売設定・特商法の表記 | `lib/shop.ts` |
@@ -58,7 +59,7 @@ GitHub の `main` に入ると、Cloudflare の Workers Builds が3つの Worker
 
 ## 空室カレンダーと予約（事前決済）
 
-`/reserve`（外国語は `/en/reserve` など）。カレンダーでご到着日とご出発日を選び、部屋・食事・お客様情報を入れて、Square で前払いする。
+トップページの「ご予約」（`#reserve`）に直接出している。`/reserve`（外国語は `/en/reserve` など）にも同じものがある。カレンダーでご到着日とご出発日を選び、部屋・食事・お客様情報を入れて、Square で前払いする。
 
 ```
 HP（Worker sayozuki）──サービスバインディング（BOOKING → sayozuki-booking の HpApi）──→ 予約管理（D1）

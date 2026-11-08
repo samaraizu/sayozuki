@@ -94,6 +94,8 @@ export const ja = {
     title: "ご予約",
     otaBook: "{name}で予約する",
     otaSoon: "掲載準備中",
+    /** トップの「ご予約」からお問い合わせページへのボタン */
+    contactCta: "お問い合わせはこちら",
     otaNames: { 楽天トラベル: "楽天トラベル", じゃらん: "じゃらん" } as Record<string, string>,
     directTitle: "宿へ直接のお問い合わせ",
     directBody: "日程やお部屋のご希望、お食事のご相談などはこちらから。年中無休で営業しております。",

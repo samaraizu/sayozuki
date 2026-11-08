@@ -91,6 +91,7 @@ export const vi: Dict = {
     title: "Đặt phòng",
     otaBook: "Đặt phòng trên {name}",
     otaSoon: "Sắp ra mắt",
+    contactCta: "Liên hệ với chúng tôi",
     otaNames: { 楽天トラベル: "Rakuten Travel", じゃらん: "Jalan" },
     directTitle: "Liên hệ trực tiếp với lữ quán",
     directBody:

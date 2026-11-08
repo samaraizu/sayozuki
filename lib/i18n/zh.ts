@@ -91,6 +91,7 @@ export const zh: Dict = {
     title: "预订",
     otaBook: "在{name}预订",
     otaSoon: "即将上线",
+    contactCta: "点此咨询",
     otaNames: { 楽天トラベル: "乐天旅游", じゃらん: "Jalan" },
     directTitle: "直接联系旅馆",
     directBody: "如有日期、房间或餐食方面的需求，请在此咨询。本馆全年无休，每天营业。",
