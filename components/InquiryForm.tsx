@@ -26,7 +26,7 @@ export function InquiryForm({
   if (state.status === "ok") {
     return (
       <div className="rounded-[22px] bg-mint px-6 py-12 text-center" role="status">
-        <p className="font-serif text-xl font-semibold text-pine">{t.thanks}</p>
+        <p className="font-mincho text-xl font-semibold text-pine">{t.thanks}</p>
         <p className="mt-4 text-sm leading-7">
           {state.message ?? t.ok}
         </p>
@@ -312,7 +312,7 @@ function Fields({
         <button
           type="submit"
           disabled={pending}
-          className="h-14 w-full rounded-2xl bg-grad px-10 text-[15px] font-bold text-white shadow-cta transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 sm:w-auto"
+          className="h-14 w-full rounded-2xl bg-wood px-10 text-[15px] font-bold text-white shadow-cta transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50 sm:w-auto"
         >
           {pending ? t.sending : t.submit}
         </button>

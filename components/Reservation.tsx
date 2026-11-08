@@ -181,7 +181,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
                 aria-label={`${dateLabel(iso)} ${free > 0 ? fmt(b.dayFree, { n: free }) : b.dayFull}`}
                 className={`flex h-14 flex-col items-center justify-center rounded-xl text-[14px] transition-colors md:h-16 ${
                   isEdge
-                    ? "bg-grad font-bold text-white shadow-cta"
+                    ? "bg-grad font-bold text-white shadow-soft"
                     : inRange
                       ? "bg-sel font-bold text-navy"
                       : enabled
@@ -215,7 +215,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
         {/* 1. 日程と人数 */}
         <section className={card} aria-labelledby="st-dates">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 id="st-dates" className="flex items-center gap-2 font-serif text-xl font-semibold">
+            <h2 id="st-dates" className="flex items-center gap-2 font-mincho text-xl font-semibold">
               <span className="flex size-7 items-center justify-center rounded-full bg-grad font-sans text-[13px] text-white">1</span>
               {b.stepDates}
             </h2>
@@ -275,7 +275,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
         {/* 2. 部屋 */}
         {checkIn && checkOut && data && (
           <section className={card} aria-labelledby="st-room">
-            <h2 id="st-room" className="flex items-center gap-2 font-serif text-xl font-semibold">
+            <h2 id="st-room" className="flex items-center gap-2 font-mincho text-xl font-semibold">
               <span className="flex size-7 items-center justify-center rounded-full bg-grad font-sans text-[13px] text-white">2</span>
               {b.stepRoom}
             </h2>
@@ -298,7 +298,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
                       }`}
                     >
                       <span className="flex items-center justify-between gap-2">
-                        <span className="font-serif text-lg font-semibold">{roomNames[r.name] ?? r.name}</span>
+                        <span className="font-mincho text-lg font-semibold">{roomNames[r.name] ?? r.name}</span>
                         <span className={`rounded-lg px-2 py-0.5 text-[12px] font-bold ${can ? "bg-mint text-pine" : ""}`}>
                           {on ? b.selected : t.form[STATUS_KEY[st]]}
                         </span>
@@ -321,7 +321,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
         {/* 3. 食事：日程が決まったら出す（部屋を選ぶ前でも付けられる） */}
         {checkIn && checkOut && (
           <section className={card} aria-labelledby="st-meal">
-            <h2 id="st-meal" className="flex items-center gap-2 font-serif text-xl font-semibold">
+            <h2 id="st-meal" className="flex items-center gap-2 font-mincho text-xl font-semibold">
               <span className="flex size-7 items-center justify-center rounded-full bg-grad font-sans text-[13px] text-white">3</span>
               {b.stepMeal}
             </h2>
@@ -356,7 +356,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
         {/* 4. お客様 */}
         {pickedRoom && (
           <section className={card} aria-labelledby="st-guest">
-            <h2 id="st-guest" className="flex items-center gap-2 font-serif text-xl font-semibold">
+            <h2 id="st-guest" className="flex items-center gap-2 font-mincho text-xl font-semibold">
               <span className="flex size-7 items-center justify-center rounded-full bg-grad font-sans text-[13px] text-white">4</span>
               {b.stepGuest}
             </h2>
@@ -398,7 +398,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
 
       {/* ご予約内容とお支払い */}
       <aside className={`${card} flex flex-col gap-4 lg:sticky lg:top-4`} aria-labelledby="st-sum">
-        <h2 id="st-sum" className="font-serif text-xl font-semibold">{b.stepConfirm}</h2>
+        <h2 id="st-sum" className="font-mincho text-xl font-semibold">{b.stepConfirm}</h2>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[14px]">
           <dt className="text-slate">{b.summaryRoom}</dt>
           <dd className="text-right font-bold">{pickedRoom ? roomNames[pickedRoom] ?? pickedRoom : "—"}</dd>
@@ -461,7 +461,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
         <button
           type="submit"
           disabled={!q || !agree || pending}
-          className="h-14 rounded-2xl bg-grad text-[16px] font-bold text-white shadow-cta transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+          className="h-14 rounded-2xl bg-wood hover:bg-wood-deep text-[16px] font-bold text-white shadow-cta transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
         >
           {pending ? b.paying : b.pay}
         </button>

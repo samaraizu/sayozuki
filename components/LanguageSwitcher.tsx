@@ -7,7 +7,7 @@ export function LanguageSwitcher({ lang, sub = "" }: { lang: Locale; sub?: strin
     <details className="group relative">
       <summary
         aria-label={dictionaries[lang].nav.language}
-        className="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-full border border-white/60 bg-white/15 px-3 text-[13px] font-medium text-white hover:bg-white/25 [&::-webkit-details-marker]:hidden"
+        className="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-frost bg-white px-3 text-[13px] font-medium text-navy hover:bg-kinari [&::-webkit-details-marker]:hidden"
       >
         <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
           <circle cx="12" cy="12" r="9" />

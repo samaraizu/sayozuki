@@ -12,7 +12,7 @@ import { shopUrl } from "@/lib/urls";
 const field =
   "h-12 w-full rounded-xl border border-steel bg-mist px-3 text-[15px] text-navy outline-none focus:border-sea focus:ring-2 focus:ring-sea/20";
 
-/** 宿のトップページ。言語ごとに文言だけ差し替える。見た目は客室オーダーと同じ青緑 */
+/** 宿のトップページ。言語ごとに文言だけ差し替える。見た目は「湯と木」（生成り×苔×檜） */
 export function InnPage({ lang }: { lang: Locale }) {
   const t = dictionaries[lang];
   const yen = (n: number) => formatYen(lang, n);
@@ -56,58 +56,55 @@ export function InnPage({ lang }: { lang: Locale }) {
 
       <SiteHeader lang={lang} onTop />
 
-      <main id="top" className="mx-auto flex max-w-6xl flex-col gap-20 px-4 pt-6 md:gap-24 md:px-6">
-        {/* ファーストビューと空室検索 */}
-        <section aria-label={site.name}>
-          <div className="relative h-[62svh] min-h-[420px] overflow-hidden rounded-[28px] shadow-lift md:h-[560px]">
-            <div className="absolute inset-0">
-              <Photo src={photos.hero} alt={t.hero.alt} priority className="h-full" />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#122038]/10 to-[#122038]/65" />
-            <div className="absolute inset-x-0 bottom-0 p-6 pb-20 text-white md:p-10 md:pb-24">
-              <p className="text-[13px] tracking-[0.2em] opacity-95">{t.hero.tagline}</p>
-              <h1 className="mt-2 font-serif text-[24px] font-semibold leading-[1.6] tracking-[0.04em] break-keep sm:text-[30px] md:text-[44px] md:tracking-[0.06em]">
-                {t.about.lead[0]}
-                <br />
-                {t.about.lead[1]}
-              </h1>
-            </div>
-          </div>
+      <main id="top" className="mx-auto flex max-w-6xl flex-col gap-20 px-4 pt-4 md:gap-28 md:px-6">
+        {/* ファーストビューと空室検索。左に言葉と検索、右にアーチの写真 */}
+        <section aria-label={site.name} className="grid items-center gap-8 md:grid-cols-[1fr_1.15fr] md:gap-12">
+          <div className="order-2 flex flex-col gap-6 md:order-1">
+            <p className="self-start rounded-full bg-kinari px-3.5 py-1 text-[13px] font-medium text-umber">{t.hero.tagline}</p>
+            <h1 className="font-mincho text-[28px] font-bold leading-[1.6] tracking-[0.04em] break-keep sm:text-[34px] md:text-[44px] md:tracking-[0.06em]">
+              {t.about.lead[0]}
+              <br />
+              {t.about.lead[1]}
+            </h1>
 
-          {/* 空室を見る：日程を下の空室カレンダー（#reserve）へ持っていく */}
-          <form
-            action={reserveHref}
-            method="get"
-            className="relative mx-2 -mt-14 grid grid-cols-2 gap-3 rounded-[22px] bg-white p-4 shadow-lift md:mx-8 md:grid-cols-[1.4fr_1fr_1fr_auto] md:items-end md:p-5"
-          >
-            <label className="col-span-2 flex flex-col gap-1.5 text-[12px] font-bold text-slate md:col-span-1">
-              {t.form.checkin}
-              <input type="date" name="in" className={field} />
-            </label>
-            <label className="flex flex-col gap-1.5 text-[12px] font-bold text-slate">
-              {t.form.nights}
-              <select name="nights" defaultValue="1" className={field}>
-                {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {fmt(t.form.nightUnit, { n })}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1.5 text-[12px] font-bold text-slate">
-              {t.form.guests}
-              <select name="guests" defaultValue="2" className={field}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>
-                    {fmt(t.form.guestUnit, { n })}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="col-span-2 h-[52px] rounded-2xl bg-grad md:col-span-1 px-8 text-[15px] font-bold text-white shadow-cta transition-transform hover:scale-[1.02] active:scale-95">
-              {t.book.heroCta}
-            </button>
-          </form>
+            {/* 空室を見る：日程を下の空室カレンダー（#reserve）へ持っていく */}
+            <form
+              action={reserveHref}
+              method="get"
+              className="grid grid-cols-2 gap-3 rounded-[20px] border border-frost bg-white p-4 shadow-soft"
+            >
+              <label className="col-span-2 flex flex-col gap-1.5 text-[12px] font-bold text-slate">
+                {t.form.checkin}
+                <input type="date" name="in" className={field} />
+              </label>
+              <label className="flex flex-col gap-1.5 text-[12px] font-bold text-slate">
+                {t.form.nights}
+                <select name="nights" defaultValue="1" className={field}>
+                  {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {fmt(t.form.nightUnit, { n })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1.5 text-[12px] font-bold text-slate">
+                {t.form.guests}
+                <select name="guests" defaultValue="2" className={field}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <option key={n} value={n}>
+                      {fmt(t.form.guestUnit, { n })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit" className="col-span-2 h-[52px] rounded-2xl bg-wood px-8 text-[15px] font-bold text-white shadow-cta transition-colors hover:bg-wood-deep active:scale-95">
+                {t.book.heroCta}
+              </button>
+            </form>
+          </div>
+          <div className="order-1 md:order-2">
+            <Photo src={photos.hero} alt={t.hero.alt} priority sizes="(min-width: 768px) 55vw, 100vw" className="arch h-[52svh] min-h-[360px] md:h-[600px]" />
+          </div>
         </section>
 
         {/* 小夜月について */}
@@ -121,46 +118,50 @@ export function InnPage({ lang }: { lang: Locale }) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Photo src={photos.lobby} alt={t.about.altLobby} sizes="(min-width: 768px) 25vw, 50vw" className="aspect-[3/4] rounded-[22px] shadow-soft" />
-            <Photo src={photos.noren} alt={t.about.altNoren} sizes="(min-width: 768px) 25vw, 50vw" className="aspect-[3/4] rounded-[22px] shadow-soft" />
+            <Photo src={photos.lobby} alt={t.about.altLobby} sizes="(min-width: 768px) 25vw, 50vw" className="aspect-[3/4] rounded-[24px]" />
+            <Photo src={photos.noren} alt={t.about.altNoren} sizes="(min-width: 768px) 25vw, 50vw" className="arch mt-10 aspect-[3/4]" />
           </div>
         </section>
 
         {/* 温泉 */}
-        <section id="onsen" className="grid scroll-mt-6 overflow-hidden rounded-[28px] bg-white shadow-soft md:grid-cols-2">
-          <Photo src={photos.onsen} alt={t.onsen.alt} sizes="(min-width: 768px) 50vw, 100vw" className="min-h-[300px]" />
-          <div className="flex flex-col gap-5 p-6 md:p-10">
-            <Heading en="ONSEN" ja={t.onsen.title} />
-            <p className="-mt-4 text-[15px] leading-8 text-slate">{t.onsen.body}</p>
-            <div className="rounded-2xl bg-sky px-4 py-3.5">
-              <p className="text-[12px] font-bold text-slate">{t.onsen.qualityLabel}</p>
+        {/* 温泉は苔色の帯。ページの中で一か所だけ色の面にする */}
+        <section id="onsen" className="grid scroll-mt-6 items-center gap-8 rounded-[32px] bg-sea p-5 text-cream md:grid-cols-2 md:gap-10 md:p-12">
+          <div className="order-2 flex flex-col gap-5 md:order-1">
+            <div className="flex flex-col gap-2">
+              <p className="text-[12px] font-bold tracking-[0.24em] text-[#D6C7A8]">ONSEN</p>
+              <h2 className="font-mincho text-[26px] font-bold leading-snug md:text-[32px]">{t.onsen.title}</h2>
+            </div>
+            <p className="text-[15px] leading-8 text-[#DCD6C8]">{t.onsen.body}</p>
+            <div className="rounded-2xl bg-cream/10 px-4 py-3.5">
+              <p className="text-[12px] font-bold text-[#D6C7A8]">{t.onsen.qualityLabel}</p>
               <p className="mt-0.5 font-bold">{t.onsen.quality}</p>
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate">{t.onsen.benefitsLabel}</p>
+              <p className="text-[12px] font-bold text-[#D6C7A8]">{t.onsen.benefitsLabel}</p>
               <ul className="mt-2 flex flex-wrap gap-1.5">
                 {t.onsen.benefits.map((b) => (
-                  <li key={b} className="flex h-8 items-center rounded-full border border-frost-2 bg-white px-3 text-[13px]">
+                  <li key={b} className="flex h-8 items-center rounded-full bg-cream/15 px-3 text-[13px]">
                     {b}
                   </li>
                 ))}
               </ul>
             </div>
           </div>
+          <Photo src={photos.onsen} alt={t.onsen.alt} sizes="(min-width: 768px) 50vw, 100vw" className="order-1 aspect-[4/3] rounded-[24px] md:order-2 md:aspect-auto md:h-[420px]" />
         </section>
 
         {/* 客室 */}
         <section id="rooms" className="scroll-mt-6">
           <Heading en="ROOMS" ja={t.rooms.title} lead={fmt(t.rooms.body, { n: rooms.length })} />
           <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
-            <Photo src={photos.room} alt={t.rooms.altRoom} sizes="(min-width: 768px) 66vw, 100vw" className="aspect-[16/10] rounded-[22px]" />
-            <Photo src={photos.corridor} alt={t.rooms.altCorridor} sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[16/10] rounded-[22px] md:aspect-auto" />
+            <Photo src={photos.room} alt={t.rooms.altRoom} sizes="(min-width: 768px) 66vw, 100vw" className="aspect-[16/10] rounded-[24px]" />
+            <Photo src={photos.corridor} alt={t.rooms.altCorridor} sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[16/10] rounded-[24px] md:aspect-auto" />
           </div>
           <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rooms.map((r) => (
-              <li key={r.name} className="flex flex-col gap-1.5 rounded-[22px] border border-frost bg-white px-5 py-4 shadow-soft">
+              <li key={r.name} className="flex flex-col gap-1.5 rounded-[24px] border border-frost bg-white px-5 py-4 shadow-soft">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="font-serif text-xl font-semibold">{roomName(r.name)}</p>
+                  <p className="font-mincho text-xl font-semibold">{roomName(r.name)}</p>
                   <span className="rounded-lg bg-mint px-2.5 py-0.5 text-[12px] font-bold text-pine">{fmt(t.rooms.capacity, { n: r.capacity })}</span>
                 </div>
                 {r.note && <p className="text-[13px] text-slate">{t.rooms.familyNote}</p>}
@@ -175,7 +176,7 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* ご料金 */}
         <section id="price" className="grid scroll-mt-6 gap-4 md:grid-cols-2">
-          <div className="rounded-[22px] bg-white p-6 shadow-soft md:p-8">
+          <div className="rounded-[24px] bg-white p-6 shadow-soft md:p-8">
             <Heading en="PRICE" ja={t.price.title} />
             <ul className="-mt-2 space-y-2 text-[13px] leading-6 text-slate">
               {t.price.notes.map((n) => (
@@ -183,8 +184,8 @@ export function InnPage({ lang }: { lang: Locale }) {
               ))}
             </ul>
           </div>
-          <div className="flex flex-col gap-3 rounded-[22px] bg-white p-6 shadow-soft md:p-8">
-            <h3 className="font-serif text-xl font-semibold">{t.price.mealsTitle}</h3>
+          <div className="flex flex-col gap-3 rounded-[24px] bg-white p-6 shadow-soft md:p-8">
+            <h3 className="font-mincho text-xl font-semibold">{t.price.mealsTitle}</h3>
             <p className="text-[13px] leading-6 text-slate">{t.price.mealsNote}</p>
             {photos.meal && <Photo src={photos.meal} alt={t.price.altMeal} sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[4/3] rounded-2xl" />}
             <div className="flex items-center justify-between rounded-2xl bg-sky px-4 py-3.5">
@@ -200,7 +201,7 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* お取り寄せ（site.showSakeSection で出し入れ） */}
         {site.showSakeSection && (
-          <section className="rounded-[28px] bg-white p-6 shadow-soft md:p-10">
+          <section className="rounded-[32px] bg-white p-6 shadow-soft md:p-10">
             <Heading en={t.sake.en} ja={t.nav.shop} lead={t.sake.lead} />
             <div lang="ja">
               <ProductGrid items={products} />
@@ -226,18 +227,18 @@ export function InnPage({ lang }: { lang: Locale }) {
                   href={o.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-3 rounded-[22px] border border-frost bg-white px-5 py-4 shadow-soft"
+                  className="flex items-center justify-between gap-3 rounded-[24px] border border-frost bg-white px-5 py-4 shadow-soft"
                 >
                   <span className="flex items-center gap-3 font-bold">
                     <OtaIcon name={o.icon} className="text-sea" />
                     {fmt(t.reserve.otaBook, { name })}
                   </span>
-                  <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-grad text-white">
+                  <span aria-hidden className="flex size-9 items-center justify-center rounded-full bg-sea text-cream">
                     →
                   </span>
                 </a>
               ) : (
-                <span key={o.name} className="flex items-center justify-between gap-3 rounded-[22px] border border-frost bg-navy/[0.04] px-5 py-4 text-slate">
+                <span key={o.name} className="flex items-center justify-between gap-3 rounded-[24px] border border-frost bg-navy/[0.04] px-5 py-4 text-slate">
                   <span className="flex items-center gap-3 font-bold">
                     <OtaIcon name={o.icon} className="text-slate/70" />
                     {name}
@@ -249,9 +250,9 @@ export function InnPage({ lang }: { lang: Locale }) {
           </div>
 
           {/* お問い合わせはフォームを別ページ（/contact）に分けた */}
-          <div className="mt-4 flex flex-col gap-4 rounded-[28px] bg-white p-6 shadow-soft md:flex-row md:items-center md:justify-between md:p-8">
+          <div className="mt-4 flex flex-col gap-4 rounded-[32px] bg-white p-6 shadow-soft md:flex-row md:items-center md:justify-between md:p-8">
             <div>
-              <h3 className="font-serif text-xl font-semibold">{t.reserve.directTitle}</h3>
+              <h3 className="font-mincho text-xl font-semibold">{t.reserve.directTitle}</h3>
               <p className="mt-2 max-w-xl text-sm leading-7 text-slate">{t.reserve.directBody}</p>
             </div>
             <a
@@ -264,7 +265,7 @@ export function InnPage({ lang }: { lang: Locale }) {
         </section>
 
         {/* アクセス */}
-        <section id="access" className="grid scroll-mt-6 gap-6 rounded-[28px] bg-white p-6 shadow-soft md:grid-cols-2 md:p-10">
+        <section id="access" className="grid scroll-mt-6 gap-6 rounded-[32px] bg-white p-6 shadow-soft md:grid-cols-2 md:p-10">
           <div>
             <Heading en="ACCESS" ja={t.access.title} />
             <dl className="grid content-start gap-x-6 gap-y-4 text-[15px] md:grid-cols-[7rem_1fr]">
@@ -295,7 +296,7 @@ export function InnPage({ lang }: { lang: Locale }) {
             title={t.access.mapTitle}
             src={`https://www.google.com/maps?q=${mapQuery}&output=embed&hl=${lang === "zh" ? "zh-CN" : lang}`}
             loading="lazy"
-            className="aspect-[4/3] w-full rounded-[22px] border border-frost"
+            className="aspect-[4/3] w-full rounded-[24px] border border-frost"
             referrerPolicy="no-referrer-when-downgrade"
           />
         </section>

@@ -1,4 +1,4 @@
-import { Noto_Sans_JP, Roboto, Shippori_Mincho, Yuji_Syuku } from "next/font/google";
+import { Noto_Sans_JP, Roboto, Shippori_Mincho, Yuji_Syuku, Zen_Old_Mincho } from "next/font/google";
 
 export const notoSans = Noto_Sans_JP({
   variable: "--font-noto-sans-jp",
@@ -25,4 +25,11 @@ export const yuji = Yuji_Syuku({
   weight: "400",
 });
 
-export const fontVariables = `${notoSans.variable} ${shippori.variable} ${roboto.variable} ${yuji.variable}`;
+/** 宿のHPの見出し。やわらかい明朝 */
+export const zenOldMincho = Zen_Old_Mincho({
+  variable: "--font-zen-old-mincho",
+  subsets: ["latin"],
+  weight: ["500", "700"],
+});
+
+export const fontVariables = `${notoSans.variable} ${shippori.variable} ${roboto.variable} ${yuji.variable} ${zenOldMincho.variable}`;

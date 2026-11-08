@@ -82,38 +82,61 @@ html:lang(th) body * {
 }
 
 /*
- * 宿のHP（青緑）。客室オーダー（order/public/app.css の :root）と同じ値。
+ * 宿のHP（湯と木）。生成りの地に、苔と檜の色。デザイン案 C。
+ * 名前は青緑だったころのまま残し、値だけ差し替えている（sea＝苔、teal＝檜、navy＝墨）。
  * お取り寄せ（/shop）は白×緑のままなので、上の --color-green などは変えずに別の名前で持つ
  */
 @theme inline {
-  --color-sea: #2b6bd3;
-  --color-sea-deep: #1e5fc2;
-  --color-teal: #138a74;
-  --color-navy: #1d2a3b;
-  --color-slate: #536479;
-  --color-sky: #eef4fb;
-  --color-mist: #f6fafe;
-  --color-sel: #e3eefc;
-  --color-frost: #e2ebf5;
-  --color-frost-2: #d5e1ee;
-  --color-steel: #c3d3e5;
-  --color-dash: #93a8bf;
-  --color-mint: #d9f2e8;
-  --color-pine: #145e4b;
+  --color-sea: #4e5b44;
+  --color-sea-deep: #3f4a37;
+  --color-teal: #b08a5a;
+  --color-navy: #33302a;
+  --color-slate: #6b6458;
+  --color-sky: #efe8da;
+  --color-mist: #fbf8f2;
+  --color-sel: #e6eadf;
+  --color-frost: #e4dccd;
+  --color-frost-2: #ddd3c1;
+  --color-steel: #d3c8b4;
+  --color-dash: #b5aa98;
+  --color-mint: #eef0e8;
+  --color-pine: #4e5b44;
+  --color-cream: #f6f2ea;
+  --color-kinari: #e9dfcd;
+  --color-wood: #b08a5a;
+  --color-wood-deep: #96744a;
+  --color-umber: #7a5e3a;
+
+  /* 見出しの明朝（宿のHPだけ）。/shop は font-serif のまま */
+  --font-mincho: var(--font-zen-old-mincho), var(--font-shippori), "Hiragino Mincho ProN", serif;
 }
 
+/* 苔の面（選んだ日・手順の番号など） */
 .bg-grad {
-  background-image: linear-gradient(135deg, #2b6bd3 0%, #138a74 100%);
+  background-color: #4e5b44;
 }
 .bg-page {
-  background-image: linear-gradient(180deg, #eaf2fd 0%, #edf8f4 100%);
+  background-color: #f6f2ea;
 }
 .shadow-soft {
-  box-shadow: 0 6px 20px rgba(43, 107, 211, 0.08);
+  box-shadow: 0 4px 16px rgba(51, 48, 42, 0.05);
 }
 .shadow-lift {
-  box-shadow: 0 12px 30px rgba(43, 107, 211, 0.18);
+  box-shadow: 0 14px 34px rgba(51, 48, 42, 0.12);
 }
 .shadow-cta {
-  box-shadow: 0 10px 24px rgba(43, 107, 211, 0.3);
+  box-shadow: 0 8px 20px rgba(150, 116, 74, 0.28);
+}
+/* 上が丸いアーチの写真枠 */
+.arch {
+  border-radius: 999px 999px 24px 24px;
+}
+html:lang(zh-Hans) .font-mincho {
+  font-family: "Songti SC", "Noto Serif SC", "SimSun", serif;
+}
+html:lang(ko) .font-mincho {
+  font-family: "AppleMyungjo", "Nanum Myeongjo", "Noto Serif KR", serif;
+}
+html:lang(th) .font-mincho {
+  font-family: "Noto Serif Thai", "Noto Sans Thai", "Thonburi", serif;
 }
