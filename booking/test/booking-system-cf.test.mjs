@@ -68,3 +68,15 @@ test('アプリのキャンセルを台帳に反映：ステータスをキャ�
   assert.strictEqual(r.dirty['ステータス'], true);
   assert.strictEqual(X.cfApplyCancels_(c, list), 0);
 });
+
+test('アプリで入れた直販を通知に足す（HP決済済みは足さない）', () => {
+  const res = table([]);
+  const c = X.makeCtx_(res, table([]), table([]));
+  const notes = [];
+  X.cfAppendPending_(c, [
+    { '媒体': '直販', '予約番号': 'SZ-20261108-0001', '部屋': '月山', 'チェックイン': '2026-11-12', 'チェックアウト': '2026-11-14', '大人': '2', '代表者名': '山田', '支払い状況': '現地でSquare' },
+    { '媒体': '直販', '予約番号': 'SZ-20261108-0002', '部屋': '蔵王', 'チェックイン': '2026-11-20', 'チェックアウト': '2026-11-21', '大人': '1', '代表者名': 'HP客', '支払い状況': 'HPで決済済' },
+  ], notes);
+  assert.deepStrictEqual(notes, ['直販の予約（アプリで入力）：月山 11/12〜11/14 2名 山田（SZ-20261108-0001）']);
+  assert.strictEqual(res.rows.length, 2);
+});

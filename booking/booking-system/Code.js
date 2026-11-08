@@ -228,7 +228,8 @@ function runCore_(opts) {
     log.sheet.getRange('I1:J1').setValues([['最終実行', now]]);
 
     // 6. 台帳の中身を Cloudflare版に送る
-    if (cf) pushToCloudflare_(cf, res, rooms, Utilities.formatDate(now, tz, 'yyyy/MM/dd HH:mm'), todayIso, notes);
+    //    この回の通知メールと同じ文も渡す（Cloudflare版がスマホにプッシュ通知で出す）
+    if (cf) pushToCloudflare_(cf, res, rooms, Utilities.formatDate(now, tz, 'yyyy/MM/dd HH:mm'), todayIso, notes, opts.silent ? [] : notes.slice());
 
     if (!opts.silent) sendNotes_(ss, notes);
     return { mails: found.length, notes: notes, calendar: calResult };
@@ -618,14 +619,15 @@ function cfFetch_(cf, path, payload) {
 function pullFromCloudflare_(cf, ctx, todayIso, notes) {
   try {
     const got = cfFetch_(cf, '/api/sync/pending');
-    cfAppendPending_(ctx, got.bookings || []);
+    cfAppendPending_(ctx, got.bookings || [], notes);
     cfApplyCancels_(ctx, got.cancels || []);
   } catch (e) {
     alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
   }
 }
 
-function cfAppendPending_(ctx, list) {
+// notes があれば、アプリで入れた直販を通知に足す（HPで決済済みの予約は Cloudflare版がもう知らせているので足さない）
+function cfAppendPending_(ctx, list, notes) {
   let added = 0;
   list.forEach(function (b) {
     const no = str_(b['予約番号']);
@@ -637,6 +639,10 @@ function cfAppendPending_(ctx, list) {
     });
     ctx.byCode[no] = newRow_(ctx.res, vals);
     added++;
+    if (notes && str_(b['支払い状況']) !== 'HPで決済済') {
+      notes.push('直販の予約（アプリで入力）：' + str_(b['部屋']) + ' ' + md_(str_(b['チェックイン'])) + '〜' + md_(str_(b['チェックアウト'])) +
+        ' ' + str_(b['大人']) + '名 ' + str_(b['代表者名']) + '（' + no + '）');
+    }
   });
   return added;
 }
@@ -656,9 +662,11 @@ function cfApplyCancels_(ctx, list) {
 }
 
 // 台帳の予約・部屋をまるごと送る（D1側は1回のトランザクションで置き換える）
-function pushToCloudflare_(cf, res, rooms, lastImport, todayIso, notes) {
+function pushToCloudflare_(cf, res, rooms, lastImport, todayIso, notes, notify) {
   try {
-    cfFetch_(cf, '/api/sync/sheet', cfPayload_(res, rooms, lastImport));
+    const payload = cfPayload_(res, rooms, lastImport);
+    payload.notes = notify || [];
+    cfFetch_(cf, '/api/sync/sheet', payload);
     cf.props.deleteProperty('cfPushAlert');
   } catch (e) {
     alertOnce_(cf.props, 'cfPushAlert', todayIso, notes, 'Cloudflare版に台帳を送れなかった：' + String((e && e.message) || e));

@@ -25,6 +25,7 @@ import { UserError, json, type Env } from './env';
 import { calendar, checkoutStatus, startCheckout, sweep, type CheckoutInput } from './hp';
 import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
 import { cancelBooking, type CancelForm } from './cancel';
+import { latest, notify, subscribe, unsubscribe, vapid } from './push';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -89,6 +90,20 @@ async function handle(req: Request, env: Env): Promise<Response> {
       return res;
     }
     if (path === '/api/board' && req.method === 'GET') return json(await getBoard(env, email));
+    // スマホへの通知（public/push.js・sw.js）
+    if (path === '/api/push/key' && req.method === 'GET') return json({ ok: true, key: (await vapid(env)).pub });
+    if (path === '/api/push/latest' && req.method === 'GET') return json(await latest(env));
+    if (path.startsWith('/api/push/') && req.method === 'POST') {
+      const origin = req.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
+      const body = (await req.json().catch(() => ({}))) as { endpoint?: string };
+      if (path === '/api/push/subscribe') return json(await subscribe(env, email, String(body.endpoint || '')));
+      if (path === '/api/push/unsubscribe') return json(await unsubscribe(env, String(body.endpoint || '')));
+      if (path === '/api/push/test') {
+        await notify(env, '小夜月 予約', 'テスト通知。新しい予約・要確認・HP予約・問い合わせがこの形で届きます', '/', email);
+        return json({ ok: true });
+      }
+    }
     if (path === '/api/bookings' && req.method === 'POST') {
       // 別サイトからの書き込みを弾く（クッキーは SameSite=Lax だが念のため）
       const origin = req.headers.get('origin');

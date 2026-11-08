@@ -6,6 +6,7 @@
  * 「予約にする」で保存したときの 予約済み は db.ts の createBooking が同じバッチで付ける
  */
 import { UserError, nowText, type Env } from './env';
+import { notify } from './push';
 
 const MEAL = { none: '素泊まり', breakfast: '朝食付き', both: '1泊2食付き' } as const;
 
@@ -66,6 +67,10 @@ export async function addInquiry(env: Env, input: InquiryInput): Promise<{ ok: b
   )
     .bind(q.id, nowText(), q.lang, q.name, q.email, q.tel, q.checkIn, q.nights, q.guests, q.room, q.meal, q.message)
     .run();
+  if (res.meta.changes) {
+    const when = q.checkIn ? `${+q.checkIn.slice(5, 7)}/${+q.checkIn.slice(8)}〜${q.nights}泊 ` : '';
+    await notify(env, '小夜月 予約：HPからの問い合わせ', `${q.name}様 ${when}${q.guests}名${q.room ? ' ' + q.room : ''}`);
+  }
   return { ok: true, duplicate: !res.meta.changes };
 }
 

@@ -12,6 +12,9 @@
  */
 import { Lib } from './lib.gen.js';
 import { innAddresses, sendMail } from './mail';
+import { notify } from './push';
+
+const md = (iso: string) => (iso ? `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}` : '?');
 import { createPaymentLink, deletePaymentLink, orderPaid, type PayLine } from './square';
 import { todayIso, type Env } from './env';
 
@@ -286,6 +289,7 @@ async function confirm(env: Env, row: CheckoutRow) {
     await log(env, 'HP予約：押さえの外れた予約に支払い', row.no, `${row.amount}円。返金するか、空いていれば手で予約を入れる`);
     await sendMail(env, innAddresses(env), `【小夜月】要対応：期限切れの予約 ${row.no} に支払いがありました`,
       `予約番号 ${row.no} は決済の期限が切れて部屋を戻したあとに、${row.amount.toLocaleString('ja-JP')}円が支払われました。\nSquare で返金するか、空いていれば予約管理から手で入れてください。`);
+    await notify(env, '小夜月 予約：要対応', `期限切れのHP予約 ${row.no} に ${row.amount.toLocaleString('ja-JP')}円の支払い。返金か手で予約を`);
     return;
   }
   await log(env, 'HP予約（決済済）', row.no, `${row.amount}円`);
@@ -293,6 +297,16 @@ async function confirm(env: Env, row: CheckoutRow) {
   // 確認メールは1回だけ
   const claim = await env.DB.prepare('UPDATE hp_checkouts SET mailed = 1 WHERE no = ? AND mailed = 0').bind(row.no).run();
   if (!claim.meta.changes) return;
+  const bk = await env.DB.prepare('SELECT room, check_in, check_out, adults, name FROM bookings WHERE no = ?')
+    .bind(row.no)
+    .first<{ room: string; check_in: string; check_out: string; adults: string; name: string }>();
+  await notify(
+    env,
+    '小夜月 予約：HP予約（決済済）',
+    bk
+      ? `${bk.room} ${md(bk.check_in)}〜${md(bk.check_out)} ${bk.adults}名 ${bk.name} ${row.amount.toLocaleString('ja-JP')}円`
+      : `${row.no} ${row.amount.toLocaleString('ja-JP')}円`,
+  );
   let mail: Partial<CheckoutInput['mail']> = {};
   try {
     mail = JSON.parse(row.summary || '{}');
