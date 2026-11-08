@@ -17,8 +17,11 @@ export const CATEGORIES: Record<string, CategoryConf> = {
   夕食: { order: 1, cutoff: '18:00', names: { en: 'Dinner', zht: '晚餐', zhs: '晚餐', ko: '저녁' } },
   夜食: { order: 2, names: { en: 'Late night', zht: '宵夜', zhs: '夜宵', ko: '야식' } },
   飲み物: { order: 3, names: { en: 'Drinks', zht: '飲品', zhs: '饮品', ko: '음료' } },
-  翌朝: { order: 4, names: { en: 'Morning', zht: '隔日早晨', zhs: '次日早晨', ko: '다음날 아침' } },
-  その他: { order: 5, names: { en: 'Others', zht: '其他', zhs: '其他', ko: '기타' } }
+  お菓子: { order: 4, names: { en: 'Sweets', zht: '點心', zhs: '点心', ko: '과자' } },
+  // 朝食は仕込みが要るので、前の晩のうちに受ける（20:00で締める）。当日の朝の注文は受けない運用にするなら、Squareで朝に「売り切れ」にする
+  朝食: { order: 5, cutoff: '20:00', names: { en: 'Breakfast', zht: '早餐', zhs: '早餐', ko: '아침 식사' } },
+  翌朝: { order: 6, names: { en: 'Morning', zht: '隔日早晨', zhs: '次日早晨', ko: '다음날 아침' } },
+  その他: { order: 7, names: { en: 'Others', zht: '其他', zhs: '其他', ko: '기타' } }
 };
 
 export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
@@ -59,6 +62,26 @@ export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
   翌朝のコーヒー: {
     name: { en: 'Morning coffee', zht: '隔日早晨咖啡', zhs: '次日早晨咖啡', ko: '다음날 아침 커피' },
     desc: { en: 'At your door when you wake', zht: '於起床時間送到門前', zhs: '于起床时间送到门前', ko: '기상 시간에 문 앞으로' }
+  },
+  芋煮と山形の夕膳: {
+    name: { en: 'Imoni dinner set', zht: '芋煮山形晚膳', zhs: '芋煮山形晚膳', ko: '이모니 저녁 정식' },
+    desc: { en: 'For 1', zht: '1人份', zhs: '1人份', ko: '1인분' }
+  },
+  朝ごはん御膳: {
+    name: { en: 'Japanese breakfast set', zht: '日式早餐御膳', zhs: '日式早餐御膳', ko: '일본식 아침 정식' },
+    desc: { en: 'For 1, at your door', zht: '1人份・送至門前', zhs: '1人份・送至门前', ko: '1인분・문 앞 배달' }
+  },
+  朝がゆと小鉢: {
+    name: { en: 'Rice porridge breakfast', zht: '早餐粥與小菜', zhs: '早餐粥与小菜', ko: '아침 죽과 반찬' },
+    desc: { en: 'For 1', zht: '1人份', zhs: '1人份', ko: '1인분' }
+  },
+  紅干し柿: {
+    name: { en: 'Dried persimmons', zht: '紅柿乾', zhs: '红柿饼', ko: '홍시 곶감' },
+    desc: { en: '2 pcs with tea', zht: '2個・附茶', zhs: '2个・附茶', ko: '2개・차 포함' }
+  },
+  のし梅: {
+    name: { en: 'Noshiume plum sweet', zht: '梅子羊羹片', zhs: '梅子羊羹片', ko: '노시우메(매실 과자)' },
+    desc: { en: '2 sheets', zht: '2片', zhs: '2片', ko: '2장' }
   },
   レイトチェックアウト: {
     name: { en: 'Late check-out', zht: '延遲退房', zhs: '延迟退房', ko: '레이트 체크아웃' },
