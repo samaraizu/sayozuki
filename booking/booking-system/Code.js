@@ -618,14 +618,15 @@ function cfFetch_(cf, path, payload) {
 function pullFromCloudflare_(cf, ctx, todayIso, notes) {
   try {
     const got = cfFetch_(cf, '/api/sync/pending');
-    cfAppendPending_(ctx, got.bookings || []);
-    cfApplyCancels_(ctx, got.cancels || []);
+    cfAppendPending_(ctx, got.bookings || [], notes);
+    cfApplyCancels_(ctx, got.cancels || [], notes);
   } catch (e) {
     alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
   }
 }
 
-function cfAppendPending_(ctx, list) {
+// notes を渡すと、足した予約を「新しい予約」として通知メールに載せる（Airbnbの取り込みと同じメール・同じ宛先）
+function cfAppendPending_(ctx, list, notes) {
   let added = 0;
   list.forEach(function (b) {
     const no = str_(b['予約番号']);
@@ -635,14 +636,19 @@ function cfAppendPending_(ctx, list) {
       if (b[h] === undefined || b[h] === '') return;
       vals[h] = CF_NUMBER_COLS.indexOf(h) >= 0 && /^\d+$/.test(String(b[h])) ? Number(b[h]) : b[h];
     });
-    ctx.byCode[no] = newRow_(ctx.res, vals);
+    const r = newRow_(ctx.res, vals);
+    ctx.byCode[no] = r;
     added++;
+    if (notes && CONFIG.NOTIFY_NEW_BOOKING) {
+      const from = str_(vals['支払い状況']) === 'HPで決済済' ? 'HP' : 'アプリ';
+      notes.push('新しい予約（' + from + '）：' + rowLabel_(r));
+    }
   });
   return added;
 }
 
 // アプリの「キャンセル」を台帳に反映する（ステータスをキャンセルにし、メモに1行足す。行は消さない）
-function cfApplyCancels_(ctx, list) {
+function cfApplyCancels_(ctx, list, notes) {
   let done = 0;
   list.forEach(function (c) {
     const r = ctx.byCode[str_(c['予約番号'])];
@@ -651,6 +657,7 @@ function cfApplyCancels_(ctx, list) {
     const note = str_(c['メモ']);
     if (note && str_(r.v['メモ']).indexOf(note) < 0) set_(r, 'メモ', str_(r.v['メモ']) ? str_(r.v['メモ']) + '\n' + note : note);
     done++;
+    if (notes) notes.push('キャンセル（アプリ）：' + rowLabel_(r) + (note ? '\n  ' + note : ''));
   });
   return done;
 }
