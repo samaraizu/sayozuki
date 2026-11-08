@@ -149,7 +149,7 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
       await env.DB.prepare('INSERT INTO requests (id, room_id, kind, status, created_at) VALUES (?, ?, ?, ?, ?)')
         .bind(newId('req'), room.id, kind, 'new', nowIso())
         .run();
-      ctx.waitUntil(notifyStaff(env, `🫖 ${room.name} リクエスト：${REQUEST_KINDS[kind]}`));
+      ctx.waitUntil(notifyStaff(env, `🙋 ${room.name} リクエスト：${REQUEST_KINDS[kind]}`));
     }
     return json({ ok: true });
   }
