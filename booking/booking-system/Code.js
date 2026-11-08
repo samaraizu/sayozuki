@@ -228,7 +228,8 @@ function runCore_(opts) {
     log.sheet.getRange('I1:J1').setValues([['最終実行', now]]);
 
     // 6. 台帳の中身を Cloudflare版に送る
-    if (cf) pushToCloudflare_(cf, res, rooms, Utilities.formatDate(now, tz, 'yyyy/MM/dd HH:mm'), todayIso, notes);
+    //    この回の通知メールと同じ文も渡す（Cloudflare版がスマホにプッシュ通知で出す）
+    if (cf) pushToCloudflare_(cf, res, rooms, Utilities.formatDate(now, tz, 'yyyy/MM/dd HH:mm'), todayIso, notes, opts.silent ? [] : notes.slice());
 
     if (!opts.silent) sendNotes_(ss, notes);
     return { mails: found.length, notes: notes, calendar: calResult };
@@ -663,9 +664,11 @@ function cfApplyCancels_(ctx, list, notes) {
 }
 
 // 台帳の予約・部屋をまるごと送る（D1側は1回のトランザクションで置き換える）
-function pushToCloudflare_(cf, res, rooms, lastImport, todayIso, notes) {
+function pushToCloudflare_(cf, res, rooms, lastImport, todayIso, notes, notify) {
   try {
-    cfFetch_(cf, '/api/sync/sheet', cfPayload_(res, rooms, lastImport));
+    const payload = cfPayload_(res, rooms, lastImport);
+    payload.notes = notify || [];
+    cfFetch_(cf, '/api/sync/sheet', payload);
     cf.props.deleteProperty('cfPushAlert');
   } catch (e) {
     alertOnce_(cf.props, 'cfPushAlert', todayIso, notes, 'Cloudflare版に台帳を送れなかった：' + String((e && e.message) || e));

@@ -1,6 +1,7 @@
 import { Lib, type Room } from './lib.gen.js';
 import { UserError, nowText, todayIso, type Env } from './env';
 import { openInquiries } from './inquiries';
+import { notify, summarizeNotes } from './push';
 
 // 画面・同期で使う名前 → D1の列 → スプシの見出し
 export const FIELDS = [
@@ -148,6 +149,8 @@ export interface SyncPayload {
   rooms: { name: string; capacity: number | string; state: string }[];
   bookings: Partial<Booking>[];
   lastImport?: string;
+  /** この回に取り込みGASが通知メールで送った文（新しい予約・要確認など）。同じものをスマホにも出す */
+  notes?: string[];
 }
 
 /** アプリで入れて、まだスプシに載っていない予約（GASがスプシに足す）。スプシの見出し名で返す */
@@ -242,6 +245,8 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
     ).bind(JSON.stringify(metaRows)),
   ];
   await env.DB.batch(stmts);
+  const n = summarizeNotes(body.notes);
+  if (n) await notify(env, n.title, n.body);
   const after = await env.DB.prepare('SELECT COUNT(*) AS n FROM bookings').first<{ n: number }>();
   return { ok: true, gen, rooms: rooms.length, received: bookings.length, total: after ? Number(after.n) : 0 };
 }

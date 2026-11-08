@@ -52,9 +52,9 @@ window.google = { script: { run: (function () {
 </script>`;
 
 const html = src('Index.html')
-  .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>小夜月 予約</title>')
+  .replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>小夜月 予約</title>\n<link rel="manifest" href="/manifest.webmanifest">\n<link rel="apple-touch-icon" href="/icon-180.png">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="小夜月 予約">\n<meta name="apple-mobile-web-app-status-bar-style" content="black">')
   .replace("<?!= include_('Styles') ?>", () => src('Styles.html'))
-  .replace("<?!= include_('App') ?>", () => shim + src('App.html'))
+  .replace("<?!= include_('App') ?>", () => shim + src('App.html') + '\n<script src="/push.js" defer></script>')
   .replace('<?!= libSource_() ?>', () => lib.replace(/<\/script/gi, '<\\/script'));
 if (/<\?/.test(html)) throw new Error('組み立て漏れのスクリプトレットがある');
 out('public/index.html', html);
