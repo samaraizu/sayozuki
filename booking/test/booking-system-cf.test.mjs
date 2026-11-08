@@ -6,7 +6,7 @@ import { test } from 'node:test';
 
 const src = fs.readFileSync(new URL('../booking-system/Code.js', import.meta.url), 'utf8');
 const ctx = vm.createContext({ console });
-vm.runInContext(src + '\n;this.__x = { cfAppendPending_, cfPayload_, makeCtx_, newRow_ };', ctx);
+vm.runInContext(src + '\n;this.__x = { cfAppendPending_, cfApplyCancels_, cfPayload_, makeCtx_, newRow_ };', ctx);
 const X = ctx.__x;
 
 const table = (rows) => ({ rows: rows.map((v, i) => ({ _row: i + 2, v, dirty: {}, isNew: false })) });
@@ -48,4 +48,23 @@ test('送る中身：空行を除き、見出しをCloudflare版の名前にす�
   assert.strictEqual(b.flag, '[変更]');
   assert.strictEqual(b.checkOut, '2026-11-07');
   assert.strictEqual(b.memo, '');
+});
+
+test('アプリのキャンセルを台帳に反映：ステータスをキャンセルにし、メモに1行足す（2回目は何もしない）', () => {
+  const res = table([
+    { '媒体': '直販', '予約番号': 'SZ-20261201-0001', 'ステータス': '確定', 'メモ': 'HP予約・事前決済 27,000円' },
+    { '媒体': '直販', '予約番号': 'SZ-20261201-0002', 'ステータス': 'キャンセル', 'メモ': '' },
+  ]);
+  const c = X.makeCtx_(res, table([]), table([]));
+  const list = [
+    { '予約番号': 'SZ-20261201-0001', 'メモ': '2026/12/01 10:00 キャンセル（7日前まで・規定0%）支払27,000円・返金27,000円' },
+    { '予約番号': 'SZ-20261201-0002', 'メモ': 'x' },
+    { '予約番号': 'SZ-NOTHERE', 'メモ': 'x' },
+  ];
+  assert.strictEqual(X.cfApplyCancels_(c, list), 1);
+  const r = res.rows[0];
+  assert.strictEqual(r.v['ステータス'], 'キャンセル');
+  assert.strictEqual(r.v['メモ'], 'HP予約・事前決済 27,000円\n2026/12/01 10:00 キャンセル（7日前まで・規定0%）支払27,000円・返金27,000円');
+  assert.strictEqual(r.dirty['ステータス'], true);
+  assert.strictEqual(X.cfApplyCancels_(c, list), 0);
 });

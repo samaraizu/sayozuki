@@ -147,3 +147,22 @@ test('inquiryToForm は問い合わせを手動入力の初期値にする', () 
   assert.equal(past.dinner, false);
   assert.equal(past.memo, 'HP問い合わせ HP-20261201-a1b2c3');
 });
+
+test('cancelPolicy は到着日までの日数で規定を当てはめる', () => {
+  const r = (inIso) => Lib.cancelPolicy(inIso, '2026-12-01');
+  assert.equal(r('2026-12-08').rate, 0);   // 7日前
+  assert.equal(r('2026-12-07').rate, 30);  // 6日前
+  assert.equal(r('2026-12-03').rate, 30);  // 2日前
+  assert.equal(r('2026-12-02').rate, 50);  // 前日
+  assert.equal(r('2026-12-01').rate, 100); // 当日
+  assert.equal(r('2026-11-30').rate, 100); // 過ぎている
+  assert.equal(r('2026-12-02').daysBefore, 1);
+});
+
+test('cancelAmounts はキャンセル料を切り捨てて返金額を出す', () => {
+  const a = Lib.cancelAmounts('13,501', 30);
+  assert.equal(a.paid, 13501);
+  assert.equal(a.fee, 4050);
+  assert.equal(a.refund, 9451);
+  assert.deepEqual(Object.assign({}, Lib.cancelAmounts('', 50)), { paid: 0, fee: 0, refund: 0 });
+});

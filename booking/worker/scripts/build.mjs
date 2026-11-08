@@ -24,6 +24,9 @@ window.google = { script: { run: (function () {
     createBooking: function (form) {
       return fetch('/api/bookings', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(form) });
     },
+    cancelBooking: function (arg) {
+      return fetch('/api/bookings/cancel', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(arg) });
+    },
     closeInquiry: function (arg) {
       return fetch('/api/inquiries/close', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(arg) });
     }

@@ -185,6 +185,34 @@ function sayozukiLib() {
 
   var PAYMENTS = { '当日Square': '現地でSquare', 'あとで決める': '未収' };
 
+  /**
+   * キャンセル規定（直販）。HPの予約ページ・確認メールと同じ（HPは lib/site.ts の cancellationPolicy と
+   * lib/i18n の book.policy）。変えるときは3か所そろえる。
+   * minDays：ご到着日の何日前以上か。上から順に当てはめる
+   */
+  var CANCEL_POLICY = [
+    { minDays: 7, rate: 0, label: '7日前まで' },
+    { minDays: 2, rate: 30, label: '6日前〜2日前' },
+    { minDays: 1, rate: 50, label: '前日' },
+    { minDays: -9999, rate: 100, label: '当日・連絡なしの不泊' }
+  ];
+
+  // 今日キャンセルしたときの規定。daysBefore はご到着日まであと何日か（当日 0、過ぎていればマイナス）
+  function cancelPolicy(checkInIso, todayIso) {
+    var days = nightsBetween(todayIso, checkInIso);
+    for (var i = 0; i < CANCEL_POLICY.length; i++) {
+      if (days >= CANCEL_POLICY[i].minDays) return { daysBefore: days, rate: CANCEL_POLICY[i].rate, label: CANCEL_POLICY[i].label };
+    }
+    return { daysBefore: days, rate: 100, label: CANCEL_POLICY[CANCEL_POLICY.length - 1].label };
+  }
+
+  // キャンセル料と返金額（円）。キャンセル料は1円未満を切り捨て（お客様に有利な側）
+  function cancelAmounts(paid, rate) {
+    var p = Math.max(0, toInt(paid));
+    var fee = Math.floor(p * rate / 100);
+    return { paid: p, fee: fee, refund: p - fee };
+  }
+
   // 手動入力の中身チェック。問題なければ ''
   function validateManual(form, rooms, todayIso) {
     var inIso = toIso(form.checkIn), outIso = toIso(form.checkOut);
@@ -249,6 +277,9 @@ function sayozukiLib() {
     CANCELLED: CANCELLED,
     SELLABLE: SELLABLE,
     PAYMENTS: PAYMENTS,
+    CANCEL_POLICY: CANCEL_POLICY,
+    cancelPolicy: cancelPolicy,
+    cancelAmounts: cancelAmounts,
     toIso: toIso,
     addDays: addDays,
     nightsBetween: nightsBetween,

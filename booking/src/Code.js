@@ -170,6 +170,11 @@ function createBooking(form) {
   });
 }
 
+// キャンセル（Square の返金と台帳の反映）は Cloudflare版だけ。GAS版から押されたとき用
+function cancelBooking() {
+  return { ok: false, message: 'キャンセルは Cloudflare版の予約管理（sayozuki-booking）から。台帳ではステータスを「キャンセル」にする' };
+}
+
 // HPからの問い合わせを予約にせず閉じる（満室・連絡がつかない・いたずら など）
 function closeInquiry(arg) {
   return api_(function (email) {
