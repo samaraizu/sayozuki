@@ -4,6 +4,7 @@
 // key = Squareに登録した日本語の商品名（src/config/i18n-menu.ts の ITEMS と同じ）。価格・在庫・Squareの写真はここに書かず、
 // /api/public/menu（客室QRなしで読める）から引く。ここに書くのは、Squareの「説明」に収まらない読み物だけ。
 //
+// price … まだ Square に無い品の初期値（スタッフ画面の下書きから Square に入れるときに使う）
 // prep: true … 仕込みが要る事前予約制の品（夕食・朝食）。注文画面では注文できず、予約のとき（Airbnbは宿がメッセージで聞いて予約管理に入れる）に申し込む
 // photos … Squareに写真が無いときに使う写真のパス。空のあいだは shots（撮る予定のカット）を写真枠に出す
 // 本文・内容・アレルゲンはモック用の仮の文章。料理長に確かめてから差し替える
@@ -59,6 +60,7 @@ export const DISHES = [
   },
   {
     slug: 'croissant',
+    price: 1000, // まだ Square に無い品をスタッフ画面から入れるときの初期値（HP の朝食と同じ1人1,000円）
     key: 'クロワッサンサンドの朝食',
     name: { ja: 'クロワッサンサンドの朝食', en: 'Croissant sandwich breakfast' },
     cat: 'breakfast',
@@ -80,6 +82,7 @@ export const DISHES = [
   },
   {
     slug: 'onigiri',
+    price: 1000, // まだ Square に無い品をスタッフ画面から入れるときの初期値（HP の朝食と同じ1人1,000円）
     key: 'おにぎりと漬物の朝食',
     name: { ja: 'おにぎりと漬物の朝食', en: 'Rice ball breakfast with pickles' },
     cat: 'breakfast',

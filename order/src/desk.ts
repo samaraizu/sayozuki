@@ -47,8 +47,8 @@ export class OrderDesk extends DurableObject<Env> {
     return new Map((r.results ?? []).map((x) => [x.id, Number(x.qty)]));
   }
 
-  /** ゲスト画面用：残り数と締め切りを反映したメニュー */
-  async guestMenu() {
+  /** ゲスト画面用：残り数と締め切りを反映したメニュー（withDrafts は /menu/<URL> の下見用） */
+  async guestMenu(withDrafts = false) {
     const menu = await this.getMenu();
     const pend = await this.pending();
     const now = jstParts().minutes;
@@ -57,7 +57,8 @@ export class OrderDesk extends DurableObject<Env> {
       open,
       lastOrder: this.env.LAST_ORDER,
       categories: menu.categories.map((c) => ({ ...c, closed: !open || (c.cutoff ? now >= hhmmToMin(c.cutoff) : false) })),
-      items: menu.items.map((i) => {
+      // 下書きはお客様の画面に出さない
+      items: menu.items.filter((i) => withDrafts || !i.draft).map((i) => {
         const left = i.tracked ? Math.max(0, (i.stock ?? 0) - (pend.get(i.id) ?? 0)) : null;
         return {
           id: i.id,
@@ -70,6 +71,7 @@ export class OrderDesk extends DurableObject<Env> {
           images: i.images,
           detail: i.detail,
           paused: i.paused,
+          draft: i.draft,
           left,
           soldOut: i.soldOut || left === 0
         };
@@ -119,7 +121,7 @@ export class OrderDesk extends DurableObject<Env> {
 
     for (const [id, qty] of merged) {
       const item = menu.items.find((i) => i.id === id);
-      if (!item) throw new HttpError(409, 'item_unavailable');
+      if (!item || item.draft) throw new HttpError(409, 'item_unavailable');
       if (CATEGORIES[item.category]?.preorder) throw new HttpError(409, 'preorder_only', item.name);
       const cutoff = CATEGORIES[item.category]?.cutoff;
       if (cutoff && now >= hhmmToMin(cutoff)) throw new HttpError(409, 'category_closed', item.name);

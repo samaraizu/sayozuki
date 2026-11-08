@@ -1,15 +1,13 @@
 import type { Env } from '../env';
 import { ITEMS } from '../config/i18n-menu';
 import { categoryList, loadMenuMeta } from './menu';
-import { loadDetails } from './detail';
+import { isDraft, loadDetails, loadDrafts } from './detail';
 import type { Menu, MenuItem } from './types';
 
 /** Square未接続でも画面と流れを確認できるモックのカタログ（価格は動作確認用のダミーで、実際の料金ではない） */
 const RAW: [string, string, string, number, number | null, boolean?][] = [
   ['山形牛すき焼き', '夕食', '2人前・〆の讃岐うどん付き', 12000, 2],
   ['お造り盛り合わせ', '夕食', '2人前', 3800, 0],
-  ['クロワッサンサンドの朝食', '朝食', '1人前・お飲み物付き', 1000, null],
-  ['おにぎりと漬物の朝食', '朝食', '1人前・お飲み物付き', 1000, null],
   ['塩むすび', '夜食', '2個・漬物つき', 600, null],
   ['玉子サンドウィッチ', '夜食', '4切れ', 900, null],
   ['カップラーメン', '夜食', 'お湯をお持ちします', 400, null, true],
@@ -65,6 +63,7 @@ export async function saveMockItems(env: Env, items: MockItem[]) {
 export async function mockMenu(env: Env): Promise<Menu> {
   const meta = await loadMenuMeta(env);
   const details = await loadDetails(env);
+  const drafts = await loadDrafts(env);
   const items: MenuItem[] = (await mockItems(env))
     .filter((x) => !x.archived)
     .map((x) => {
@@ -84,7 +83,8 @@ export async function mockMenu(env: Env): Promise<Menu> {
         paused: Boolean(m?.paused),
         images: x.images.map((i) => i.url),
         imageIds: x.images.map((i) => i.id),
-        detail: details.get(x.itemId) ?? null
+        detail: details.get(x.itemId) ?? null,
+        draft: isDraft(drafts, x.itemId, x.name)
       };
     });
   return { fetchedAt: Date.now(), items, categories: categoryList() };
