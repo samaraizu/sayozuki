@@ -141,6 +141,12 @@ export const zh: Dict = {
       "感谢您咨询小夜月。\n我们已收到您的咨询，受理编号如下。\n\n受理编号：{no}\n\n我们确认空房后，将通过电子邮件与您联系。\n请注意，此时预订尚未确定。\n如需补充或更改内容，请直接回复此邮件。\n\n如果您没有提交过此咨询，请忽略此邮件。",
   },
   book: {
+    bestRateBadge: "官网预订 房费立减{pct}%",
+    bestRateTitle: "在官网预订价格最低",
+    bestRateBody: "比其他预订网站更优惠：在本网站预订，房费立减{pct}%。",
+    listPrice: "原价 {price}",
+    discountLine: "官网优惠（房费减{pct}%）",
+    officialPrice: "官网价格",
     navLabel: "空房与预订",
     title: "空房与预订",
     heroCta: "查看空房",

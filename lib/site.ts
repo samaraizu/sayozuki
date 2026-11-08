@@ -111,7 +111,15 @@ export const bookingRules = {
   bookAheadDays: 180,
   /** 入湯税（大人1人1泊）。現地払い */
   bathTax: 300,
+  /**
+   * 公式サイト（HPの事前決済）限定の割引（%）。室料だけに掛け、食事・入湯税は対象外。
+   * 「他の予約サイトより最安値」とうたうので、OTA の料金は lib/site.ts の rooms の定価より下げないこと
+   */
+  directDiscount: 10,
 };
+
+/** 公式サイト価格（室料の定価から directDiscount を引いた額） */
+export const directPrice = (list: number) => list - Math.round((list * bookingRules.directDiscount) / 100);
 
 /**
  * キャンセル料（事前決済の予約）。日数はご到着日の何日前か。上から順に当てはめる。
