@@ -17,4 +17,7 @@ export declare const Lib: {
   roomAvailability(rooms: Room[], bookings: BookingLike[], inIso: string, outIso: string, people: number): Availability[];
   makeBookingNo(todayIso: string, existing: Record<string, boolean>, random?: () => number): string;
   validateManual(form: Record<string, unknown>, rooms: Room[], todayIso: string): string;
+  CANCEL_POLICY: { minDays: number; rate: number; label: string }[];
+  cancelPolicy(checkInIso: string, todayIso: string): { daysBefore: number; rate: number; label: string };
+  cancelAmounts(paid: unknown, rate: number): { paid: number; fee: number; refund: number };
 };

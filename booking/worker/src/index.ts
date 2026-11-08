@@ -24,6 +24,7 @@ import { createBooking, getBoard, pendingForSheet, syncFromSheet, type ManualFor
 import { UserError, json, type Env } from './env';
 import { calendar, checkoutStatus, startCheckout, sweep, type CheckoutInput } from './hp';
 import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
+import { cancelBooking, type CancelForm } from './cancel';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -93,6 +94,11 @@ async function handle(req: Request, env: Env): Promise<Response> {
       const origin = req.headers.get('origin');
       if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
       return json(await createBooking(env, email, (await req.json()) as ManualForm));
+    }
+    if (path === '/api/bookings/cancel' && req.method === 'POST') {
+      const origin = req.headers.get('origin');
+      if (origin && origin !== url.origin) return json({ ok: false, message: 'bad origin' }, 403);
+      return json(await cancelBooking(env, email, (await req.json()) as CancelForm));
     }
     if (path === '/api/inquiries/close' && req.method === 'POST') {
       const origin = req.headers.get('origin');

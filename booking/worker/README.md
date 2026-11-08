@@ -171,6 +171,23 @@ npx wrangler dev -c wrangler.jsonc -c booking/worker/wrangler.jsonc --local
 
 `booking/worker/.dev.vars` に `SQUARE_MOCK=1` を入れておくと、Square を呼ばずに完了画面まで通る。部屋は `wrangler d1 execute` で入れる。
 
+## キャンセル
+
+予約管理アプリで予約を開くと、下に「キャンセル」とキャンセル規定のメモが出る（直販の予約だけ。Airbnb・楽天はそのサイトでキャンセルする）。
+
+| ご到着日まで | キャンセル料 |
+| --- | --- |
+| 7日前まで | 無料 |
+| 6日前〜2日前 | 支払額の30% |
+| 前日 | 支払額の50% |
+| 当日・連絡なしの不泊 | 支払額の100% |
+
+- HPで前払いの予約（支払い状況「HPで決済済」）は、規定どおりの返金額が入った状態で出る。額は直せる（規定より多く返すときなど）。押すと Square で返金し、予約を「キャンセル」にする
+- 現地払い・未収の予約は返金しない。規定のキャンセル料の額だけ出す（請求するかは宿の判断）
+- 台帳（スプシ）は取り込みGASが次の同期（5分以内）で「キャンセル」にし、メモに1行足す（`src/cancel.ts`、`cancellations` 表、`/api/sync/pending` の `cancels`）。台帳がキャンセルになるまでは、台帳の値で D1 のステータスを戻さない
+- 規定は `../src/lib.js` の `CANCEL_POLICY`。HPの `lib/site.ts` の `cancellationPolicy` と `lib/i18n` の `book.policy` もそろえる
+- 返金の idempotency key は予約番号から作るので、押し直しても二重に返金しない。Square で返金できなかったときはキャンセルもしない
+
 ## この先（第2段・第3段）
 
 - 取り込みGASの Gmail 読み取り・iCal 照合・入湯税・要確認の計算を Worker に移し、台帳スプシを使わなくする

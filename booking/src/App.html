@@ -428,9 +428,83 @@
       h('dl', null,
         rows.map(function (r) { return h('div', null, h('dt', null, r[0]), h('dd', null, r[1])); }),
         b.url ? h('div', null, h('dt', null, '媒体の画面'), h('dd', null, h('a', { href: b.url, target: '_blank', rel: 'noopener' }, '開く'))) : null
-      )
+      ),
+      cancelBox(b)
     );
     if ($detail.showModal) $detail.showModal(); else $detail.setAttribute('open', '');
+  }
+
+  // ---------- キャンセル（直販だけ） ----------
+
+  function yenText(n) { return Lib.toInt(n).toLocaleString('ja-JP') + '円'; }
+
+  // キャンセル規定のメモ。今日キャンセルしたときに当たる行を強調する
+  function policyMemo(current) {
+    return h('div', { class: 'policy' },
+      h('p', { class: 'ph' }, 'キャンセル規定（直販・HP予約）'),
+      h('ul', null, Lib.CANCEL_POLICY.map(function (p) {
+        return h('li', { class: current && current.label === p.label ? 'on' : '' },
+          h('span', null, p.label), h('span', null, p.rate === 0 ? '無料' : '支払額の' + p.rate + '%'));
+      })),
+      h('p', { class: 'pn' }, '日数はご到着日の何日前か。HPで前払いの予約は、返金額を Square から自動で返す。現地払い・未収の予約は返金なし（キャンセル料を請求するかは宿の判断）')
+    );
+  }
+
+  function cancelBox(b) {
+    var today = state.board.today;
+    if (b.channel !== '直販') {
+      return h('div', { class: 'cancelbox' }, h('p', { class: 'pn' }, (b.channel || '媒体') + 'の予約は、そのサイトでキャンセルする（メールの取り込みで台帳もキャンセルになる）'));
+    }
+    if (b.status === 'キャンセル') return h('div', { class: 'cancelbox' }, policyMemo(null), h('p', { class: 'pn' }, 'キャンセル済み'));
+    if (b.status === '仮') return h('div', { class: 'cancelbox' }, policyMemo(null), h('p', { class: 'pn' }, 'HPの決済待ち。30分払われなければ自動で取り消される'));
+    if (b.checkOut && b.checkOut < today) return h('div', { class: 'cancelbox' }, policyMemo(null));
+
+    var policy = Lib.cancelPolicy(b.checkIn, today);
+    var prepaid = b.payment === 'HPで決済済';
+    var amt = Lib.cancelAmounts(b.guestPaid, policy.rate);
+    var refundInput = null, reasonInput = null, actions = null, confirming = false;
+
+    function render() {
+      actions.textContent = '';
+      var refund = prepaid ? Lib.toInt(refundInput.value) : 0;
+      if (!confirming) {
+        append(actions, h('button', { type: 'button', class: 'ghost danger', onclick: function () { confirming = true; render(); } }, 'キャンセルする'));
+      } else {
+        append(actions,
+          h('button', { type: 'button', class: 'ghost', onclick: function () { confirming = false; render(); } }, 'やめる'),
+          h('button', { type: 'button', class: 'save danger-fill', onclick: function (e) { doCancel(e.currentTarget, refund); } },
+            prepaid ? '本当にキャンセルして ' + yenText(refund) + ' 返金' : '本当にキャンセルする'));
+      }
+    }
+
+    function doCancel(btn, refund) {
+      btn.disabled = true;
+      call('cancelBooking', { no: b.no, refund: prepaid ? refund : undefined, reason: reasonInput.value }).then(function (res) {
+        if (!res.ok) { btn.disabled = false; toast(res.message, true); return; }
+        $detail.close();
+        toast(displayName(b) + ' をキャンセルにした' + (res.refund ? '（' + yenText(res.refund) + ' 返金）' : '') + '。台帳には5分以内に反映');
+        load();
+      });
+    }
+
+    var box = h('div', { class: 'cancelbox' },
+      h('h3', null, 'キャンセル'),
+      policyMemo(policy),
+      h('dl', { class: 'calc' },
+        h('div', null, h('dt', null, 'ご到着まで'), h('dd', null, policy.daysBefore > 0 ? 'あと' + policy.daysBefore + '日' : policy.daysBefore === 0 ? '今日' : '過ぎている')),
+        h('div', null, h('dt', null, 'キャンセル料'), h('dd', null, policy.rate + '%（' + yenText(amt.fee) + '）')),
+        h('div', null, h('dt', null, '支払額'), h('dd', null, amt.paid ? yenText(amt.paid) + (prepaid ? '（HPで前払い）' : '（' + (b.payment || '未収') + '）') : '—'))
+      ),
+      prepaid ? h('label', { class: 'field' }, '返金する額（規定どおりなら ' + yenText(amt.refund) + '）',
+        refundInput = h('input', { class: 'input', type: 'number', inputmode: 'numeric', min: '0', max: String(amt.paid), value: String(amt.refund),
+          oninput: function () { confirming = false; render(); } })) : null,
+      h('label', { class: 'field' }, '理由（任意。台帳のメモに残る）',
+        reasonInput = h('input', { class: 'input', type: 'text', maxlength: '200', placeholder: 'お客様からの電話 など' })),
+      h('p', { class: 'pn' }, prepaid ? '返金は Square から。台帳のステータスは5分以内に「キャンセル」になる' : '返金はない。台帳のステータスは5分以内に「キャンセル」になる'),
+      actions = h('div', { class: 'qactions' })
+    );
+    render();
+    return box;
   }
   $detail.addEventListener('click', function (e) { if (e.target === $detail) $detail.close(); });
 

@@ -158,6 +158,11 @@ export async function pendingForSheet(env: Env) {
        AND NOT EXISTS (SELECT 1 FROM hp_checkouts h WHERE h.no = bookings.no AND h.status <> 'paid')
      ORDER BY id`,
   ).all<Row>();
+  // アプリでキャンセルにした、台帳に載っている予約。GASが台帳のステータスを「キャンセル」にし、メモに1行足す
+  const cancels = await env.DB.prepare(
+    `SELECT c.no AS no, c.note AS note FROM cancellations c JOIN bookings b ON b.no = c.no
+     WHERE c.applied = 0 AND b.in_sheet = 1 ORDER BY c.at`,
+  ).all<{ no: string; note: string }>();
   return {
     ok: true,
     bookings: results.map((r) => {
@@ -166,6 +171,7 @@ export async function pendingForSheet(env: Env) {
       for (const [k, , sheet] of FIELDS) if (b[k] !== '') out[sheet] = b[k];
       return out;
     }),
+    cancels: cancels.results.map((c) => ({ '予約番号': c.no, 'メモ': c.note })),
   };
 }
 
@@ -218,6 +224,12 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
   const stmts: D1PreparedStatement[] = [
     env.DB.prepare(upsert).bind(JSON.stringify(rows), gen),
     env.DB.prepare("DELETE FROM bookings WHERE (source = 'sheet' OR in_sheet = 1) AND seen <> ?").bind(gen),
+    // アプリでのキャンセル：台帳もキャンセルになっていれば反映済み。まだなら台帳の値で戻さない
+    env.DB.prepare(
+      `UPDATE cancellations SET applied = 1
+       WHERE applied = 0 AND no IN (SELECT no FROM bookings WHERE status = 'キャンセル' AND in_sheet = 1)`,
+    ),
+    env.DB.prepare("UPDATE bookings SET status = 'キャンセル' WHERE no IN (SELECT no FROM cancellations WHERE applied = 0)"),
     env.DB.prepare('DELETE FROM rooms'),
     env.DB.prepare(
       `INSERT INTO rooms (name, capacity, state, sort)

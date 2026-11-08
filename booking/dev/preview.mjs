@@ -28,7 +28,7 @@ const b = (channel, room, i, o, name, adults, extra = {}) => ({
 });
 const bookings = [
   b('Airbnb', '301', -1, 2, 'Test Guest A', 2),
-  b('直販', '301', 3, 5, 'テスト 一郎', 2, { contact: '090-0000-0000', arrival: '16:00' }),
+  b('直販', '301', 3, 5, 'テスト 一郎', 2, { contact: '090-0000-0000', arrival: '16:00', payment: 'HPで決済済', guestPaid: '27000' }),
   b('Airbnb', '302', 1, 4, 'Test Guest B', 1),
   b('楽天', '月山', 2, 3, 'テスト 花子', 2),
   b('Airbnb', '月山', 4, 9, 'Reserved', 0),
@@ -60,6 +60,12 @@ window.google = { script: { run: (function () {
         adults: String(f.people), name: f.name, contact: f.contact, arrival: f.arrival, payment: Lib.PAYMENTS[f.payment], memo: f.memo });
       if (f.inquiryId) data.inquiries = data.inquiries.filter(function (q) { return q.id !== f.inquiryId; });
       return { ok: true, no: no };
+    },
+    cancelBooking: function (a) {
+      var bk = data.bookings.filter(function (x) { return x.no === a.no; })[0];
+      if (!bk) return { ok: false, message: '見つからない' };
+      bk.status = 'キャンセル';
+      return { ok: true, no: a.no, refund: Number(a.refund || 0) };
     },
     closeInquiry: function (a) {
       data.inquiries = data.inquiries.filter(function (q) { return q.id !== a.id; });

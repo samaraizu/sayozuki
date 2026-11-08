@@ -619,6 +619,7 @@ function pullFromCloudflare_(cf, ctx, todayIso, notes) {
   try {
     const got = cfFetch_(cf, '/api/sync/pending');
     cfAppendPending_(ctx, got.bookings || []);
+    cfApplyCancels_(ctx, got.cancels || []);
   } catch (e) {
     alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
   }
@@ -638,6 +639,20 @@ function cfAppendPending_(ctx, list) {
     added++;
   });
   return added;
+}
+
+// アプリの「キャンセル」を台帳に反映する（ステータスをキャンセルにし、メモに1行足す。行は消さない）
+function cfApplyCancels_(ctx, list) {
+  let done = 0;
+  list.forEach(function (c) {
+    const r = ctx.byCode[str_(c['予約番号'])];
+    if (!r || isCancelled_(r)) return;
+    set_(r, 'ステータス', 'キャンセル');
+    const note = str_(c['メモ']);
+    if (note && str_(r.v['メモ']).indexOf(note) < 0) set_(r, 'メモ', str_(r.v['メモ']) ? str_(r.v['メモ']) + '\n' + note : note);
+    done++;
+  });
+  return done;
 }
 
 // 台帳の予約・部屋をまるごと送る（D1側は1回のトランザクションで置き換える）

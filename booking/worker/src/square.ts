@@ -88,3 +88,24 @@ export async function deletePaymentLink(env: Env, id: string) {
     console.error('支払いリンクを消せなかった', e);
   }
 }
+
+/**
+ * 返金（予約管理アプリの「キャンセル」）。支払いリンクの注文から支払いIDを引いて、その支払いから返金する。
+ * idempotency key は予約番号で決めるので、押し直しても二重に返金しない
+ */
+export async function refundOrder(env: Env, p: { no: string; orderId: string; amount: number; reason: string }) {
+  if (squareMock(env)) return { id: `mock-refund-${p.no}` };
+  const o = await sq<{ order: { tenders?: { id?: string; payment_id?: string }[] } }>(env, `/v2/orders/${encodeURIComponent(p.orderId)}`);
+  const tender = o.order.tenders?.[0];
+  const paymentId = tender?.payment_id || tender?.id;
+  if (!paymentId) throw new Error('square_payment_not_found');
+  const r = await sq<{ refund: { id: string; status: string } }>(env, '/v2/refunds', {
+    body: {
+      idempotency_key: `cancel-${p.no}`,
+      payment_id: paymentId,
+      amount_money: { amount: p.amount, currency: 'JPY' },
+      reason: p.reason.slice(0, 192),
+    },
+  });
+  return { id: r.refund.id };
+}
