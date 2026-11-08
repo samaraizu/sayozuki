@@ -18,18 +18,20 @@ npm run deploy       # ビルドして本番へ
 ```
 
 - 秘密の値（`RESEND_API_KEY` など、`.env.local.example` の項目）はリポジトリに置かず `npx wrangler secret put RESEND_API_KEY` で入れる。
-- ドメイン接続までの仮のURLは https://sayozuki.toneclown17.workers.dev 。
+- 本番は https://sayozuki.com（2026-11-08 に接続。Worker「sayozuki」のカスタムドメインに sayozuki.com・www.sayozuki.com・shop.sayozuki.com）。https://sayozuki.toneclown17.workers.dev は sayozuki.com へ転送される。
 - 客室オーダー（`order/`）は別の Worker「sayozuki-order」。`order/` の中でデプロイする。
+- **本番ビルドは Webpack**（`npm run build` = `next build --webpack`）。Turbopack だと Workers Builds の環境で `next/font/google` の Noto Sans JP が「Can't resolve '@vercel/turbopack-next/internal/font/google/font'」「next/font/google queries have exactly one entry」で落ちる（手元では通る）。`next dev` は Turbopack のまま。
 
 ### 自動デプロイ（Workers Builds）
 
-GitHub の `main` に入ると、Cloudflare の Workers Builds が2つの Worker をそれぞれビルドして本番に出す。
+GitHub の `main` に入ると、Cloudflare の Workers Builds が3つの Worker をそれぞれビルドして本番に出す。
 設定はダッシュボードの各 Worker → Settings → Builds にある（リポジトリには入っていない）。
 
-| Worker | ルート | ビルドコマンド | デプロイコマンド |
-| --- | --- | --- | --- |
-| sayozuki | `/` | `npx opennextjs-cloudflare build` | `npx opennextjs-cloudflare deploy` |
-| sayozuki-order | `order` | なし | `npx wrangler deploy` |
+| Worker | ルート | ビルドコマンド | デプロイコマンド | ビルド変数 |
+| --- | --- | --- | --- | --- |
+| sayozuki | `/` | `npx opennextjs-cloudflare build` | `npx opennextjs-cloudflare deploy` | `NEXT_PUBLIC_SPLIT_DOMAINS=true` |
+| sayozuki-order | `order` | なし | `npx wrangler deploy` | なし |
+| sayozuki-booking | `/booking/worker` | `npm ci` | `npm run deploy` | なし |
 
 - **`main` 以外のブランチのビルド（Previews）は2つとも止めている。** `npx wrangler preview` は Wrangler の設定に `previews` ブロックがないと失敗し、客室オーダーで使うには本番と別の D1 と Square のサンドボックスを用意する必要があるため。PR でビルドを確かめたくなったら、それを用意してから Settings → Builds → Previews Base でオンにする。
 - sayozuki のビルドコマンドを `npx wrangler deploy` にしないこと。OpenNext のプロジェクトだと Wrangler がビルドせずにデプロイしようとして失敗する。
@@ -102,7 +104,7 @@ HPの「201号室」は台帳の「201」に読み替え、台帳にない客室
 
 `NEXT_PUBLIC_SPLIT_DOMAINS=true` を入れてビルド・デプロイすると、宿とお取り寄せのリンクがそれぞれのドメインを向き、sayozuki.com/shop は shop.sayozuki.com へ、workers.dev などほかのホストは sayozuki.com へ転送される。
 ビルド時に埋め込まれる値なので、ビルドする環境（ローカルなら `.env.production`）に入れる。Cloudflare の Worker の変数に入れても効かない。
-**DNS がつながってから入れること**（先に入れると本番のアクセスが仮ページへ飛ぶ）。未設定のあいだ・ローカルでは今までどおり `/shop` で動く。
+本番は Worker「sayozuki」→ Settings → Builds →「Variables and secrets」に入れてある（2026-11-08）。未設定のあいだ・ローカルでは今までどおり `/shop` で動く。
 
 ## 多言語
 
