@@ -116,7 +116,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "食事は付いていますか？", a: `素泊まりが基本です。朝食（お一人様 ${bf}）・夕食（お一人様 ${dn}）は、ご予約時に追加いただけます。` },
                   { q: "夜食や飲み物は頼めますか？", a: `客室のQRコードから、${o.open}〜${o.lastOrder}（ラストオーダー）までご注文いただけます。夕食・朝食は仕込みが要るため、ご予約のときにお申し込みいただく事前予約制です（当日のご注文は承れません）。お部屋の扉の前にお届けします。` },
-                  { q: "お湯やお茶はもらえますか？", a: "日本茶セット（お湯と茶葉）を無料でお持ちします。客室のQRコードの「リクエスト」からどうぞ。" },
+                  { q: "お茶は頼めますか？", a: "日本茶は、客室のQRコードの「メニュー」からご注文いただけます。" },
                 ],
               },
             ],
@@ -181,7 +181,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
           {
             heading: "無料でお持ちするもの",
             blocks: [
-              { type: "list", items: ["日本茶セット（お湯と茶葉）", "湯たんぽ", "氷セット（アイスペールとトング）", "追加のタオル（バスタオル2枚）", "充電器の貸出（USB-C／Lightning）"] },
+              { type: "list", items: ["湯たんぽ", "氷セット（アイスペールとトング）", "追加のタオル（バスタオル2枚）", "充電器の貸出（USB-C／Lightning）"] },
               { type: "text", text: "客室のQRコードの「リクエスト」からお申し付けください。お部屋の前にお置きします。" },
             ],
           },
@@ -303,7 +303,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "Are meals included?", a: `Stays are room-only by default. Breakfast (${bf} per person) and dinner (${dn} per person) can be added when you book.` },
                   { q: "Can I order snacks or drinks?", a: `Yes — scan the QR code in your room to order from ${o.open} until ${o.lastOrder} (last order). Dinner and breakfast must be booked with your stay — we cannot prepare them on the day. We leave orders outside your door.` },
-                  { q: "Can I get hot water or tea?", a: "We bring a Japanese tea set (hot water and tea leaves) free of charge. Use “Requests” on the in-room QR code." },
+                  { q: "Can I order tea?", a: "Japanese green tea can be ordered from the “Menu” on the in-room QR code." },
                 ],
               },
             ],
@@ -355,7 +355,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
           {
             heading: "Free on request",
             blocks: [
-              { type: "list", items: ["Japanese tea set (hot water and tea leaves)", "Hot water bottle (yutanpo)", "Ice set (ice bucket and tongs)", "Extra towels (2 bath towels)", "Phone charger (USB-C / Lightning)"] },
+              { type: "list", items: ["Hot water bottle (yutanpo)", "Ice set (ice bucket and tongs)", "Extra towels (2 bath towels)", "Phone charger (USB-C / Lightning)"] },
               { type: "text", text: "Use “Requests” on the in-room QR code. We leave them outside your door." },
             ],
           },
@@ -472,7 +472,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "是否含餐？", a: `基本为不含餐住宿。早餐（每位 ${bf}）、晚餐（每位 ${dn}）可在预订时加购。` },
                   { q: "可以点夜宵或饮品吗？", a: `可以。扫描客房内的二维码，${o.open}〜${o.lastOrder}（最后点单）均可点单。晚餐与早餐需在订房时一并预订，恕不接受当天点餐。我们会放在房门前。` },
-                  { q: "可以要热水或茶吗？", a: "我们免费送上日本茶套装（热水和茶叶）。请通过客房二维码的“需求”提出。" },
+                  { q: "可以点茶吗？", a: "日本茶可通过客房二维码的“菜单”点单。" },
                 ],
               },
             ],
@@ -516,7 +516,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
           {
             heading: "免费提供",
             blocks: [
-              { type: "list", items: ["日本茶套装（热水和茶叶）", "热水袋", "冰块套装（冰桶和夹子）", "加送毛巾（浴巾2条）", "充电器出借（USB-C／Lightning）"] },
+              { type: "list", items: ["热水袋", "冰块套装（冰桶和夹子）", "加送毛巾（浴巾2条）", "充电器出借（USB-C／Lightning）"] },
               { type: "text", text: "请通过客房二维码的“需求”提出，我们会放在房门前。" },
             ],
           },
@@ -614,7 +614,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
                 items: [
                   { q: "식사가 포함되어 있나요?", a: `기본은 숙박만 하는 요금입니다. 조식(1인 ${bf})・석식(1인 ${dn})은 예약 시 추가하실 수 있습니다.` },
                   { q: "야식이나 음료를 주문할 수 있나요?", a: `객실의 QR 코드로 ${o.open}〜${o.lastOrder}(라스트 오더)까지 주문하실 수 있습니다. 저녁·아침 식사는 사전 예약제로 숙박 예약 시 신청해 주세요(당일 주문 불가). 객실 문 앞에 놓아 드립니다.` },
-                  { q: "뜨거운 물이나 차를 받을 수 있나요?", a: "일본차 세트(뜨거운 물과 찻잎)를 무료로 가져다 드립니다. 객실 QR 코드의 '요청'에서 신청해 주세요." },
+                  { q: "차를 주문할 수 있나요?", a: "일본차는 객실 QR 코드의 '메뉴'에서 주문하실 수 있습니다." },
                 ],
               },
             ],
@@ -658,7 +658,7 @@ export function guideDoc(l: GuideLocale, slug: GuideSlug): GuideDoc {
           {
             heading: "무료로 가져다 드리는 것",
             blocks: [
-              { type: "list", items: ["일본차 세트(뜨거운 물과 찻잎)", "탕파(유탄포)", "얼음 세트(아이스 버킷과 집게)", "추가 수건(목욕 수건 2장)", "충전기 대여(USB-C／Lightning)"] },
+              { type: "list", items: ["탕파(유탄포)", "얼음 세트(아이스 버킷과 집게)", "추가 수건(목욕 수건 2장)", "충전기 대여(USB-C／Lightning)"] },
               { type: "text", text: "객실 QR 코드의 '요청'에서 신청해 주세요. 객실 문 앞에 놓아 드립니다." },
             ],
           },

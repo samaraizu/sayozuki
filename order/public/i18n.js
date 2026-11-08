@@ -18,7 +18,6 @@ export const ABOUT = [
 ];
 
 export const REQUESTS = [
-  { kind: 'greentea', name: { ja: '日本茶セット', en: 'Japanese tea set', zht: '日本茶組', zhs: '日本茶组', ko: '일본차 세트' }, sub: { ja: 'お湯と茶葉をお持ちします', en: 'Hot water and tea leaves', zht: '提供熱水與茶葉', zhs: '提供热水与茶叶', ko: '뜨거운 물과 찻잎을 가져다 드립니다' } },
   { kind: 'yutanpo', name: { ja: '湯たんぽ', en: 'Hot-water bottle', zht: '熱水袋', zhs: '热水袋', ko: '보온 물주머니' }, sub: { ja: '冷える夜に', en: 'For chilly nights', zht: '寒夜保暖', zhs: '寒夜保暖', ko: '추운 밤에' } },
   { kind: 'ice', name: { ja: '氷セット', en: 'Ice set', zht: '冰塊組', zhs: '冰块组', ko: '얼음 세트' }, sub: { ja: 'アイスペールとトング', en: 'Ice bucket and tongs', zht: '冰桶與冰夾', zhs: '冰桶与冰夹', ko: '얼음통과 집게' } },
   { kind: 'towel', name: { ja: '追加のタオル', en: 'Extra towels', zht: '加送毛巾', zhs: '加送毛巾', ko: '추가 수건' }, sub: { ja: 'バスタオル2枚', en: '2 bath towels', zht: '浴巾2條', zhs: '浴巾2条', ko: '목욕 수건 2장' } },
