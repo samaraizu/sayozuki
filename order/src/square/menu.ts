@@ -111,5 +111,5 @@ const availableAt = (o: any, loc: string) => {
 
 export const categoryList = () =>
   Object.entries(CATEGORIES)
-    .map(([name, c]) => ({ name, names: c.names, order: c.order, cutoff: c.cutoff }))
+    .map(([name, c]) => ({ name, names: c.names, order: c.order, cutoff: c.cutoff, preorder: Boolean(c.preorder) }))
     .sort((a, b) => a.order - b.order);

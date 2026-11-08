@@ -621,6 +621,7 @@ function pullFromCloudflare_(cf, ctx, todayIso, notes) {
     const got = cfFetch_(cf, '/api/sync/pending');
     cfAppendPending_(ctx, got.bookings || [], notes);
     cfApplyCancels_(ctx, got.cancels || [], notes);
+    cfApplyMeals_(ctx, got.meals || [], notes);
   } catch (e) {
     alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
   }
@@ -659,6 +660,20 @@ function cfApplyCancels_(ctx, list, notes) {
     if (note && str_(r.v['メモ']).indexOf(note) < 0) set_(r, 'メモ', str_(r.v['メモ']) ? str_(r.v['メモ']) + '\n' + note : note);
     done++;
     if (notes) notes.push('キャンセル（アプリ）：' + rowLabel_(r) + (note ? '\n  ' + note : ''));
+  });
+  return done;
+}
+
+// アプリで入れた食事（Airbnbはメッセージで聞いた答え）を台帳の「食事」列に書く
+function cfApplyMeals_(ctx, list, notes) {
+  let done = 0;
+  list.forEach(function (m) {
+    const r = ctx.byCode[str_(m['予約番号'])];
+    const meals = str_(m['食事']);
+    if (!r || !meals || isCancelled_(r) || str_(r.v['食事']) === meals) return;
+    set_(r, '食事', meals);
+    done++;
+    if (notes) notes.push('食事（アプリ）：' + rowLabel_(r) + '\n  ' + meals);
   });
   return done;
 }

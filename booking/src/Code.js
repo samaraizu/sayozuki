@@ -175,6 +175,11 @@ function cancelBooking() {
   return { ok: false, message: 'キャンセルは Cloudflare版の予約管理（sayozuki-booking）から。台帳ではステータスを「キャンセル」にする' };
 }
 
+// 食事のあとからの入力は Cloudflare版だけ。GAS版から押されたとき用
+function setMeals() {
+  return { ok: false, message: '食事の入力は Cloudflare版の予約管理（sayozuki-booking）から。台帳では「食事」列を直す' };
+}
+
 // HPからの問い合わせを予約にせず閉じる（満室・連絡がつかない・いたずら など）
 function closeInquiry(arg) {
   return api_(function (email) {

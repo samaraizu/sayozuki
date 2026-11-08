@@ -161,7 +161,8 @@ const itemDesc = (i) => pick(i.descs, S.lang, i.desc);
 const catName = (c) => pick(c.names, S.lang, c.name);
 const byId = (id) => S.menu && S.menu.items.find((i) => i.id === id);
 const catOf = (i) => S.menu && S.menu.categories.find((c) => c.name === i.category);
-const orderable = (i) => S.menu && S.menu.open && !i.soldOut && !(catOf(i) || {}).closed;
+// 夕食・朝食（preorder）は仕込みが要るので、注文画面では紹介だけ出して注文は受けない
+const orderable = (i) => S.menu && S.menu.open && !i.soldOut && !(catOf(i) || {}).closed && !(catOf(i) || {}).preorder;
 const maxQty = (i) => (i.left == null ? 20 : i.left);
 const cartCount = () => Object.values(S.cart).reduce((a, b) => a + b, 0);
 const cartTotal = () => Object.entries(S.cart).reduce((a, [id, q]) => a + (byId(id)?.price || 0) * q, 0);
@@ -451,7 +452,8 @@ function itemCard(i) {
     ? `<img src="${esc(i.images[0])}" alt="" loading="lazy" decoding="async">${i.images.length > 1 ? `<span class="count">${I.stack}${i.images.length}</span>` : ''}`
     : `<span style="color:var(--dim)">${I.photo()}</span>`;
   let action;
-  if (i.soldOut) action = `<span class="tag-sold">${esc(t('soldOut'))}</span>`;
+  if (cat.preorder) action = `<span class="tag-sold">${esc(t('preorder'))}</span>`;
+  else if (i.soldOut) action = `<span class="tag-sold">${esc(t('soldOut'))}</span>`;
   else if (cat.closed || !S.menu.open) action = `<span class="tag-sold">${esc(t('closedCat'))}</span>`;
   else if (!q) action = `<button class="add" data-act="inc" data-id="${esc(i.id)}" aria-label="${esc(t('add', { n: name }))}">${I.plus()}</button>`;
   else
@@ -477,7 +479,7 @@ function viewMenu() {
     .map((c) => {
       const items = S.menu.items.filter((i) => i.category === c.name);
       if (!items.length) return '';
-      const title = S.cat === 'all' ? `<h3 class="cat-title">${esc(catName(c))}${c.cutoff && !c.closed ? `<small>〜${esc(c.cutoff)}</small>` : ''}</h3>` : '';
+      const title = S.cat === 'all' ? `<h3 class="cat-title">${esc(catName(c))}${c.preorder ? `<small>${esc(t('preorderSub'))}</small>` : c.cutoff && !c.closed ? `<small>〜${esc(c.cutoff)}</small>` : ''}</h3>` : '';
       return title + items.map(itemCard).join('');
     })
     .join('');
@@ -653,7 +655,8 @@ function viewerHtml() {
   const idx = Math.min(S.viewer.idx, slides.length - 1);
   const q = S.cart[i.id] || 0;
   let bar;
-  if (i.soldOut) bar = `<span class="vsold">${esc(t('soldOut'))}</span>`;
+  if ((catOf(i) || {}).preorder) bar = `<span class="vsold">${esc(t('preorderNote'))}</span>`;
+  else if (i.soldOut) bar = `<span class="vsold">${esc(t('soldOut'))}</span>`;
   else if (!orderable(i)) bar = `<span class="vsold">${esc(t('closedCat'))}</span>`;
   else if (!q) bar = `<button class="btn-primary" data-act="inc" data-id="${esc(i.id)}">${esc(t('addToOrder', { p: yen(i.price) }))}</button>`;
   else
@@ -702,7 +705,7 @@ function openFromHash() {
 }
 
 // ---------- 操作 ----------
-const ERR = { sold_out: 'errSoldOut', category_closed: 'errCatClosed', ordering_closed: 'orderingClosed' };
+const ERR = { sold_out: 'errSoldOut', category_closed: 'errCatClosed', ordering_closed: 'orderingClosed', preorder_only: 'errPreorder' };
 
 async function placeOrder() {
   if (S.sending) return;
@@ -719,7 +722,7 @@ async function placeOrder() {
   } catch (e) {
     const key = ERR[e.code];
     toast(key ? t(key, { n: e.detail || '' }) : t('errNetwork'));
-    if (e.code === 'sold_out' || e.code === 'category_closed') await refreshMenu();
+    if (e.code === 'sold_out' || e.code === 'category_closed' || e.code === 'preorder_only') await refreshMenu();
   } finally {
     S.sending = false;
     render();

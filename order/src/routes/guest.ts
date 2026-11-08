@@ -107,7 +107,7 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
     });
   }
 
-  // 商品の紹介ページ（/menu/<slug>）と事前申込（/meals）用。客室QRなしで読めるので、名前・価格・写真・売り切れだけ渡す（在庫数は出さない）
+  // 商品の紹介ページ（/menu・/menu/<slug>）用。客室QRなしで読めるので、名前・価格・写真・売り切れだけ渡す（在庫数は出さない）
   if (path === '/api/public/menu' && method === 'GET') {
     const m = await desk(env).guestMenu();
     const items = m.items.map((i) => ({ name: i.name, names: i.names, desc: i.desc, descs: i.descs, price: i.price, category: i.category, images: i.images, soldOut: i.soldOut }));

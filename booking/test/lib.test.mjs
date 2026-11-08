@@ -166,3 +166,24 @@ test('cancelAmounts はキャンセル料を切り捨てて返金額を出す', 
   assert.equal(a.refund, 9451);
   assert.deepEqual(Object.assign({}, Lib.cancelAmounts('', 50)), { paid: 0, fee: 0, refund: 0 });
 });
+
+test('食事：毎泊同じならまとめ、泊で違えば日付ごと。全部0は「なし（確認済み）」', () => {
+  const p = (...xs) => xs.map(([dinner, breakfast]) => ({ dinner, breakfast }));
+  assert.equal(Lib.mealText('2026-12-05', p([2, 2])), '夕食2名・朝食2名');
+  assert.equal(Lib.mealText('2026-12-05', p([0, 2], [0, 2]), '朝8:00'), '毎泊 朝食2名（朝8:00）');
+  assert.equal(Lib.mealText('2026-12-05', p([2, 0], [0, 2])), '夕食 12/5×2／朝食 12/7×2');
+  assert.equal(Lib.mealText('2026-12-05', p([0, 0], [0, 0])), 'なし（確認済み）');
+});
+
+test('食事：入力を泊数にそろえ、0〜20名に収める', () => {
+  assert.deepEqual(JSON.parse(JSON.stringify(Lib.cleanMealPlan([{ dinner: '3', breakfast: -1 }, { dinner: 99 }], 3))),
+    [{ dinner: 3, breakfast: 0 }, { dinner: 20, breakfast: 0 }, { dinner: 0, breakfast: 0 }]);
+});
+
+test('食事の初期値：台帳の文字から毎泊の人数分にする', () => {
+  const j = (x) => JSON.parse(JSON.stringify(x));
+  assert.deepEqual(j(Lib.mealPlanFrom('朝食・夕食', 2, 3)), [{ dinner: 3, breakfast: 3 }, { dinner: 3, breakfast: 3 }]);
+  assert.deepEqual(j(Lib.mealPlanFrom('朝食', 1, 2)), [{ dinner: 0, breakfast: 2 }]);
+  assert.deepEqual(j(Lib.mealPlanFrom('なし（確認済み）', 1, 2)), [{ dinner: 0, breakfast: 0 }]);
+  assert.deepEqual(j(Lib.mealPlanFrom('', 1, 2)), [{ dinner: 0, breakfast: 0 }]);
+});

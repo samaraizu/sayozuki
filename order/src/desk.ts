@@ -118,6 +118,7 @@ export class OrderDesk extends DurableObject<Env> {
     for (const [id, qty] of merged) {
       const item = menu.items.find((i) => i.id === id);
       if (!item) throw new HttpError(409, 'item_unavailable');
+      if (CATEGORIES[item.category]?.preorder) throw new HttpError(409, 'preorder_only', item.name);
       const cutoff = CATEGORIES[item.category]?.cutoff;
       if (cutoff && now >= hhmmToMin(cutoff)) throw new HttpError(409, 'category_closed', item.name);
       if (item.soldOut) throw new HttpError(409, 'sold_out', item.name);

@@ -1,4 +1,4 @@
-// /menu（一覧）と /menu/<slug>（1品の紹介）。客室QRなしで開ける公開ページ。Airbnb などで事前に共有する
+// /menu（一覧）と /menu/<slug>（1品の紹介）。客室QRなしで開ける公開ページ。Airbnb のゲストに食事を聞くメッセージにも載せる
 import { DISHES, DISH_CATS, dishBySlug, pickD } from './dishes.js';
 import { slidesOf, galleryHtml, dishBodyHtml, bindGallery } from './dish-view.js';
 import { esc, yen, initialLang, setLang, pageHeader, loadPublicMenu, dishName } from './page-common.js';
@@ -6,11 +6,13 @@ import { esc, yen, initialLang, setLang, pageHeader, loadPublicMenu, dishName } 
 const L = {
   title: { ja: 'お部屋でのお食事', en: 'In-room dining', zht: '客房用餐', zhs: '客房用餐' , ko: '객실 식사' },
   lead: {
-    ja: '小夜月では、夕食・朝食・お飲み物・お菓子をお部屋までお届けします。夕食と朝食は仕込みが要るため、事前のご予約制です。',
-    en: 'We bring dinner, breakfast, drinks and sweets to your room. Dinner and breakfast are prepared to order, so please book them before you arrive.'
+    ja: '小夜月では、夕食・朝食・お飲み物・お菓子をお部屋までお届けします。夕食と朝食は仕込みが要るため、ご予約のときにお申し込みいただく事前予約制です。',
+    en: 'We bring dinner, breakfast, drinks and sweets to your room. Dinner and breakfast are prepared to order, so they are booked together with your stay.'
   },
-  ctaPrep: { ja: 'ご宿泊予定の方は、チェックインの3日前までにお申し込みください。', en: 'Staying with us? Please book at least 3 days before check-in.' },
-  ctaPrepBtn: { ja: '夕食・朝食を申し込む', en: 'Book dinner & breakfast' },
+  ctaPrep: {
+    ja: '夕食・朝食はご予約のときにお申し込みください。Airbnbでご予約の方には、宿からメッセージでお伺いします。仕込みの都合で、当日のお申し込みは承れません。',
+    en: 'Please add dinner and breakfast when you book. If you booked on Airbnb, we will ask you by message. We cannot prepare meals requested on the day.'
+  },
   ctaRoom: { ja: 'ご滞在中は、お部屋のQRコードからいつでもご注文いただけます。', en: 'During your stay, order any time from the QR code in your room.' },
   all: { ja: 'メニューをすべて見る', en: 'See the full menu' },
   notFound: { ja: 'このページは見つかりませんでした。', en: 'This page could not be found.' },
@@ -29,7 +31,7 @@ function viewDish(d) {
   const name = dishName(d, item, S.lang);
   document.title = `${name} | 小夜月 Sayozuki`;
   const cta = d.prep
-    ? `<div class="pg-cta"><p>${esc(l('ctaPrep'))}</p><a class="btn-primary" href="/meals?lang=${S.lang}">${esc(l('ctaPrepBtn'))}</a></div>`
+    ? `<div class="pg-cta"><p>${esc(l('ctaPrep'))}</p></div>`
     : `<div class="pg-cta"><p>${esc(l('ctaRoom'))}</p></div>`;
   return `<main class="pg-main">${galleryHtml(slides, Math.min(S.idx, slides.length - 1), S.lang)}
     ${dishBodyHtml(d, S.lang, { name, price: item ? item.price : null })}
@@ -60,7 +62,7 @@ function viewIndex() {
     .join('');
   return `<main class="pg-main">
     <section class="mh"><p class="en">IN-ROOM DINING</p><h1>${esc(l('title'))}</h1><p>${esc(l('lead'))}</p></section>
-    <div class="pg-cta"><p>${esc(l('ctaPrep'))}</p><a class="btn-primary" href="/meals?lang=${S.lang}">${esc(l('ctaPrepBtn'))}</a></div>
+    <div class="pg-cta"><p>${esc(l('ctaPrep'))}</p></div>
     <div class="pg-sec">${sections}</div>
     <p class="pg-foot">${esc(l('foot'))}</p></main>`;
 }

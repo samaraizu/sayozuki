@@ -2,7 +2,7 @@
 // key = Squareに登録した日本語の商品名（src/config/i18n-menu.ts の ITEMS と同じ）。価格・在庫・Squareの写真はここに書かず、
 // /api/public/menu（客室QRなしで読める）から引く。ここに書くのは、Squareの「説明」に収まらない読み物だけ。
 //
-// prep: true … 仕込みが要る品。Airbnb などの事前申込ページ（/meals）に並び、「チェックインの◯日前まで」の締め切りが付く
+// prep: true … 仕込みが要る事前予約制の品（夕食・朝食）。注文画面では注文できず、予約のとき（Airbnbは宿がメッセージで聞いて予約管理に入れる）に申し込む
 // photos … Squareに写真が無いときに使う写真のパス。空のあいだは shots（撮る予定のカット）を写真枠に出す
 // 本文・内容・アレルゲンはモック用の仮の文章。料理長に確かめてから差し替える
 // 文章は日本語と英語。繁体字・簡体字・韓国語は英語で出す（pickD）
@@ -48,7 +48,7 @@ export const DISHES = [
     serve: { ja: '18:00〜19:30 のお好きな時間', en: 'Any time 18:00–19:30' },
     portion: { ja: '2人前', en: 'Serves 2' },
     allergens: ['egg', 'wheat', 'soy', 'beef'],
-    note: { ja: '仕入れの都合で、チェックインの3日前までのご予約制です。', en: 'Reservation required at least 3 days before check-in.' },
+    note: { ja: '仕入れの都合で、ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
     shots: [
       { ja: '鍋と肉の皿を真上から', en: 'Pot and beef, overhead' },
       { ja: '霜降りの肉のアップ', en: 'Close-up of the marbling' },
@@ -78,7 +78,7 @@ export const DISHES = [
     serve: { ja: '18:00〜19:30 のお好きな時間', en: 'Any time 18:00–19:30' },
     portion: { ja: '1人前', en: 'For 1' },
     allergens: ['wheat', 'soy', 'beef', 'fish'],
-    note: { ja: 'チェックインの3日前までのご予約制です。', en: 'Reservation required at least 3 days before check-in.' },
+    note: { ja: 'ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
     shots: [
       { ja: 'お膳の全景（真上から）', en: 'Full tray, overhead' },
       { ja: '芋煮の椀のアップ', en: 'Close-up of the imoni bowl' },
@@ -132,7 +132,7 @@ export const DISHES = [
     serve: { ja: '7:30〜9:00 の15分刻みでお選びください', en: 'Choose a 15-minute slot, 7:30–9:00' },
     portion: { ja: '1人前', en: 'For 1' },
     allergens: ['egg', 'wheat', 'soy', 'fish'],
-    note: { ja: 'チェックインの3日前までのご予約制です。', en: 'Reservation required at least 3 days before check-in.' },
+    note: { ja: 'ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
     shots: [
       { ja: 'お膳の全景（窓の光で）', en: 'Full tray in window light' },
       { ja: '土鍋を開けた瞬間', en: 'Opening the clay pot' },
@@ -159,7 +159,7 @@ export const DISHES = [
     serve: { ja: '7:30〜9:00 の15分刻みでお選びください', en: 'Choose a 15-minute slot, 7:30–9:00' },
     portion: { ja: '1人前', en: 'For 1' },
     allergens: ['egg', 'soy'],
-    note: { ja: 'チェックインの3日前までのご予約制です。', en: 'Reservation required at least 3 days before check-in.' },
+    note: { ja: 'ご予約のときにお申し込みいただく事前予約制です。', en: 'Book together with your stay; not available on the day.' },
     shots: [
       { ja: '湯気の立つ椀', en: 'Steaming bowl' },
       { ja: '小鉢と並べて真上から', en: 'With the sides, overhead' }

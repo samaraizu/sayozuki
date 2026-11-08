@@ -22,5 +22,5 @@ export interface MenuItem {
 export interface Menu {
   fetchedAt: number;
   items: MenuItem[];
-  categories: { name: string; names: Tr; order: number; cutoff?: string }[];
+  categories: { name: string; names: Tr; order: number; cutoff?: string; preorder?: boolean }[];
 }

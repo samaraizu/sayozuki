@@ -11,15 +11,19 @@ export interface CategoryConf {
   order: number;
   /** この時刻（日本時間）を過ぎたら当日の注文を締め切る */
   cutoff?: string;
+  /**
+   * 事前予約だけの品（夕食・朝食）。仕込みが要り当日言われても用意できないので、注文画面では紹介だけ出して注文は受けない。
+   * 申込は予約のとき（HP・ほかのサイト）か、Airbnb は宿からメッセージで聞いて予約管理に入れる
+   */
+  preorder?: boolean;
 }
 
 export const CATEGORIES: Record<string, CategoryConf> = {
-  夕食: { order: 1, cutoff: '18:00', names: { en: 'Dinner', zht: '晚餐', zhs: '晚餐', ko: '저녁' } },
+  夕食: { order: 1, preorder: true, names: { en: 'Dinner', zht: '晚餐', zhs: '晚餐', ko: '저녁' } },
   夜食: { order: 2, names: { en: 'Late night', zht: '宵夜', zhs: '夜宵', ko: '야식' } },
   飲み物: { order: 3, names: { en: 'Drinks', zht: '飲品', zhs: '饮品', ko: '음료' } },
   お菓子: { order: 4, names: { en: 'Sweets', zht: '點心', zhs: '点心', ko: '과자' } },
-  // 朝食は仕込みが要るので、前の晩のうちに受ける（20:00で締める）。当日の朝の注文は受けない運用にするなら、Squareで朝に「売り切れ」にする
-  朝食: { order: 5, cutoff: '20:00', names: { en: 'Breakfast', zht: '早餐', zhs: '早餐', ko: '아침 식사' } },
+  朝食: { order: 5, preorder: true, names: { en: 'Breakfast', zht: '早餐', zhs: '早餐', ko: '아침 식사' } },
   翌朝: { order: 6, names: { en: 'Morning', zht: '隔日早晨', zhs: '次日早晨', ko: '다음날 아침' } },
   その他: { order: 7, names: { en: 'Others', zht: '其他', zhs: '其他', ko: '기타' } }
 };

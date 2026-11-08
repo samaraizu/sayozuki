@@ -1,4 +1,4 @@
-// /menu と /meals の共通部分（言語の決め方・ヘッダー・公開メニューの読み込み）
+// /menu の共通部分（言語の決め方・ヘッダー・公開メニューの読み込み）
 import { LANGS } from './i18n.js';
 import { pickD } from './dishes.js';
 
