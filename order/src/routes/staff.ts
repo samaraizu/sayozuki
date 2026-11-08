@@ -10,6 +10,7 @@ import { markSettled, syncPendingPayments } from '../lib/settle';
 import { createCheckoutLink, deletePaymentLink } from '../square/checkout';
 import { addImage, archiveItem, changeImage, createItem, heldCounts, parseInput, suggestTr, updateItem } from '../square/admin';
 import { desk, pendingSettlement, roomBill, type RoomRow } from './guest';
+import { setDraft } from '../square/detail';
 
 function authStaff(req: Request, env: Env) {
   const pin = env.STAFF_PIN;
@@ -239,8 +240,23 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
   if (p === '/menu' && m === 'GET') return json(await staffMenu(env));
 
   if (p === '/menu' && m === 'POST') {
-    const id = await createItem(env, parseInput(await readJson(req)));
+    const body = await readJson<any>(req);
+    const id = await createItem(env, parseInput(body));
+    // 新しい商品は下書きで入れる（「保存して公開」なら公開）
+    await setDraft(env, id, body?.publish !== true);
+    // 用意してある紹介（public/dishes.js）から作ったとき：その写真を Square の商品写真にする
+    for (const path of Array.isArray(body?.seedPhotos) ? body.seedPhotos.slice(0, 6) : []) {
+      if (typeof path !== 'string' || !/^\/images\/menu\/[\w-]+\.(jpe?g|png)$/.test(path)) continue;
+      const r = await env.ASSETS.fetch(new Request(new URL(path, req.url)));
+      if (r.ok) await addImage(env, id, new Blob([await r.arrayBuffer()], { type: path.endsWith('.png') ? 'image/png' : 'image/jpeg' }));
+    }
     return json({ id, ...(await staffMenu(env)) });
+  }
+
+  // 下書き ⇄ 公開
+  if ((mt = p.match(/^\/menu\/([\w-]+)\/(publish|unpublish)$/)) && m === 'POST') {
+    await setDraft(env, mt[1], mt[2] === 'unpublish');
+    return json(await staffMenu(env));
   }
 
   if (p === '/menu/translate' && m === 'POST') {
@@ -293,7 +309,8 @@ async function staffMenu(env: Env) {
       paused: i.paused,
       soldOut: i.soldOut,
       images: i.images.map((url, n) => ({ id: i.imageIds[n], url })),
-      detail: i.detail
+      detail: i.detail,
+      draft: i.draft
     })),
     held: await heldCounts(env),
     mock: isMock(env)

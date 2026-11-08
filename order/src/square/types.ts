@@ -20,6 +20,8 @@ export interface MenuItem {
   imageIds: string[];
   /** 詳細ページの読み物（スタッフ画面で入れたもの）。無ければ null */
   detail: MenuDetail | null;
+  /** 下書き（お客様の画面に出さず、注文も受けない） */
+  draft: boolean;
 }
 
 export interface Menu {

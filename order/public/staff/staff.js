@@ -1,5 +1,5 @@
 // スタッフ画面：注文・リクエスト・チャットの受付、精算、スマホへの通知
-import { ALLERGENS, dishByKey } from '../dishes.js';
+import { ALLERGENS, DISHES, DISH_CATS, dishByKey } from '../dishes.js';
 const root = document.getElementById('root');
 const dlg = document.getElementById('dlg');
 const PIN_KEY = 'syz_staff_pin';
@@ -285,6 +285,7 @@ async function openMenu() {
 function itemStatus(i) {
   const held = menuData.held[i.id] || 0;
   const tags = [];
+  if (i.draft) tags.push('<span class="tag w">下書き</span>');
   if (i.paused) tags.push('<span class="tag w">一時停止中</span>');
   else if (i.tracked) {
     const left = Math.max(0, (i.stock || 0) - held);
@@ -294,12 +295,57 @@ function itemStatus(i) {
   return tags.join(' ');
 }
 
+// ---------- 下書き ----------
+// 下書きの商品はお客様の画面に出ず、注文も受けない。「公開」でお客様に見えるようにする。
+// 用意してある紹介（public/dishes.js）で、まだ Square に無い品も「Squareに未登録」の下書きとして並べる
+const CAT_NAME = { dinner: '夕食', breakfast: '朝食', drink: '飲み物', sweet: 'お菓子' };
+const seeds = () => DISHES.filter((s) => !menuData.items.some((i) => i.name === s.key) && !menuData.categories.every((c) => c.name !== CAT_NAME[s.cat]));
+const previewUrl = (slug) => `/menu/${encodeURIComponent(slug)}`;
+let seedEdit = null; // 編集中の未登録の下書き（slug）
+
+/** 未登録の下書き → 新規の商品（Square には「公開」か「下書き保存」を押したときに入れる） */
+function seedItem(s) {
+  return {
+    name: s.key,
+    desc: s.portion?.ja || '',
+    price: s.price ?? '',
+    category: CAT_NAME[s.cat],
+    names: s.name?.en ? { en: s.name.en } : {},
+    descs: s.portion?.en ? { en: s.portion.en } : {},
+    seed: s
+  };
+}
+
+function draftSection() {
+  const d = menuData;
+  const rows = [
+    ...d.items.filter((i) => i.draft).map((i) => {
+      const slug = i.detail?.slug || dishByKey(i.name)?.slug;
+      const thumb = i.images[0]?.url || dishByKey(i.name)?.photos?.[0];
+      return `<div class="item mitem drow"><button class="dmain" data-act="menu-edit" data-id="${esc(i.itemId)}">
+          <span class="thumb">${thumb ? `<img src="${esc(thumb)}" alt="" loading="lazy">` : '<span class="noimg">写真なし</span>'}</span>
+          <span class="minfo"><span class="mname">${esc(i.name)}</span><span class="muted">${esc(i.category)}・${yen(i.price)}</span></span></button>
+        <span class="dbtns">${slug ? `<a class="b" href="${previewUrl(slug)}" target="_blank" rel="noopener">プレビュー</a>` : ''}<button class="b p" data-act="menu-publish" data-id="${esc(i.itemId)}">公開</button></span></div>`;
+    }),
+    ...seeds().map(
+      (s) => `<div class="item mitem drow"><button class="dmain" data-act="seed-edit" data-id="${esc(s.slug)}">
+          <span class="thumb">${s.photos?.[0] ? `<img src="${esc(s.photos[0])}" alt="" loading="lazy">` : '<span class="noimg">写真なし</span>'}</span>
+          <span class="minfo"><span class="mname">${esc(s.key)}</span><span class="muted">${esc(CAT_NAME[s.cat] || '')}${s.price != null ? '・' + yen(s.price) : ''}</span><span><span class="tag w">Squareに未登録</span></span></span></button>
+        <span class="dbtns"><a class="b" href="${previewUrl(s.slug)}" target="_blank" rel="noopener">プレビュー</a><button class="b p" data-act="seed-publish" data-id="${esc(s.slug)}">公開</button></span></div>`
+    )
+  ];
+  return `<section class="mgroup"><h2>下書き <span class="n">${rows.length}</span></h2>
+    <p class="muted">お客様には見えません。「プレビュー」で詳細ページを確かめて、「公開」でお客様の画面に出ます。</p>
+    ${rows.length ? rows.join('') : '<div class="empty">下書きはありません</div>'}</section>`;
+}
+
 function showMenuList() {
   menuEditId = null;
+  seedEdit = null;
   const d = menuData;
   const groups = d.categories
     .map((c) => {
-      const items = d.items.filter((i) => i.category === c.name);
+      const items = d.items.filter((i) => i.category === c.name && !i.draft);
       const cards = items.length
         ? items
             .map(
@@ -314,7 +360,7 @@ function showMenuList() {
     })
     .join('');
   dlg.innerHTML = `<div class="chat-head"><button class="b" data-act="close">← 戻る</button><span class="room">メニュー</span><button class="b p" data-act="menu-new">＋ 追加</button></div>
-    <div class="mbody">${d.mock ? '<p class="muted">モック動作中：変更はこの環境のデータベースにだけ入ります。</p>' : ''}${groups}
+    <div class="mbody">${d.mock ? '<p class="muted">モック動作中：変更はこの環境のデータベースにだけ入ります。</p>' : ''}${draftSection()}${groups}
     <p class="muted">ここでの変更は Square の商品にそのまま入り、お客様の画面には数十秒以内に出ます。</p></div>`;
 }
 
@@ -338,6 +384,10 @@ let detailOrig = {}; // 開いたときの日本語・英語（日本語を直�
 /** 保存済みの詳細 → 画面の値。まだ無ければ public/dishes.js に書いてある分を初期値にする */
 function detailValues(i) {
   const d = i?.detail;
+  if (i?.seed) {
+    const s = i.seed;
+    return { on: true, slug: s.slug, allergens: s.allergens || [], v: (f, l) => (f === 'contents' ? (s.contents || []).map((c) => c[l] || '').join('\n') : s[f]?.[l] || '') };
+  }
   if (d) return { on: true, slug: d.slug, allergens: d.allergens || [], v: (f, l) => (f === 'contents' ? (d.contents?.[l] || []).join('\n') : d[f]?.[l] || '') };
   const s = i ? dishByKey(i.name) : null;
   if (s)
@@ -387,20 +437,25 @@ function detailBody(f) {
   return out;
 }
 
-function showMenuEdit(itemId) {
-  const i = itemId ? menuData.items.find((x) => x.itemId === itemId) : null;
-  if (itemId && !i) return showMenuList();
-  menuEditId = itemId;
+function showMenuEdit(itemId, seedSlug = null) {
+  const seed = seedSlug ? DISHES.find((s) => s.slug === seedSlug) : null;
+  const i = seed ? seedItem(seed) : itemId ? menuData.items.find((x) => x.itemId === itemId) : null;
+  if ((itemId || seedSlug) && !i) return showMenuList();
+  menuEditId = seed ? null : itemId;
+  seedEdit = seed ? seed.slug : null;
+  const isNew = !menuEditId;
   const cats = menuData.categories.map((c) => `<option${(i ? i.category : menuData.categories[0].name) === c.name ? ' selected' : ''}>${esc(c.name)}</option>`).join('');
   const held = i ? menuData.held[i.id] || 0 : 0;
-  const photos = i
+  const photos = seed
+    ? `<div class="photos">${(seed.photos || []).map((u) => `<div class="ph"><img src="${esc(u)}" alt=""></div>`).join('')}</div><p class="muted">この写真は、Square に入れるときに一緒に登録します。</p>`
+    : !isNew
     ? `<div class="photos">${i.images
         .map(
           (img, n) => `<div class="ph"><img src="${esc(img.url)}" alt="">${n === 0 ? '<span class="tag">1枚目（一覧に出る）</span>' : `<button type="button" class="b" data-act="menu-img-first" data-img="${esc(img.id)}">1枚目にする</button>`}<button type="button" class="b d" data-act="menu-img-remove" data-img="${esc(img.id)}">外す</button></div>`
         )
         .join('')}<label class="b addph">＋ 写真を追加<input type="file" accept="image/*" multiple hidden data-upload></label></div>`
     : '<p class="muted">写真は、保存したあとに追加できます。</p>';
-  dlg.innerHTML = `<div class="chat-head"><button class="b" data-act="menu-list">← 一覧</button><span class="room">${i ? '商品を編集' : '商品を追加'}</span><span></span></div>
+  dlg.innerHTML = `<div class="chat-head"><button class="b" data-act="menu-list">← 一覧</button><span class="room">${isNew ? (seed ? '下書き（Squareに未登録）' : '商品を追加') : i.draft ? '下書きを編集' : '商品を編集'}</span><span></span></div>
     <form class="mbody medit" data-form="menu">
       <label>商品名（日本語）<input name="name" required maxlength="60" value="${esc(i?.name || '')}"></label>
       <label>説明（日本語・任意）<textarea name="desc" rows="2" maxlength="300">${esc(i?.desc || '')}</textarea></label>
@@ -416,7 +471,14 @@ function showMenuEdit(itemId) {
       <p class="muted">空欄は保存のときに日本語から自動で訳します。直した訳はそのまま使います。</p>
       ${trFields('names', '商品名', i?.names)}${trFields('descs', '説明', i?.descs)}
       <button type="button" class="b" data-act="menu-tr">日本語から訳し直す</button>
-      <div class="mactions">${i ? '<button type="button" class="b d" data-act="menu-archive">掲載をやめる</button>' : '<span></span>'}<button type="submit" class="b p">保存</button></div>
+      ${!isNew ? `<p class="muted">${i.draft ? 'いまは下書きです（お客様には見えません）。' : 'いまはお客様に公開しています。'}</p>` : ''}
+      <div class="mactions">${!isNew ? '<button type="button" class="b d" data-act="menu-archive">掲載をやめる</button>' : '<span></span>'}${
+        isNew
+          ? '<button type="submit" class="b" data-publish="0">下書き保存</button><button type="submit" class="b p" data-publish="1">保存して公開</button>'
+          : i.draft
+            ? '<button type="submit" class="b">保存</button><button type="button" class="b p" data-act="menu-publish" data-id="' + esc(i.itemId) + '">公開</button>'
+            : '<button type="button" class="b" data-act="menu-unpublish" data-id="' + esc(i.itemId) + '">下書きに戻す</button><button type="submit" class="b p">保存</button>'
+      }</div>
     </form>`;
   const f = dlg.querySelector('[data-form="menu"]');
   f.dataset.origName = i?.name || '';
@@ -446,12 +508,23 @@ function formBody(f) {
   };
 }
 
-async function saveMenu(f) {
-  const btn = f.querySelector('button[type="submit"]');
-  btn.disabled = true;
+async function saveMenu(f, submitter) {
+  const btn = submitter || f.querySelector('button[type="submit"]');
+  const label = btn.textContent;
+  const publish = btn.dataset.publish === '1';
+  f.querySelectorAll('button[type="submit"]').forEach((b) => (b.disabled = true));
   btn.textContent = '保存中…';
   try {
     const body = formBody(f);
+    if (!menuEditId) {
+      body.publish = publish;
+      const seed = seedEdit && DISHES.find((s) => s.slug === seedEdit);
+      if (seed) body.seedPhotos = seed.photos || [];
+      const r = await api('/menu', { method: 'POST', body });
+      menuData = r;
+      toast(publish ? '公開しました。お客様の画面に出ます' : '下書きに保存しました。お客様には見えません');
+      return showMenuEdit(r.id);
+    }
     if (menuEditId) {
       menuData = await api(`/menu/${menuEditId}`, { method: 'PUT', body });
       toast('保存しました');
@@ -463,8 +536,59 @@ async function saveMenu(f) {
       showMenuEdit(r.id);
     }
   } catch (e) {
-    btn.disabled = false;
-    btn.textContent = '保存';
+    f.querySelectorAll('button[type="submit"]').forEach((b) => (b.disabled = false));
+    btn.textContent = label;
+    if (e.message !== 'unauthorized') fail(e);
+  }
+}
+
+/** 下書き ⇄ 公開（一覧の「公開」ボタン・編集画面の「公開」「下書きに戻す」） */
+async function setPublished(el, publish) {
+  const i = menuData.items.find((x) => x.itemId === el.dataset.id);
+  if (!i) return;
+  if (!confirm(publish ? `「${i.name}」を公開しますか？\nお客様の注文画面と /menu に出ます。` : `「${i.name}」を下書きに戻しますか？\nお客様の画面から消えます。`)) return;
+  el.disabled = true;
+  try {
+    menuData = await api(`/menu/${i.itemId}/${publish ? 'publish' : 'unpublish'}`, { method: 'POST' });
+    toast(publish ? '公開しました' : '下書きに戻しました');
+    menuEditId ? showMenuEdit(menuEditId) : showMenuList();
+  } catch (e) {
+    el.disabled = false;
+    if (e.message !== 'unauthorized') fail(e);
+  }
+}
+
+/** 未登録の下書きを、用意してある紹介のまま Square に入れて公開する（スマホの一覧から1回で） */
+async function publishSeed(el) {
+  const s = DISHES.find((x) => x.slug === el.dataset.id);
+  if (!s) return;
+  if (s.price == null) return showMenuEdit(null, s.slug); // 価格が決まっていなければ編集画面で入れる
+  if (!confirm(`「${s.key}」を ${yen(s.price)} で公開しますか？\nSquare に商品を作り、お客様の注文画面と /menu に出ます。価格などはあとから直せます。`)) return;
+  el.disabled = true;
+  el.textContent = '公開中…';
+  const t = (o) => ({ ja: o?.ja || '', en: o?.en || '' });
+  const body = {
+    ...seedItem(s),
+    seed: undefined,
+    tracked: false,
+    stock: null,
+    paused: false,
+    publish: true,
+    seedPhotos: s.photos || [],
+    detail: {
+      slug: s.slug,
+      kicker: t(s.kicker), story: t(s.story), serve: t(s.serve), portion: t(s.portion), note: t(s.note),
+      contents: { ja: (s.contents || []).map((c) => c.ja), en: (s.contents || []).map((c) => c.en || '') },
+      allergens: s.allergens || []
+    }
+  };
+  try {
+    menuData = await api('/menu', { method: 'POST', body });
+    toast('公開しました');
+    showMenuList();
+  } catch (e) {
+    el.disabled = false;
+    el.textContent = '公開';
     if (e.message !== 'unauthorized') fail(e);
   }
 }
@@ -547,7 +671,7 @@ async function uploadPhotos(input) {
 dlg.addEventListener('submit', (e) => {
   if (!e.target.matches('[data-form="menu"]')) return;
   e.preventDefault();
-  saveMenu(e.target);
+  saveMenu(e.target, e.submitter);
 });
 dlg.addEventListener('change', (e) => {
   if (e.target.matches('[data-upload]')) return uploadPhotos(e.target);
@@ -660,6 +784,10 @@ document.addEventListener('click', async (ev) => {
       case 'menu-list': return showMenuList();
       case 'menu-new': return showMenuEdit(null);
       case 'menu-edit': return showMenuEdit(id);
+      case 'seed-edit': return showMenuEdit(null, id);
+      case 'menu-publish': return setPublished(el, true);
+      case 'menu-unpublish': return setPublished(el, false);
+      case 'seed-publish': return publishSeed(el);
       case 'menu-tr': return retranslate(el);
       case 'menu-archive': return archiveMenu(el);
       case 'menu-img-first': return imageOp(el, 'first');

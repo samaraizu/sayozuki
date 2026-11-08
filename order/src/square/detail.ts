@@ -98,3 +98,33 @@ export async function saveDetail(env: Env, itemId: string, detail: MenuDetail | 
     .bind(KEY + itemId, JSON.stringify(detail))
     .run();
 }
+
+// ---------- 下書き ----------
+// 下書きの商品はお客様の画面（注文画面・/menu の一覧）に出さず、注文も受けない。/menu/<URL> を開けば下見できる。
+// スタッフ画面の「公開」で出す。D1 の settings に `menu_draft:<商品id>` = '1'（下書き）/'0'（公開）で置く。
+const DRAFT = 'menu_draft:';
+
+/**
+ * 最初から下書きに入れておく商品（Square の商品名）。settings に行がない間だけ下書き扱いになり、一度でも公開・下書きにすると行の値に従う。
+ * public/dishes.js に紹介を用意してある3品
+ */
+export const DRAFT_SEEDS = ['山形牛すき焼き', 'クロワッサンサンドの朝食', 'おにぎりと漬物の朝食'];
+
+export async function loadDrafts(env: Env): Promise<Map<string, boolean>> {
+  try {
+    const r = await env.DB.prepare('SELECT key, value FROM settings WHERE key LIKE ?').bind(DRAFT + '%').all<{ key: string; value: string }>();
+    return new Map((r.results ?? []).map((x) => [x.key.slice(DRAFT.length), x.value === '1']));
+  } catch (e) {
+    console.error('menu_draft', e);
+    return new Map();
+  }
+}
+
+export const isDraft = (drafts: Map<string, boolean>, itemId: string, name: string) =>
+  drafts.has(itemId) ? drafts.get(itemId)! : DRAFT_SEEDS.includes(name);
+
+export async function setDraft(env: Env, itemId: string, draft: boolean) {
+  await env.DB.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+    .bind(DRAFT + itemId, draft ? '1' : '0')
+    .run();
+}

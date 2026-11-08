@@ -26,7 +26,7 @@ const slug = decodeURIComponent(location.pathname.replace(/^\/menu\/?/, '').repl
 
 /**
  * 載せる品：Squareのメニュー（/api/public/menu）のうち詳細ページのあるもの。読めなければ dishes.js の分だけ。
- * 一時停止中の品は一覧に出さないが、URL を直接開けば見られる（公開前の下見用）
+ * 一時停止中・下書きの品は一覧に出さないが、URL を直接開けば見られる（公開前の下見用）
  */
 function entries() {
   if (!S.menu) return DISHES.map((dish) => ({ dish, item: null, group: dish.cat }));
@@ -61,7 +61,8 @@ function viewDish(d, item) {
 
 function viewIndex() {
   document.title = `${l('title')} | 小夜月 Sayozuki`;
-  const list = entries().filter((e) => !(e.item && e.item.paused));
+  // 一時停止・下書きの品は一覧に出さない（URL を開けば下見できる）
+  const list = entries().filter((e) => !(e.item && (e.item.paused || e.item.draft)));
   const sections = groups()
     .map((g) => {
       const es = list.filter((e) => e.group === g.key);
