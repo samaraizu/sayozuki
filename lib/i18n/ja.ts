@@ -96,7 +96,7 @@ export const ja = {
     otaSoon: "掲載準備中",
     otaNames: { 楽天トラベル: "楽天トラベル", じゃらん: "じゃらん" } as Record<string, string>,
     directTitle: "宿へ直接のお問い合わせ",
-    directBody: "日程やお部屋のご希望、お食事のご相談などはこちらから。水曜日〜日曜日を中心に営業しております。",
+    directBody: "日程やお部屋のご希望、お食事のご相談などはこちらから。年中無休で営業しております。",
   },
   form: {
     name: "お名前",

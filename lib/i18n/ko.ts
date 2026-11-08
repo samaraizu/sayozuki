@@ -93,7 +93,7 @@ export const ko: Dict = {
     otaSoon: "준비 중",
     otaNames: { 楽天トラベル: "라쿠텐 트래블", じゃらん: "Jalan" },
     directTitle: "료칸에 직접 문의",
-    directBody: "일정, 객실, 식사에 관한 요청은 이곳으로 문의해 주세요. 주로 수요일부터 일요일까지 영업합니다.",
+    directBody: "일정, 객실, 식사에 관한 요청은 이곳으로 문의해 주세요. 연중무휴로 영업합니다.",
   },
   form: {
     name: "성함",
