@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { startReservation, type ReserveState } from "@/app/reserve-actions";
 import { addDays, roomStatus, type Availability, type RoomStatus } from "@/lib/availability";
 import { fmt, formatYen, htmlLang, type Dict, type Locale } from "@/lib/i18n";
-import { isBusyNight, mealPlans, quote, type MealPlan } from "@/lib/pricing";
+import { isBusyNight, quote, type MealPlan } from "@/lib/pricing";
 import { ARRIVAL_TIMES, HOLD_MINUTES } from "@/lib/reserve-config";
 import { bookingRules, meals, rooms } from "@/lib/site";
 
@@ -46,7 +46,10 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
   const [checkIn, setCheckIn] = useState<string | null>(null);
   const [checkOut, setCheckOut] = useState<string | null>(null);
   const [room, setRoom] = useState("");
-  const [plan, setPlan] = useState<MealPlan>("none");
+  // 朝食・夕食はそれぞれオン・オフ。送るときは素泊まり／朝食／夕食／両方の1つにまとめる
+  const [breakfast, setBreakfast] = useState(false);
+  const [dinner, setDinner] = useState(false);
+  const plan: MealPlan = breakfast && dinner ? "both" : breakfast ? "breakfast" : dinner ? "dinner" : "none";
   const [month, setMonth] = useState<string | null>(null);
   const [agree, setAgree] = useState(false);
 
@@ -315,30 +318,37 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
           </section>
         )}
 
-        {/* 3. 食事 */}
-        {pickedRoom && (
+        {/* 3. 食事：日程が決まったら出す（部屋を選ぶ前でも付けられる） */}
+        {checkIn && checkOut && (
           <section className={card} aria-labelledby="st-meal">
             <h2 id="st-meal" className="flex items-center gap-2 font-serif text-xl font-semibold">
               <span className="flex size-7 items-center justify-center rounded-full bg-grad font-sans text-[13px] text-white">3</span>
               {b.stepMeal}
             </h2>
-            <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4" role="group" aria-labelledby="st-meal">
-              {mealPlans.map((p) => {
-                const label = { none: t.form.mealNone, breakfast: t.form.mealBreakfast, dinner: b.mealDinner, both: t.form.mealBoth }[p];
-                const per = { none: 0, breakfast: meals.breakfast, dinner: meals.dinner, both: meals.breakfast + meals.dinner }[p];
-                return (
-                  <button
-                    key={p}
-                    type="button"
-                    aria-pressed={plan === p}
-                    onClick={() => setPlan(p)}
-                    className={`flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-2xl border px-2 text-[14px] ${plan === p ? "border-2 border-sea bg-sel font-bold" : "border-steel bg-white"}`}
-                  >
-                    {label}
-                    {per > 0 && <span className="text-[11px] font-normal text-slate">{fmt(b.mealPrice, { price: yen(per) })}</span>}
-                  </button>
-                );
-              })}
+            <p className="mt-2 text-[13px] text-slate">{b.mealHint}</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {(
+                [
+                  ["breakfast", t.price.breakfast, meals.breakfast, breakfast, setBreakfast],
+                  ["dinner", t.price.dinner, meals.dinner, dinner, setDinner],
+                ] as const
+              ).map(([key, label, price, on, set]) => (
+                <label
+                  key={key}
+                  className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3.5 ${on ? "border-2 border-sea bg-sel" : "border-steel bg-white"}`}
+                >
+                  <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} className="size-5 shrink-0 accent-sea" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-[15px] font-bold">{label}</span>
+                    <span className="text-[12px] text-slate">{fmt(b.mealPrice, { price: yen(price) })}</span>
+                  </span>
+                  {nights > 0 && (
+                    <span className={`shrink-0 text-right text-[12px] ${on ? "font-bold text-navy" : "text-slate"}`}>
+                      {fmt(b.mealTotal, { guests, nights, price: yen(price * guests * nights) })}
+                    </span>
+                  )}
+                </label>
+              ))}
             </div>
           </section>
         )}
