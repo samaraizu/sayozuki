@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { addDays, jstParts, withinWindow } from '../src/lib/time';
-import { verifySquareSignature } from '../src/lib/webhook';
+import { notificationUrls, verifySquareSignature, verifySquareSignatureAny } from '../src/lib/webhook';
 
 describe('時刻（日本時間）', () => {
   it('UTCから日本時間の日付と分を出す', () => {
@@ -31,6 +31,28 @@ describe('Square webhook署名', () => {
     expect(await verifySquareSignature(key, url, body, sig)).toBe(true);
     expect(await verifySquareSignature(key, url, body + ' ', sig)).toBe(false);
     expect(await verifySquareSignature(key, url, body, null)).toBe(false);
+  });
+
+  it('PUBLIC_ORIGIN と届いたURLのどちらで署名されていても通す', async () => {
+    const key = 'test-key';
+    const body = '{"type":"payment.updated"}';
+    const sign = async (u: string) => {
+      const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const mac = await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(u + body));
+      return btoa(String.fromCharCode(...new Uint8Array(mac)));
+    };
+    const old = new URL('https://sayozuki-order.toneclown17.workers.dev/webhooks/square');
+    const urls = notificationUrls('https://order.sayozuki.com/', old);
+    expect(urls).toEqual(['https://order.sayozuki.com/webhooks/square', 'https://sayozuki-order.toneclown17.workers.dev/webhooks/square']);
+    // Square の通知先が workers.dev のまま
+    expect(await verifySquareSignatureAny(key, urls, body, await sign(old.href))).toBe(true);
+    // Square の通知先を正式なドメインに変えたあと
+    const next = new URL('https://order.sayozuki.com/webhooks/square');
+    expect(await verifySquareSignatureAny(key, notificationUrls('https://order.sayozuki.com', next), body, await sign(next.href))).toBe(true);
+    expect(notificationUrls('https://order.sayozuki.com', next)).toHaveLength(1);
+    // 別のURLで署名されたもの・キー違いは通さない
+    expect(await verifySquareSignatureAny(key, urls, body, await sign('https://evil.example.com/webhooks/square'))).toBe(false);
+    expect(await verifySquareSignatureAny('other-key', urls, body, await sign(old.href))).toBe(false);
   });
 });
 

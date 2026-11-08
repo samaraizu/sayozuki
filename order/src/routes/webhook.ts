@@ -1,5 +1,5 @@
 import type { Env } from '../env';
-import { verifySquareSignature } from '../lib/webhook';
+import { notificationUrls, verifySquareSignatureAny } from '../lib/webhook';
 import { notifyStaff } from '../lib/notify';
 import { markSettled } from '../lib/settle';
 import { json } from '../lib/util';
@@ -9,8 +9,7 @@ export async function handleSquareWebhook(req: Request, env: Env, url: URL, ctx:
   const body = await req.text();
   const key = env.SQUARE_WEBHOOK_SIGNATURE_KEY;
   if (!key) return json({ error: 'not_configured' }, 503);
-  const notificationUrl = `${env.PUBLIC_ORIGIN.replace(/\/$/, '')}${url.pathname}`;
-  const ok = await verifySquareSignature(key, notificationUrl, body, req.headers.get('x-square-hmacsha256-signature'));
+  const ok = await verifySquareSignatureAny(key, notificationUrls(env.PUBLIC_ORIGIN, url), body, req.headers.get('x-square-hmacsha256-signature'));
   if (!ok) return json({ error: 'bad_signature' }, 401);
 
   const evt = JSON.parse(body);

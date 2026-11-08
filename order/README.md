@@ -44,8 +44,10 @@ npx wrangler secret put NOTIFY_SLACK_WEBHOOK  # 任意
 npm run deploy
 ```
 
-- `wrangler.jsonc` の `vars` を本番の値に：`SQUARE_LOCATION_ID`、`PUBLIC_ORIGIN`（`https://order.sayozuki.com`）、`GUIDE_BASE_URL`（HPのご案内ページ）
-- Workers の **Custom Domain** で `order.〇〇.com` を割り当てる（QRに workers.dev を出さない）
+- `wrangler.jsonc` の `vars` を本番の値に：`SQUARE_LOCATION_ID`、`PUBLIC_ORIGIN`（`https://order.sayozuki.com`）、`GUIDE_BASE_URL`（`https://sayozuki.com/guide`）
+- Workers の **Custom Domain** で `order.sayozuki.com` を割り当て済み（2026-11-08）。`https://sayozuki-order.toneclown17.workers.dev` も止めずに残している（それで印刷したQRがあっても使えるように）
+- 客室QRの中身は、スタッフ画面を開いているドメインで作られる。新しく刷るQRは `https://order.sayozuki.com/staff` から出す
+- スマホ通知（Webプッシュ）はドメインごとの登録。`order.sayozuki.com/staff` をホーム画面に追加し直して、通知をオンにし直す
 - **スタッフ画面の保護**：Cloudflare Zero Trust → Access で `/staff*` にアプリを作り、スタッフのメールアドレスだけ許可（50人まで無料）。PINとの二重ロックにする
 
 ### 2. Square
@@ -57,7 +59,7 @@ npm run deploy
    - 在庫を追わない商品は、切れたらSquareアプリで **「売り切れ」** にする
    - 写真は商品ごとに複数枚登録できる。1枚目が一覧のサムネ、全部が拡大スライドに出る
 3. Webhook（Developer Dashboard → Webhooks）
-   - URL：`https://（本番ドメイン）/webhooks/square`
+   - URL：`https://order.sayozuki.com/webhooks/square`（`https://sayozuki-order.toneclown17.workers.dev/webhooks/square` のままでも通る。署名は `PUBLIC_ORIGIN` と届いたURLの両方で確かめる）
    - イベント：`payment.created` `payment.updated` `catalog.version.updated` `inventory.count.updated`
    - 表示される署名キーを `SQUARE_WEBHOOK_SIGNATURE_KEY` に入れる
    - Webhookが未登録でも、支払い完了は `src/lib/settle.ts` が拾う（毎分のcron・スタッフ画面の一覧・お客様のお会計タブ・スタッフの「支払いを確認」ボタンから Orders API で確認）。Webhookは即時反映と取りこぼし防止のため
