@@ -173,6 +173,8 @@ export const en: Dict = {
     selected: "Selected",
     mealDinner: "With dinner",
     mealPrice: "{price} per person per night",
+    mealHint: "Add breakfast and dinner separately. Leave both unchecked for a room-only stay.",
+    mealTotal: "{guests} guests · {nights} nights {price}",
     arrival: "Estimated arrival",
     arrivalUndecided: "Not sure yet",
     memo: "Requests (optional)",

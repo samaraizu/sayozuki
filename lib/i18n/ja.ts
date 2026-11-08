@@ -176,6 +176,8 @@ export const ja = {
     selected: "選択中",
     mealDinner: "夕食付き",
     mealPrice: "お一人様1泊 {price}",
+    mealHint: "朝食・夕食はそれぞれ付けられます。どちらも付けなければ素泊まりです。",
+    mealTotal: "{guests}名・{nights}泊 {price}",
     arrival: "ご到着予定",
     arrivalUndecided: "未定",
     memo: "ご要望（任意）",

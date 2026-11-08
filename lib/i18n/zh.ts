@@ -171,6 +171,8 @@ export const zh: Dict = {
     selected: "已选择",
     mealDinner: "含晚餐",
     mealPrice: "每人每晚 {price}",
+    mealHint: "早餐和晚餐可分别添加。都不选即为仅住宿。",
+    mealTotal: "{guests}人・{nights}晚 {price}",
     arrival: "预计到达时间",
     arrivalUndecided: "未定",
     memo: "其他要求（选填）",

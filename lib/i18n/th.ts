@@ -172,6 +172,8 @@ export const th: Dict = {
     selected: "เลือกแล้ว",
     mealDinner: "รวมอาหารเย็น",
     mealPrice: "{price} ต่อคนต่อคืน",
+    mealHint: "เลือกอาหารเช้าและอาหารเย็นแยกกันได้ หากไม่เลือกเลยจะเป็นห้องพักอย่างเดียว",
+    mealTotal: "{guests} คน · {nights} คืน {price}",
     arrival: "เวลาที่คาดว่าจะถึง",
     arrivalUndecided: "ยังไม่แน่ใจ",
     memo: "คำขอเพิ่มเติม (ไม่บังคับ)",

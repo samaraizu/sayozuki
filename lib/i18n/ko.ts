@@ -171,6 +171,8 @@ export const ko: Dict = {
     selected: "선택됨",
     mealDinner: "석식 포함",
     mealPrice: "1인 1박 {price}",
+    mealHint: "조식과 석식은 각각 추가할 수 있습니다. 둘 다 선택하지 않으면 숙박만입니다.",
+    mealTotal: "{guests}명・{nights}박 {price}",
     arrival: "도착 예정 시간",
     arrivalUndecided: "미정",
     memo: "요청 사항 (선택)",
