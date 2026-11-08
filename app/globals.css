@@ -24,7 +24,13 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 5rem;
+  /* 追従するヘッダーの高さ分（スマホは2段なので高い） */
+  scroll-padding-top: 7rem;
+}
+@media (min-width: 768px) {
+  html {
+    scroll-padding-top: 5.5rem;
+  }
 }
 
 body {
