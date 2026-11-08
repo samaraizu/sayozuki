@@ -458,7 +458,8 @@ function itemCard(i) {
 }
 
 function viewMenu() {
-  const cats = S.menu.categories;
+  // 商品が1つもないカテゴリは見出しも絞り込みも出さない
+  const cats = S.menu.categories.filter((c) => S.menu.items.some((i) => i.category === c.name));
   const chips = [{ name: 'all', label: t('all') }, ...cats.map((c) => ({ name: c.name, label: catName(c) }))]
     .map((c) => `<button class="chip" data-act="cat" data-id="${esc(c.name)}" aria-pressed="${S.cat === c.name}">${esc(c.label)}</button>`)
     .join('');

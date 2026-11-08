@@ -144,6 +144,14 @@ async function getItem(env: Env, itemId: string) {
 const upsert = (env: Env, object: unknown) =>
   sq<{ catalog_object: any }>(env, '/v2/catalog/object', { body: { idempotency_key: crypto.randomUUID(), object } });
 
+/** 注文画面のカテゴリをSquareから引く。まだSquareに無ければ作る（「その他」などを足したとき、管理画面で作る手間をなくす） */
+async function categoryId(env: Env, name: string) {
+  const found = (await categoryIds(env)).get(name);
+  if (found) return found;
+  const r = await upsert(env, { type: 'CATEGORY', id: '#category', category_data: { name } });
+  return r.catalog_object.id as string;
+}
+
 async function setStock(env: Env, variationId: string, n: number) {
   await sq(env, '/v2/inventory/changes/batch-create', {
     body: {
@@ -191,8 +199,7 @@ export async function createItem(env: Env, input: SaveInput) {
     await saveMeta(env, `MOCKITEM_${n}`, input);
     return `MOCKITEM_${n}`;
   }
-  const catId = (await categoryIds(env)).get(input.category);
-  if (!catId) throw new HttpError(409, 'category_missing', input.category);
+  const catId = await categoryId(env, input.category);
   const o: any = {
     type: 'ITEM',
     id: '#item',
@@ -235,8 +242,7 @@ export async function updateItem(env: Env, itemId: string, input: SaveInput) {
   const { o, v } = await getItem(env, itemId);
   const before = Number(v.item_variation_data?.price_money?.amount ?? 0);
   if (before !== input.price && (await inOpenOrders(env, v.id))) throw new HttpError(409, 'price_locked');
-  const catId = (await categoryIds(env)).get(input.category);
-  if (!catId) throw new HttpError(409, 'category_missing', input.category);
+  const catId = await categoryId(env, input.category);
   applyFields(o, v, input, catId, env.SQUARE_LOCATION_ID);
   await upsert(env, o);
   if (input.tracked && input.stock !== null) await setStock(env, v.id, input.stock);
