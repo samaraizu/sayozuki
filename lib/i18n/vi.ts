@@ -138,6 +138,9 @@ export const vi: Dict = {
     availNone: "Không còn phòng trống cho ngày này. Vui lòng chọn ngày khác.",
     availNote: "Tình trạng phòng chỉ mang tính tham khảo. Đặt phòng được xác nhận khi nhà nghỉ phản hồi yêu cầu của bạn.",
     errRoomFull: "Phòng bạn chọn không còn trống vào ngày này. Vui lòng chọn phòng hoặc ngày khác.",
+    replySubject: "[Sayozuki] Chúng tôi đã nhận được yêu cầu của bạn ({no})",
+    replyBody:
+      "Cảm ơn bạn đã liên hệ với Sayozuki.\nChúng tôi đã nhận được yêu cầu của bạn với mã tiếp nhận dưới đây.\n\nMã tiếp nhận: {no}\n\nSau khi kiểm tra phòng trống, chúng tôi sẽ liên hệ lại với bạn qua email.\nXin lưu ý rằng đặt phòng chưa được xác nhận ở thời điểm này.\nNếu muốn bổ sung hoặc thay đổi nội dung, vui lòng trả lời trực tiếp email này.\n\nNếu bạn không gửi yêu cầu này, vui lòng bỏ qua email này.",
   },
   book: {
     navLabel: "Phòng trống & Đặt phòng",

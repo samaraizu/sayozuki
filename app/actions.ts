@@ -1,10 +1,10 @@
 "use server";
 
-import { dictionaries, isLocale, type Locale } from "@/lib/i18n";
+import { dictionaries, fmt, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { roomStatus } from "@/lib/availability";
 import { getAvailability, saveInquiry } from "@/lib/booking-api";
-import { sendInquiryMail } from "@/lib/mail";
-import { rooms } from "@/lib/site";
+import { sendCustomerMail, sendInquiryMail } from "@/lib/mail";
+import { rooms, site } from "@/lib/site";
 
 export type InquiryState = {
   status: "idle" | "ok" | "error";
@@ -116,6 +116,21 @@ export async function submitInquiry(
       message: t.errSend,
     };
   }
+
+  // 送った人への受付メール（お問い合わせの言語で）。送れなくても受付は済んでいるので、ログに残すだけ。
+  // 他人のアドレスを入れられても悪用されないよう、名前や本文など入力された内容は載せない
+  await sendCustomerMail(
+    email,
+    fmt(t.replySubject, { no: id }),
+    [
+      fmt(t.replyBody, { no: id }),
+      "",
+      `${site.name}（${site.roman}）`,
+      `${site.postalCode} ${site.address}`,
+      `TEL ${site.tel}`,
+      `${site.url}${localePath(lang)}`,
+    ].join("\n"),
+  );
 
   return {
     status: "ok",
