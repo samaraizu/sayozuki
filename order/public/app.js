@@ -1,5 +1,5 @@
 import { LANGS, ABOUT, REQUESTS, makeT, pick } from './i18n.js';
-import { dishByKey, dishBySlug } from './dishes.js';
+import { dishFor } from './dishes.js';
 import { slidesOf, galleryHtml, dishBodyHtml, bindGallery } from './dish-view.js';
 
 // ---------- 状態 ----------
@@ -161,6 +161,7 @@ const itemDesc = (i) => pick(i.descs, S.lang, i.desc);
 const catName = (c) => pick(c.names, S.lang, c.name);
 const byId = (id) => S.menu && S.menu.items.find((i) => i.id === id);
 const catOf = (i) => S.menu && S.menu.categories.find((c) => c.name === i.category);
+const dishOf = (i) => dishFor(i, catOf(i));
 // 夕食・朝食（preorder）は仕込みが要るので、注文画面では紹介だけ出して注文は受けない
 const orderable = (i) => S.menu && S.menu.open && !i.soldOut && !(catOf(i) || {}).closed && !(catOf(i) || {}).preorder;
 const maxQty = (i) => (i.left == null ? 20 : i.left);
@@ -463,7 +464,7 @@ function itemCard(i) {
     <button class="thumb" data-act="photos" data-id="${esc(i.id)}" aria-label="${esc(t('photos', { n: name }))}">${thumb}</button>
     <button class="info-btn" data-act="photos" data-id="${esc(i.id)}" aria-label="${esc(t('details', { n: name }))}"><span class="name-row"><span class="name">${esc(name)}</span>${left}</span>
       ${itemDesc(i) ? `<span class="desc">${esc(itemDesc(i))}</span>` : ''}
-      <span class="price">${yen(i.price)}${dishByKey(i.name) ? ` <span class="more">${esc(t('more'))}</span>` : ''}</span></button>
+      <span class="price">${yen(i.price)}${dishOf(i) ? ` <span class="more">${esc(t('more'))}</span>` : ''}</span></button>
     ${action}
   </div>`;
 }
@@ -650,7 +651,7 @@ function overlays() {
 function viewerHtml() {
   const i = byId(S.viewer.id);
   if (!i) return '';
-  const dish = dishByKey(i.name);
+  const dish = dishOf(i);
   const slides = slidesOf(dish, i);
   const idx = Math.min(S.viewer.idx, slides.length - 1);
   const q = S.cart[i.id] || 0;
@@ -676,7 +677,7 @@ function viewerHtml() {
 function openViewer(id) {
   const i = byId(id);
   if (!i) return;
-  const dish = dishByKey(i.name);
+  const dish = dishOf(i);
   S.viewer = { id, idx: 0, pushed: false, fresh: true };
   if (dish) {
     history.pushState({ dish: dish.slug }, '', location.pathname + location.search + '#' + dish.slug);
@@ -696,8 +697,8 @@ window.addEventListener('popstate', () => {
   render();
 });
 function openFromHash() {
-  const dish = dishBySlug(decodeURIComponent(location.hash.slice(1)));
-  const item = dish && S.menu && S.menu.items.find((x) => x.name === dish.key);
+  const slug = decodeURIComponent(location.hash.slice(1));
+  const item = slug && S.menu && S.menu.items.find((x) => dishOf(x)?.slug === slug);
   if (!item) return;
   S.tab = 'menu';
   S.viewer = { id: item.id, idx: 0, pushed: false, fresh: true };

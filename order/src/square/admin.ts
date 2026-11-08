@@ -6,6 +6,7 @@ import { translate } from '../lib/translate';
 import { HttpError } from '../lib/util';
 import { sq, sqUpload } from './client';
 import { mockItems, saveMockItems } from './mock';
+import { assertSlugFree, parseDetail, saveDetail, type MenuDetail } from './detail';
 
 /**
  * スタッフ画面からのメニュー編集。商品そのもの（名前・説明・価格・カテゴリ・写真・在庫）は Square のカタログに書き、
@@ -24,6 +25,8 @@ export interface SaveInput {
   paused: boolean;
   names: Tr;
   descs: Tr;
+  /** 詳細ページ。null なら作らない（作ってあれば消す） */
+  detail: MenuDetail | null;
 }
 
 const TR_LANGS = ['en', 'zht', 'zhs', 'ko'] as const;
@@ -52,7 +55,7 @@ export function parseInput(body: any): SaveInput {
   if (!Number.isInteger(price) || price < 0 || price > 1_000_000) throw new HttpError(400, 'bad_price');
   if (!CATEGORIES[category]) throw new HttpError(400, 'bad_category');
   if (stock !== null && (!Number.isInteger(stock) || stock < 0 || stock > 9999)) throw new HttpError(400, 'bad_stock');
-  return { name, desc, price, category, tracked, stock, paused: Boolean(body?.paused), names: cleanTr(body?.names), descs: cleanTr(body?.descs) };
+  return { name, desc, price, category, tracked, stock, paused: Boolean(body?.paused), names: cleanTr(body?.names), descs: cleanTr(body?.descs), detail: parseDetail(body?.detail) };
 }
 
 /** 空いている言語だけ日本語から自動で訳す（スタッフが直した訳はそのまま） */
@@ -87,6 +90,7 @@ async function saveMeta(env: Env, itemId: string, input: SaveInput) {
   )
     .bind(itemId, JSON.stringify(names), JSON.stringify(descs), input.paused ? 1 : 0, nowIso())
     .run();
+  await saveDetail(env, itemId, input.detail, names.en ?? '');
 }
 
 /** 精算前の注文に入っている商品か（価格を変えると、精算時のSquareの請求額が画面の明細とずれるため止める） */
@@ -191,6 +195,7 @@ function applyFields(o: any, v: any, input: SaveInput, catId: string, loc: strin
 }
 
 export async function createItem(env: Env, input: SaveInput) {
+  await assertSlugFree(env, null, input.detail);
   if (isMock(env)) {
     const items = await mockItems(env);
     const n = Date.now().toString(36);
@@ -227,6 +232,7 @@ export async function createItem(env: Env, input: SaveInput) {
 }
 
 export async function updateItem(env: Env, itemId: string, input: SaveInput) {
+  await assertSlugFree(env, itemId, input.detail);
   if (isMock(env)) {
     const items = await mockItems(env);
     const x = items.find((i) => i.itemId === itemId && !i.archived);

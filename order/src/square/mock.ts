@@ -1,6 +1,7 @@
 import type { Env } from '../env';
 import { ITEMS } from '../config/i18n-menu';
 import { categoryList, loadMenuMeta } from './menu';
+import { loadDetails } from './detail';
 import type { Menu, MenuItem } from './types';
 
 /** Square未接続でも画面と流れを確認できるモックのカタログ（価格は動作確認用のダミーで、実際の料金ではない） */
@@ -66,6 +67,7 @@ export async function saveMockItems(env: Env, items: MockItem[]) {
 
 export async function mockMenu(env: Env): Promise<Menu> {
   const meta = await loadMenuMeta(env);
+  const details = await loadDetails(env);
   const items: MenuItem[] = (await mockItems(env))
     .filter((x) => !x.archived)
     .map((x) => {
@@ -84,7 +86,8 @@ export async function mockMenu(env: Env): Promise<Menu> {
         soldOut: (!x.tracked && x.soldOut) || Boolean(m?.paused),
         paused: Boolean(m?.paused),
         images: x.images.map((i) => i.url),
-        imageIds: x.images.map((i) => i.id)
+        imageIds: x.images.map((i) => i.id),
+        detail: details.get(x.itemId) ?? null
       };
     });
   return { fetchedAt: Date.now(), items, categories: categoryList() };

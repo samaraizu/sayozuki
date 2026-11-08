@@ -1,4 +1,6 @@
 // 商品の詳細ページ（/menu/<slug>）と、注文画面で商品をタップしたときのモーダルの中身。
+// ふだんはスタッフ画面の「メニュー」→ 商品の編集 →「詳細ページ」で入れる（D1、src/square/detail.ts）。
+// ここに書いた分は、スタッフ画面でまだ詳細ページを保存していない商品の初期値（保存すると画面の内容が優先される）。
 // key = Squareに登録した日本語の商品名（src/config/i18n-menu.ts の ITEMS と同じ）。価格・在庫・Squareの写真はここに書かず、
 // /api/public/menu（客室QRなしで読める）から引く。ここに書くのは、Squareの「説明」に収まらない読み物だけ。
 //
@@ -20,6 +22,9 @@ export const ALLERGENS = {
   wheat: { ja: '小麦', en: 'Wheat' },
   shrimp: { ja: 'えび', en: 'Shrimp' },
   crab: { ja: 'かに', en: 'Crab' },
+  soba: { ja: 'そば', en: 'Buckwheat' },
+  peanut: { ja: '落花生', en: 'Peanut' },
+  walnut: { ja: 'くるみ', en: 'Walnut' },
   soy: { ja: '大豆', en: 'Soy' },
   beef: { ja: '牛肉', en: 'Beef' },
   fish: { ja: '魚介', en: 'Fish' },
@@ -232,6 +237,37 @@ export const DISHES = [
 
 export const dishBySlug = (slug) => DISHES.find((d) => d.slug === slug);
 export const dishByKey = (name) => DISHES.find((d) => d.key === name);
+
+const CAT_OF = { 夕食: 'dinner', 朝食: 'breakfast', 飲み物: 'drink', お菓子: 'sweet' };
+
+/**
+ * メニューの1品（/api/menu・/api/public/menu）の詳細ページ。スタッフ画面で入れた detail があればそれ、無ければ上の DISHES。
+ * cat はその品のカテゴリ（{ name, names, preorder }）
+ */
+export function dishFor(item, cat) {
+  if (!item) return undefined;
+  const d = item.detail;
+  if (!d || !d.slug) return dishByKey(item.name);
+  const fixed = dishByKey(item.name);
+  const c = d.contents || {};
+  return {
+    slug: d.slug,
+    key: item.name,
+    name: { ja: item.name, ...(item.names || {}) },
+    cat: CAT_OF[item.category],
+    catLabel: cat ? { ja: cat.name, ...(cat.names || {}) } : null,
+    prep: Boolean(cat && cat.preorder),
+    kicker: d.kicker,
+    story: d.story,
+    contents: (c.ja || []).map((ja, k) => ({ ja, en: (c.en || [])[k] || '' })),
+    serve: d.serve,
+    portion: d.portion,
+    allergens: d.allergens || [],
+    note: d.note,
+    // 写真は Square の商品写真。無ければ同じ品の DISHES の写真
+    photos: fixed ? fixed.photos || [] : []
+  };
+}
 
 /** 料理の文章は日英だけ持つので、中国語・韓国語は英語で出す */
 export const pickD = (obj, lang) => (obj ? obj[lang] || (lang !== 'ja' && obj.en) || obj.ja || '' : '');

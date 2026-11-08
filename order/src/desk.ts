@@ -68,6 +68,8 @@ export class OrderDesk extends DurableObject<Env> {
           price: i.price,
           category: i.category,
           images: i.images,
+          detail: i.detail,
+          paused: i.paused,
           left,
           soldOut: i.soldOut || left === 0
         };

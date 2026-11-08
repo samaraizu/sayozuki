@@ -39,12 +39,12 @@ export function pageHeader(lang, home = '/menu') {
     <div class="pg-langs">${LANGS.map((l) => `<button data-act="lang" data-id="${l.id}" lang="${l.code}" aria-pressed="${l.id === lang}">${l.short}</button>`).join('')}</div></header>`;
 }
 
-/** Squareの名前・価格・写真。読めなくてもページは出す（価格を出さないだけ） */
+/** Squareの名前・価格・写真・詳細ページ（{ items, categories }）。読めなくてもページは出す（dishes.js の分だけ・価格なし） */
 export async function loadPublicMenu() {
   try {
     const r = await fetch('/api/public/menu');
     if (!r.ok) return null;
-    return (await r.json()).items;
+    return await r.json();
   } catch {
     return null;
   }

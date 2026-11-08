@@ -56,18 +56,18 @@ export function galleryHtml(slides, idx, lang) {
  */
 export function dishBodyHtml(dish, lang, opts = {}) {
   const name = opts.name || (dish ? pickD(dish.name, lang) : '');
-  const cat = dish && DISH_CATS[dish.cat];
+  const cat = dish && (dish.catLabel || DISH_CATS[dish.cat]);
   const badges = [cat ? `<span class="dv-badge">${esc(pickD(cat, lang))}</span>` : '', dish && dish.prep ? `<span class="dv-badge prep">${esc(dl('prep', lang))}</span>` : ''].join('');
   const priceRow =
-    opts.price != null || (dish && dish.portion)
-      ? `<div class="dv-price">${opts.price != null ? `<span class="v">${yen(opts.price)}</span>` : ''}${dish && dish.portion ? `<span class="u">${esc(pickD(dish.portion, lang))}</span>` : ''}</div>`
+    opts.price != null || (dish && pickD(dish.portion, lang))
+      ? `<div class="dv-price">${opts.price != null ? `<span class="v">${yen(opts.price)}</span>` : ''}${dish && pickD(dish.portion, lang) ? `<span class="u">${esc(pickD(dish.portion, lang))}</span>` : ''}</div>`
       : '';
   if (!dish) {
     return `<div class="dv-body"><h2 class="dv-title">${esc(name)}</h2>${opts.desc ? `<p class="dv-story">${esc(opts.desc)}</p>` : ''}${priceRow}${opts.extra || ''}</div>`;
   }
-  const al = dish.allergens.length ? dish.allergens.map((a) => pickD(ALLERGENS[a], lang)).join('・') : dl('noAllergens', lang);
+  const al = (dish.allergens || []).length ? dish.allergens.map((a) => pickD(ALLERGENS[a], lang)).join('・') : dl('noAllergens', lang);
   const facts = [
-    dish.serve ? [dl('serve', lang), pickD(dish.serve, lang)] : null,
+    pickD(dish.serve, lang) ? [dl('serve', lang), pickD(dish.serve, lang)] : null,
     [dl('allergens', lang), al]
   ]
     .filter(Boolean)
@@ -76,13 +76,13 @@ export function dishBodyHtml(dish, lang, opts = {}) {
   return `<div class="dv-body">
     <div class="dv-badges">${badges}</div>
     <h2 class="dv-title">${esc(name)}</h2>
-    <p class="dv-kicker">${esc(pickD(dish.kicker, lang))}</p>
+    ${pickD(dish.kicker, lang) ? `<p class="dv-kicker">${esc(pickD(dish.kicker, lang))}</p>` : ''}
     ${priceRow}
-    <p class="dv-story">${esc(pickD(dish.story, lang))}</p>
-    <h3 class="dv-h">${esc(dl('contents', lang))}</h3>
-    <ul class="dv-list">${dish.contents.map((c) => `<li>${esc(pickD(c, lang))}</li>`).join('')}</ul>
+    ${pickD(dish.story, lang) ? `<p class="dv-story">${esc(pickD(dish.story, lang))}</p>` : ''}
+    ${dish.contents && dish.contents.length ? `<h3 class="dv-h">${esc(dl('contents', lang))}</h3>
+    <ul class="dv-list">${dish.contents.map((c) => `<li>${esc(pickD(c, lang))}</li>`).join('')}</ul>` : ''}
     <div class="dv-facts">${facts}</div>
-    ${dish.note ? `<p class="dv-note">${esc(pickD(dish.note, lang))}</p>` : ''}
+    ${pickD(dish.note, lang) ? `<p class="dv-note">${esc(pickD(dish.note, lang))}</p>` : ''}
     <p class="dv-note muted">${esc(dl('allergyNote', lang))}</p>
     ${opts.share ? `<button class="dv-share" data-act="dv-share" data-slug="${esc(dish.slug)}">${esc(dl('share', lang))}</button>` : ''}
     ${opts.extra || ''}
