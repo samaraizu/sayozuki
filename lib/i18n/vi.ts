@@ -188,7 +188,7 @@ export const vi: Dict = {
     policy: ["Đến 7 ngày trước ngày đến: miễn phí", "6 đến 2 ngày trước: 30% tiền phòng", "Ngày hôm trước: 50% tiền phòng", "Trong ngày / không đến: 100% tiền phòng"],
     policyNote: "Vui lòng liên hệ qua điện thoại hoặc email để hủy hoặc thay đổi. Tiền hoàn lại được trả về thẻ đã dùng để thanh toán.",
     agree: "Tôi đồng ý với chính sách hủy",
-    pay: "Tiếp tục thanh toán (Square)",
+    pay: "Tiếp tục đặt phòng",
     paying: "Đang chuẩn bị trang thanh toán…",
     payNote: "Nếu không hoàn tất thanh toán trong {min} phút, phòng giữ chỗ sẽ bị hủy.",
     secure: "Thanh toán trên trang thanh toán an toàn của Square. Số thẻ không được gửi đến Sayozuki.",
