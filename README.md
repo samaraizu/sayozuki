@@ -18,7 +18,7 @@ npm run deploy       # ビルドして本番へ
 ```
 
 - 秘密の値（`RESEND_API_KEY` など、`.env.local.example` の項目）はリポジトリに置かず `npx wrangler secret put RESEND_API_KEY` で入れる。
-- 本番は https://sayozuki.com（2026-11-08 に接続。Worker「sayozuki」のカスタムドメインに sayozuki.com・www.sayozuki.com・shop.sayozuki.com）。https://sayozuki.toneclown17.workers.dev は sayozuki.com へ転送される。
+- 本番は https://sayozuki.com（2026-11-08 に接続。Worker「sayozuki」のカスタムドメインに sayozuki.com・www.sayozuki.com・shop.sayozuki.com）。workers.dev とプレビューURLは止めている（`wrangler.jsonc` の `workers_dev: false`・`preview_urls: false`）。
 - 客室オーダー（`order/`）は別の Worker「sayozuki-order」。`order/` の中でデプロイする。
 - **本番ビルドは Webpack**（`npm run build` = `next build --webpack`）。Turbopack だと Workers Builds の環境で `next/font/google` の Noto Sans JP が「Can't resolve '@vercel/turbopack-next/internal/font/google/font'」「next/font/google queries have exactly one entry」で落ちる（手元では通る）。`next dev` は Turbopack のまま。
 
@@ -102,7 +102,7 @@ HPの「201号室」は台帳の「201」に読み替え、台帳にない客室
 - 宿：https://sayozuki.com（6言語）
 - お取り寄せ：https://shop.sayozuki.com（中身は `/shop` 以下。`proxy.ts` で振り分ける）
 
-`NEXT_PUBLIC_SPLIT_DOMAINS=true` を入れてビルド・デプロイすると、宿とお取り寄せのリンクがそれぞれのドメインを向き、sayozuki.com/shop は shop.sayozuki.com へ、workers.dev などほかのホストは sayozuki.com へ転送される。
+`NEXT_PUBLIC_SPLIT_DOMAINS=true` を入れてビルド・デプロイすると、宿とお取り寄せのリンクがそれぞれのドメインを向き、sayozuki.com/shop は shop.sayozuki.com へ、www などほかのホストは sayozuki.com へ転送される。
 ビルド時に埋め込まれる値なので、ビルドする環境（ローカルなら `.env.production`）に入れる。Cloudflare の Worker の変数に入れても効かない。
 本番は Worker「sayozuki」→ Settings → Builds →「Variables and secrets」に入れてある（2026-11-08）。未設定のあいだ・ローカルでは今までどおり `/shop` で動く。
 

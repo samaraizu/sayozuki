@@ -4,6 +4,10 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "sayozuki",
   "main": ".open-next/worker.js",
+  // 正式なドメイン（Worker の Domains に付けたカスタムドメイン）だけで出す。
+  // 書かないと wrangler deploy のたびに workers.dev がオンに戻るので、明示してオフにする（2026-11-08）
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
