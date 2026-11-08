@@ -17,7 +17,8 @@ export const CATEGORIES: Record<string, CategoryConf> = {
   夕食: { order: 1, cutoff: '18:00', names: { en: 'Dinner', zht: '晚餐', zhs: '晚餐', ko: '저녁' } },
   夜食: { order: 2, names: { en: 'Late night', zht: '宵夜', zhs: '夜宵', ko: '야식' } },
   飲み物: { order: 3, names: { en: 'Drinks', zht: '飲品', zhs: '饮品', ko: '음료' } },
-  翌朝: { order: 4, names: { en: 'Morning', zht: '隔日早晨', zhs: '次日早晨', ko: '다음날 아침' } }
+  翌朝: { order: 4, names: { en: 'Morning', zht: '隔日早晨', zhs: '次日早晨', ko: '다음날 아침' } },
+  その他: { order: 5, names: { en: 'Others', zht: '其他', zhs: '其他', ko: '기타' } }
 };
 
 export const ITEMS: Record<string, { name: Tr; desc?: Tr }> = {
