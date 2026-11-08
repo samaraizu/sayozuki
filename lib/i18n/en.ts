@@ -94,7 +94,7 @@ export const en: Dict = {
     otaNames: { 楽天トラベル: "Rakuten Travel", じゃらん: "Jalan" },
     directTitle: "Contact the inn directly",
     directBody:
-      "Send us your preferred dates, room, and meal requests here. We are open mainly from Wednesday to Sunday.",
+      "Send us your preferred dates, room, and meal requests here. We are open every day of the year.",
   },
   form: {
     name: "Name",

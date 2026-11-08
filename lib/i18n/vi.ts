@@ -94,7 +94,7 @@ export const vi: Dict = {
     otaNames: { 楽天トラベル: "Rakuten Travel", じゃらん: "Jalan" },
     directTitle: "Liên hệ trực tiếp với lữ quán",
     directBody:
-      "Vui lòng gửi ngày lưu trú, phòng mong muốn và yêu cầu về bữa ăn tại đây. Chúng tôi chủ yếu mở cửa từ thứ Tư đến Chủ nhật.",
+      "Vui lòng gửi ngày lưu trú, phòng mong muốn và yêu cầu về bữa ăn tại đây. Chúng tôi mở cửa tất cả các ngày trong năm.",
   },
   form: {
     name: "Họ tên",
