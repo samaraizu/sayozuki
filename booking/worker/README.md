@@ -51,7 +51,7 @@ Cloudflare のダッシュボード → Workers & Pages → 作成 →「Gitリ�
 `npm run deploy` が、画面の組み立て → D1の表の作成・更新 → デプロイ まで続けてやる。
 手元から出すなら `npm ci && npx wrangler login && npm run deploy`。
 
-URL は `https://booking.sayozuki.com`（2026-11-08 にカスタムドメインを接続）。`https://sayozuki-booking.toneclown17.workers.dev` も止めずに残している（取り込みGASの `CF_SYNC_URL` がこちらを向いているため）。
+URL は `https://booking.sayozuki.com`（2026-11-08 にカスタムドメインを接続）。workers.dev とプレビューURLは止めている（`wrangler.jsonc` の `workers_dev: false`・`preview_urls: false`）。
 ログインのクッキーはドメインごとなので、URL を変えたら「Googleでログイン」し直す。
 
 ### 2. 「Googleでログイン」の鍵を作る（Google Cloud。カード登録は要らない）
@@ -64,7 +64,7 @@ URL は `https://booking.sayozuki.com`（2026-11-08 にカスタムドメイン�
 3. 「対象」→ テストユーザーに本人と海斗のGoogleアカウントを足す。公開ステータスは「テスト中」のままでよい
    （求めるのは `openid` `email` だけなので、未確認アプリの警告も7日での失効も出ない）
 4. 「クライアント」→「クライアントを作成」→ 種類 **ウェブ アプリケーション**、名前 `sayozuki-booking`、
-   承認済みのリダイレクト URI に `https://booking.sayozuki.com/api/auth/callback` と `https://sayozuki-booking.toneclown17.workers.dev/api/auth/callback` →「作成」
+   承認済みのリダイレクト URI に `https://booking.sayozuki.com/api/auth/callback` →「作成」
    （戻り先はログインを始めたドメインから作るので、使うドメインごとに要る）
 5. 出てきた **クライアントID** と **クライアントシークレット** を控える。
    シークレットはこの画面を閉じると二度と見られないので「JSONをダウンロード」もしておく（なくしたら作り直す）
@@ -100,7 +100,7 @@ Worker「sayozuki-booking」→ 設定 → 変数とシークレット →「追
 
    | プロパティ | 値 |
    | --- | --- |
-   | `CF_SYNC_URL` | `https://sayozuki-booking.toneclown17.workers.dev` |
+   | `CF_SYNC_URL` | `https://booking.sayozuki.com` |
    | `CF_SYNC_TOKEN` | 手順3の `SYNC_TOKEN` と同じ値 |
 
 3. エディタで `run` を1回手で実行。実行ログにエラーがなく、アプリを開いて台帳の予約が出ればつながっている。
