@@ -31,6 +31,7 @@ const bookings = [
   b('直販', '301', 3, 5, 'テスト 一郎', 2, { contact: '090-0000-0000', arrival: '16:00', payment: 'HPで決済済', guestPaid: '27000' }),
   b('Airbnb', '302', 1, 4, 'Test Guest B', 1),
   b('楽天', '月山', 2, 3, 'テスト 花子', 2),
+  b('Agoda', '302', 5, 7, 'Test Guest E', 1),
   b('Airbnb', '月山', 4, 9, 'Reserved', 0),
   b('直販', '蔵王', 0, 1, 'テスト 次郎', 3, { arrival: '15:00' }),
   b('Airbnb', '蔵王', 2, 5, 'Test Guest C', 2),
