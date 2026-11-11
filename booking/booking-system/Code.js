@@ -187,7 +187,7 @@ function checkAgodaMail() {
   Logger.log('このスクリプトが読んでいるGmail：' + Session.getEffectiveUser().getEmail() + '／見つかったスレッド ' + threads.length + '件');
   threads.forEach(function (th) {
     th.getMessages().forEach(function (m) {
-      const kind = /agoda/i.test(m.getFrom()) ? classifyAgoda_(m.getSubject()) : '（差出人にagodaがない）';
+      const kind = (/agoda/i.test(m.getFrom()) || isForwardedFrom_(m, /agoda/i)) ? classifyAgoda_(m.getSubject()) : '（差出人にagodaがない）';
       Logger.log((kind || '読まない') + '｜' + m.getFrom() + '｜' + m.getSubject());
     });
   });
@@ -298,8 +298,15 @@ function runCore_(opts) {
 // 媒体ごとの探し方。from で送り主を確かめ、件名で種類を決める（件名が合わないメールは読まない）
 const MAIL_SOURCES = [
   { source: 'airbnb', q: 'from:automated@airbnb.com {subject:予約確定 subject:キャンセル subject:"ご予約が変更されました"}', from: /airbnb\.com/i, classify: function (s) { return classify_(s); } },
-  { source: 'agoda', q: '{from:agoda subject:Agoda}', from: /agoda/i, classify: function (s) { return classifyAgoda_(s); } },
+  { source: 'agoda', q: '{from:agoda subject:Agoda}', from: /agoda/i, forwarded: true, classify: function (s) { return classifyAgoda_(s); } },
 ];
+
+// 手で転送したメール（件名が「Fwd:」「転送:」で始まり、本文の転送元ヘッダーが agoda.com）も読む
+function isForwardedFrom_(m, re) {
+  if (!/^\s*(?:Fwd?|転送)\s*[:：]/i.test(m.getSubject())) return false;
+  const head = String(m.getPlainBody() || '').slice(0, 1500);
+  return /(?:From|差出人|送信者)\s*[:：][^\n]*/i.test(head) && re.test((head.match(/(?:From|差出人|送信者)\s*[:：][^\n]*/i) || [''])[0]);
+}
 
 function searchMail_(days, processed) {
   const out = [];
@@ -310,7 +317,7 @@ function searchMail_(days, processed) {
       threads.forEach(function (th) {
         th.getMessages().forEach(function (m) {
           if (processed[m.getId()]) return;
-          if (!src.from.test(m.getFrom())) return;
+          if (!src.from.test(m.getFrom()) && !(src.forwarded && isForwardedFrom_(m, src.from))) return;
           const kind = src.classify(m.getSubject());
           if (kind) out.push({ thread: th, message: m, kind: kind, source: src.source });
         });

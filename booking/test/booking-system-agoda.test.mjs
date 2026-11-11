@@ -151,3 +151,27 @@ test('キャンセル・変更', () => {
   assert.strictEqual(X.applyMail_(c, pc, '2026-11-13', []), '既にキャンセルだった');
   assert.strictEqual(res.rows.length, 1);
 });
+
+test('手で転送したAgodaのメールも読む（転送元ヘッダーが agoda.com のときだけ）', () => {
+  const c2 = vm.createContext({ console });
+  vm.runInContext(src + '\n;this.__y = { isForwardedFrom_, parseAgoda_, classifyAgoda_ };', c2);
+  const Y = c2.__y;
+  const msg = (subject, body) => ({ getSubject: () => subject, getPlainBody: () => body });
+  const fwdBody = `---------- Forwarded message ---------
+From: agoda.com <no-reply@agoda.com>
+Date: 2026年11月10日(火) 10:00
+Subject: Agoda予約ID 1796010901 - 予約確定 Hotel ホテル所在国: Japan
+To: <someone@example.com>
+
+` + BODY_JA;
+  const fwdSubj = 'Fwd: ' + SUBJ;
+  assert.strictEqual(Y.isForwardedFrom_(msg(fwdSubj, fwdBody), /agoda/i), true);
+  assert.strictEqual(Y.isForwardedFrom_(msg(fwdSubj, fwdBody.replace('agoda.com <no-reply@agoda.com>', 'x <x@example.com>')), /agoda/i), false);
+  assert.strictEqual(Y.isForwardedFrom_(msg(SUBJ, fwdBody), /agoda/i), false);
+  assert.strictEqual(Y.classifyAgoda_(fwdSubj), 'confirm');
+  const p = Y.parseAgoda_('confirm', fwdSubj, fwdBody, '2026-11-12');
+  assert.strictEqual(p.ok, true);
+  assert.strictEqual(p.checkIn, '2026-12-20');
+  assert.strictEqual(p.checkOut, '2026-12-22');
+  assert.strictEqual(p.name, 'TARO YAMADA');
+});
