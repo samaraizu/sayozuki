@@ -113,7 +113,7 @@ test('日付は和・英・数字の書き方を読む', () => {
   assert.deepStrictEqual([...X.findDates_('20 Dec 2026 - Jan 3, 2027')], ['2026-12-20', '2027-01-03']);
 });
 
-test('予約確定：台帳に1行足し、部屋タイプを「Agoda」タブに足す。紐付ければ部屋が入る', () => {
+test('予約確定：台帳に1行足し、部屋タイプを「Agoda」タブに足す。タブで部屋を選べばその部屋', () => {
   const p = X.parseAgoda_('confirm', SUBJ, BODY_JA, '2026-11-11');
   assert.strictEqual(p.ok, true);
   assert.strictEqual(p.code, '1700000001');
@@ -139,8 +139,7 @@ test('予約確定：台帳に1行足し、部屋タイプを「Agoda」タブ�
   assert.ok(notes.some(n => n.startsWith('新しいAgodaの部屋タイプ')));
   assert.ok(notes.some(n => n.startsWith('新しい予約（Agoda）')));
 
-  X.applyRules_(c, '2026-11-11', []);
-  assert.ok(X.tagsOf_(r).some(t => t.includes('「Agoda」タブ')));
+  // 「Agoda」タブで部屋を選べばその部屋
   agoda.rows[0].v['部屋'] = '月山';
   X.applyRules_(c, '2026-11-11', []);
   assert.strictEqual(r.v['部屋'], '月山');
@@ -276,4 +275,41 @@ test('読み方を直したあとの読み直し（refresh）：古い読み取�
   assert.strictEqual(r.v['メモ'], 'Agodaの要望：NonSmoke');
   assert.strictEqual(X.tagsOf_(r).length, 0);
   assert.ok(!notes.some(n => n.startsWith('新しい予約')));
+});
+
+test('部屋が空のAgodaの予約は、人数と空きから部屋を決める', () => {
+  const rooms = [
+    { '部屋': '301', '定員': 4, '状態': '販売可' }, { '部屋': '302', '定員': 1, '状態': '販売可' },
+    { '部屋': '月山', '定員': 4, '状態': '販売可' }, { '部屋': '201', '定員': 5, '状態': '準備中' },
+  ];
+  const ag = (no, i, o, adults, extra = {}) => ({ '媒体': 'Agoda', '予約番号': no, 'ステータス': '確定', 'チェックイン': i, 'チェックアウト': o, '大人': adults, '代表者名': 'X', 'リスティングID': 'Japanese Room', ...extra });
+  const res = table([
+    { '媒体': 'Airbnb', '予約番号': 'HMAAAAAAAA', 'ステータス': '確定', '部屋': '301', 'チェックイン': '2026-11-15', 'チェックアウト': '2026-11-17', '大人': 2, '代表者名': 'A' },
+    ag('1700000011', '2026-11-15', '2026-11-16', 2),   // 301は埋まり → 月山（302は定員1）
+    ag('1700000012', '2026-11-15', '2026-11-16', 1),   // 1名 → 定員の小さい302
+    ag('1700000013', '2026-11-15', '2026-11-16', 3),   // 301・月山とも埋まり → 空きなし
+    ag('1700000014', '2026-11-01', '2026-11-02', 2),   // 過去の予約は触らない
+    ag('1700000015', '2026-11-20', '2026-11-21', 2, { 'ステータス': 'キャンセル' }),
+  ]);
+  const c = X.makeCtx_(res, table([]), table(rooms), table([{ 'Agodaの部屋タイプ': 'Japanese Room', '部屋': '' }]));
+  const notes = [];
+  X.applyRules_(c, '2026-11-12', notes);
+  const room = (no) => res.rows.find(r => r.v['予約番号'] === no).v['部屋'];
+  assert.strictEqual(room('1700000011'), '月山');
+  assert.strictEqual(room('1700000012'), '302');
+  assert.strictEqual(room('1700000013'), undefined);
+  assert.strictEqual(room('1700000014'), undefined);
+  assert.strictEqual(room('1700000015'), undefined);
+  const r13 = res.rows.find(r => r.v['予約番号'] === '1700000013');
+  assert.ok(X.tagsOf_(r13).some(t => t.startsWith('[部屋未設定]')));
+  assert.ok(res.rows.find(r => r.v['予約番号'] === '1700000011').v['メモ'].includes('自動で決めた（月山）'));
+  assert.ok(notes.some(n => n.startsWith('Agodaの予約の部屋を 月山')));
+  // 重複は出ない
+  assert.ok(!res.rows.some(r => X.tagsOf_(r).some(t => t.startsWith('[重複]'))));
+
+  // 「Agoda」タブで候補を絞れる（302,月山）。定員が足りる月山
+  const res2 = table([ag('1700000021', '2026-11-15', '2026-11-16', 2)]);
+  const c2 = X.makeCtx_(res2, table([]), table(rooms), table([{ 'Agodaの部屋タイプ': 'Japanese Room', '部屋': '302,月山' }]));
+  X.applyRules_(c2, '2026-11-12', []);
+  assert.strictEqual(res2.rows[0].v['部屋'], '月山');
 });

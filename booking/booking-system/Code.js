@@ -1104,12 +1104,48 @@ function fillRoom_(ctx, r) {
   const lid = str_(r.v['リスティングID']);
   const map = str_(r.v['媒体']) === 'Agoda' ? ctx.agodaTypes : ctx.listings;
   const l = lid && map[lid];
-  if (!str_(r.v['部屋']) && l && str_(l.v['部屋'])) set_(r, '部屋', str_(l.v['部屋']));
+  const room = l ? str_(l.v['部屋']) : '';
+  if (!str_(r.v['部屋']) && room && !/[,、，\s]/.test(room)) set_(r, '部屋', room);
 }
 
 // ===== 台帳ルール（重複・準備中・定員・入湯税・泊数） =====
 
+// Agodaのメールには部屋タイプしか書いていないので、部屋が空の予約は人数と空きを見て部屋を決める。
+// 候補は「Agoda」タブの「部屋」（「302,月山」のようにカンマで複数書ける。空ならすべての販売可の部屋）。
+// 定員が足りて、その日程に重なる予約がない部屋のうち、定員の小さい順（同じなら「部屋」タブの並び順）で選ぶ
+function autoRoomAgoda_(ctx, todayIso, notes) {
+  const order = ctx.rooms ? ctx.rooms.rows.map(function (r) { return str_(r.v['部屋']); }).filter(Boolean) : Object.keys(ctx.roomInfo);
+  const active = ctx.res.rows.filter(function (r) {
+    return hasData_(r) && !isCancelled_(r) && r.v['チェックイン'] && r.v['チェックアウト'];
+  });
+  const todo = active
+    .filter(function (r) { return str_(r.v['媒体']) === 'Agoda' && !str_(r.v['部屋']) && r.v['チェックアウト'] > todayIso; })
+    .sort(function (a, b) { return a.v['チェックイン'] < b.v['チェックイン'] ? -1 : 1; });
+  todo.forEach(function (r) {
+    const type = ctx.agodaTypes[str_(r.v['リスティングID'])];
+    const listed = type ? str_(type.v['部屋']).split(/[,、，\s]+/).filter(Boolean) : [];
+    const people = Math.max(1, num_(r.v['大人']) + num_(r.v['子ども']));
+    const cands = (listed.length ? listed : order).filter(function (name) {
+      const info = ctx.roomInfo[name];
+      if (!info || info.state !== '販売可' || (info.cap && info.cap < people)) return false;
+      return !active.some(function (o) {
+        return o !== r && str_(o.v['部屋']) === name && o.v['チェックイン'] < r.v['チェックアウト'] && r.v['チェックイン'] < o.v['チェックアウト'];
+      });
+    });
+    cands.sort(function (a, b) {
+      return (ctx.roomInfo[a].cap || 99) - (ctx.roomInfo[b].cap || 99) || order.indexOf(a) - order.indexOf(b);
+    });
+    if (!cands.length) return; // 空きがなければ [部屋未設定] のまま（人が決める）
+    set_(r, '部屋', cands[0]);
+    const memo = str_(r.v['メモ']);
+    const line = '部屋は人数と空きから自動で決めた（' + cands[0] + '）';
+    if (memo.indexOf(line) < 0) set_(r, 'メモ', memo ? memo + '\n' + line : line);
+    notes.push('Agodaの予約の部屋を ' + cands[0] + ' にした：' + shortLabel_(r));
+  });
+}
+
 function applyRules_(ctx, todayIso, notes) {
+  autoRoomAgoda_(ctx, todayIso, notes);
   const rows = ctx.res.rows.filter(hasData_);
   const derived = new Map();
   rows.forEach(function (r) { derived.set(r, []); });
@@ -1127,7 +1163,7 @@ function applyRules_(ctx, todayIso, notes) {
     const upcoming = !outIso || outIso >= todayIso;
     const agodaRow = str_(r.v['媒体']) === 'Agoda';
     if (!room) tags.push(TAG.ROOM_UNSET + (!lid ? ' 部屋を選んで'
-      : agodaRow ? ' 「Agoda」タブでこの部屋タイプの部屋を選ぶか、この予約の部屋を選んで'
+      : agodaRow ? ' 人数に合う空き部屋が見つからなかった。この予約の部屋を選んで'
       : ' 「Airbnb」タブでこのリスティングの部屋を選んで'));
     const info = room ? ctx.roomInfo[room] : null;
     if (info && upcoming && info.state && info.state !== '販売可') tags.push(TAG.NOT_FOR_SALE + ' ' + room + 'は「' + info.state + '」');
