@@ -15,6 +15,7 @@
  *   setupCalendar … Googleカレンダー連携を足したときに1回だけ。カレンダーを作って、今ある予約を書く
  *   setupAgoda … Agodaの取り込みを足したときに1回だけ。「Agoda」タブを作り、媒体の選択肢にAgodaを足す
  *   importPast … 過去1年分のメールをさかのぼって取り込む（ふだんの run は直近14日だけ）。並べ替えはしない
+ *   useThisAccount … 取り込みを、今エディタを開いているアカウントで動かす（そのアカウントのGmailを読む）
  *
  * Googleカレンダー：キャンセル以外の予約を「小夜月 予約」カレンダーに終日の予定で書く（泊まる夜の日に出る）。
  * 台帳を直せば次の実行でカレンダーも直る。カレンダー側で直しても台帳には戻らない（台帳が正）。
@@ -191,6 +192,22 @@ function checkAgodaMail() {
       Logger.log((kind || '読まない') + '｜' + m.getFrom() + '｜' + m.getSubject());
     });
   });
+}
+
+// 取り込みを、今エディタを開いているアカウントで動かす（そのアカウントのGmailを読むようになる）。
+// 並べ替えも取り込みもしない。前のアカウントの自動実行は、前のアカウントで「トリガー」画面から消す
+function useThisAccount() {
+  const me = Session.getEffectiveUser().getEmail();
+  ScriptApp.getProjectTriggers()
+    .filter(function (t) { return t.getHandlerFunction() === 'run'; })
+    .forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('run').timeBased().everyMinutes(5).create();
+  Logger.log('5分ごとの取り込みを ' + me + ' で入れた。これからはこのアカウントのGmailを読む');
+  if (CONFIG.CALENDAR_NAME) {
+    try { Logger.log('カレンダー「' + getCalendar_().getName() + '」に書ける'); }
+    catch (e) { Logger.log('要対応：' + String((e && e.message) || e)); }
+  }
+  Logger.log('前のアカウントの自動実行は、前のアカウントで Apps Script の「トリガー」（時計のアイコン）から run を消して');
 }
 
 function dryRun() {
@@ -688,6 +705,8 @@ function getCalendar_() {
   const props = PropertiesService.getScriptProperties();
   const id = props.getProperty('calendarId');
   let cal = id ? CalendarApp.getCalendarById(id) : null;
+  // 別のアカウントで動かしていて、カレンダーが共有されていないとき。新しく作るとカレンダーが2つに分かれるので作らない
+  if (id && !cal) throw new Error('「' + CONFIG.CALENDAR_NAME + '」カレンダーが開けない。持ち主から ' + Session.getEffectiveUser().getEmail() + ' に「予定の変更」の権限で共有して');
   if (!cal) {
     const found = CalendarApp.getOwnedCalendarsByName(CONFIG.CALENDAR_NAME);
     cal = found.length ? found[0] : CalendarApp.createCalendar(CONFIG.CALENDAR_NAME, { timeZone: 'Asia/Tokyo' });
@@ -950,6 +969,8 @@ function applyCancel_(ctx, p, notes) {
       'チェックイン': p.checkIn, 'チェックアウト': p.checkOut, '大人': p.guests, '予約URL': airbnbUrl_(p.code),
     });
     ctx.byCode[p.code] = r;
+  } else if (isCancelled_(r)) {
+    return '既にキャンセルだった';
   } else {
     set_(r, 'ステータス', 'キャンセル');
   }
