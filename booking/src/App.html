@@ -181,6 +181,20 @@
         ));
       });
 
+    // 部屋が決まっていない予約（Agodaの部屋タイプが紐付いていないときなど）。カレンダーの行に乗らないので、ここに出す
+    b.bookings
+      .filter(function (x) { return Lib.isActive(x) && x.checkOut > b.today && !String(x.room || '').trim(); })
+      .forEach(function (x) {
+        append($view, h('button', { type: 'button', class: 'alert', onclick: function () { openDetail(x); } },
+          svg(ICON_WARN, 22, '#FF8A8A'),
+          h('span', { class: 'grow' },
+            h('strong', null, '部屋が決まってない ' + md(x.checkIn) + '〜' + md(x.checkOut) + ' ' + displayName(x) + '（' + (x.channel || '?') + '）'),
+            h('span', { class: 's' }, 'カレンダーに出ない。台帳で部屋を選んで（Agodaは「Agoda」タブで部屋タイプに部屋を紐付けると次から自動で入る）')
+          ),
+          svg(ICON_NEXT, 18, '#FFC2C2')
+        ));
+      });
+
     if (b.inquiries.length) {
       append($view, h('button', { type: 'button', class: 'alert inbox-alert', onclick: function () { go('inbox'); } },
         h('span', { class: 'grow' },
