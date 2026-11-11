@@ -14,6 +14,7 @@
  *   dryRun … シートに書かずに、直近60日のメールの読み取り結果だけを「実行ログ」に出す（確認用）
  *   setupCalendar … Googleカレンダー連携を足したときに1回だけ。カレンダーを作って、今ある予約を書く
  *   setupAgoda … Agodaの取り込みを足したときに1回だけ。「Agoda」タブを作り、媒体の選択肢にAgodaを足す
+ *   importPast … 過去1年分のメールをさかのぼって取り込む（ふだんの run は直近14日だけ）。並べ替えはしない
  *
  * Googleカレンダー：キャンセル以外の予約を「小夜月 予約」カレンダーに終日の予定で書く（泊まる夜の日に出る）。
  * 台帳を直せば次の実行でカレンダーも直る。カレンダー側で直しても台帳には戻らない（台帳が正）。
@@ -169,6 +170,15 @@ function setupAgoda() {
   res.getRange(2, resIdx['媒体'] + 1, res.getMaxRows() - 1, 1)
     .setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(CHANNELS, true).setAllowInvalid(true).build());
   Logger.log('「Agoda」タブを作った。Agodaの予約メールが来ると部屋タイプが足されるので、「部屋」を選んで');
+}
+
+// 過去のメールをさかのぼって取り込む（Agodaを足したときなど）。setup と違って並べ替えはしない。
+// 取り込み済みのメールは「ログ」タブで飛ばすので、何度押してもいい。通知メールは出さず、結果は実行ログに出す
+function importPast() {
+  const r = runCore_({ silent: true, days: CONFIG.FIRST_IMPORT_DAYS });
+  if (!r) return;
+  Logger.log('過去' + CONFIG.FIRST_IMPORT_DAYS + '日のメールを見て、新しく ' + r.mails + ' 通を取り込んだ');
+  if (r.notes.length) Logger.log('気になる点：\n' + r.notes.join('\n'));
 }
 
 function dryRun() {
