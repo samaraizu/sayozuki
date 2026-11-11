@@ -181,6 +181,18 @@ function importPast() {
   if (r.notes.length) Logger.log('気になる点：\n' + r.notes.join('\n'));
 }
 
+// Agodaのメールが拾えないときの確認用。直近60日のAgodaらしいメールを、差出人・件名・判定結果つきで実行ログに出す
+function checkAgodaMail() {
+  const threads = GmailApp.search('{from:agoda subject:Agoda} newer_than:60d', 0, 50);
+  Logger.log('このスクリプトが読んでいるGmail：' + Session.getEffectiveUser().getEmail() + '／見つかったスレッド ' + threads.length + '件');
+  threads.forEach(function (th) {
+    th.getMessages().forEach(function (m) {
+      const kind = /agoda/i.test(m.getFrom()) ? classifyAgoda_(m.getSubject()) : '（差出人にagodaがない）';
+      Logger.log((kind || '読まない') + '｜' + m.getFrom() + '｜' + m.getSubject());
+    });
+  });
+}
+
 function dryRun() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tz = ss ? ss.getSpreadsheetTimeZone() : 'Asia/Tokyo';
@@ -286,7 +298,7 @@ function runCore_(opts) {
 // 媒体ごとの探し方。from で送り主を確かめ、件名で種類を決める（件名が合わないメールは読まない）
 const MAIL_SOURCES = [
   { source: 'airbnb', q: 'from:automated@airbnb.com {subject:予約確定 subject:キャンセル subject:"ご予約が変更されました"}', from: /airbnb\.com/i, classify: function (s) { return classify_(s); } },
-  { source: 'agoda', q: 'from:agoda', from: /agoda/i, classify: function (s) { return classifyAgoda_(s); } },
+  { source: 'agoda', q: '{from:agoda subject:Agoda}', from: /agoda/i, classify: function (s) { return classifyAgoda_(s); } },
 ];
 
 function searchMail_(days, processed) {
@@ -446,7 +458,7 @@ function listingTitle_(body, id) {
 // 読めなかった欄は [Agoda要確認] に書いて台帳に出す。日程が読めないときは行を作らず「要手入力」で知らせる
 
 function classifyAgoda_(subject) {
-  const s = String(subject || '');
+  const s = clean_(subject).replace(/\n/g, ' ');
   const i = s.search(AGODA_SUBJECT_RE);
   if (i < 0) return null;
   const tail = s.slice(i).replace(/ホテル所在国.*$/, '');
