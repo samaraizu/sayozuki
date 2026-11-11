@@ -43,11 +43,19 @@
   .bottomnav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); z-index: 5; }
   .bottomnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 11px; }
   .bottomnav a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  /* PCは左のサイドバー（ロゴの下にカレンダー・問い合わせ・手動入力を縦に並べる）。スマホは下のナビ */
   @media (min-width: 900px) {
-    .top { padding: 14px 24px; border-bottom: 1px solid var(--line); }
-    .topnav { display: flex; }
+    .shell { flex-direction: row; align-items: flex-start; }
+    .top { position: sticky; top: 0; flex: none; width: 200px; height: 100vh; flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 20px; padding: 20px 12px; border-right: 1px solid var(--line); background: #131720; }
+    .brand { padding: 0 10px; }
+    .topnav { display: flex; flex-direction: column; gap: 2px; }
+    .topnav a { height: 44px; gap: 10px; padding: 0 12px; }
+    .topnav a:hover { background: #1C212B; }
+    .topnav a svg { flex: none; color: var(--muted); }
+    .topnav a[aria-current="page"] svg { color: var(--accent); }
+    .topnav .badge { margin-left: auto; }
     .bottomnav { display: none; }
-    .view { padding-bottom: 40px; }
+    .view { min-width: 0; padding-top: 8px; padding-bottom: 40px; }
   }
 
   .badge { min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: var(--red); color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
@@ -62,12 +70,12 @@
   /* 左：週の表、右：30日のマス。狭い画面では30日のマスを上に */
   .cal-split { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
   .week { min-width: 0; }
-  @media (min-width: 1000px) {
+  @media (min-width: 1200px) {
     .cal-split { flex-direction: row-reverse; align-items: flex-start; gap: 0; }
     .week { flex: 1; }
     .month { flex: none; width: 400px; border-left: 1px solid var(--line); position: sticky; top: 8px; }
   }
-  .month { padding-bottom: 8px; }
+  .month { padding-bottom: 8px; max-width: 560px; }
   .mgrid { padding: 0 16px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
   .mwd { padding: 2px 0 4px; text-align: center; font-size: 10px; color: var(--muted); }
   .mwd.we { color: var(--text); font-weight: 700; }
@@ -86,7 +94,7 @@
   .mcell.sel { background: #1A2B3D; border-color: #3B6A94; }
   .mcell.sel.today { border-color: var(--accent); }
   .mcell.clash { border-color: var(--red); box-shadow: inset 0 0 0 1px var(--red); }
-  @media (min-width: 1000px) { .mn { font-size: 13px; } .mfree { font-size: 10px; } }
+  @media (min-width: 1200px) { .mn { font-size: 13px; } .mfree { font-size: 10px; } }
   .day.past .dn, .day.past .wd { color: var(--faint); }
   .pager { display: flex; align-items: center; gap: 2px; margin-left: auto; }
   .icon-btn { width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; }
