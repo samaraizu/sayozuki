@@ -2,8 +2,11 @@
 (function () {
   'use strict';
 
-  var DAYS = 28; // 4週間
-  var STEP = 7;  // 前後の矢印は1週間ずつ
+  var DAYS = 7;        // 左の週の表（月曜はじまり）
+  var STEP = 7;        // 週の矢印は1週間ずつ
+  var MONTH_DAYS = 30; // 右の月のマス（今日から30日）
+  var MONTH_STEP = 28; // 月の矢印は4週間ずつ
+  var WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日'];
   var TAX_PER_NIGHT = 300; // 入湯税の目安（2026/4/1以降の予約）。正式な額は台帳側で計算
   var ARRIVALS = ['15:00', '16:00', '17:00', '18:00以降', '未定'];
   var PAYS = ['当日Square', 'あとで決める'];
@@ -12,7 +15,8 @@
   var state = {
     board: null,
     view: 'cal',
-    weekStart: '',
+    weekStart: '',  // 左の週の月曜
+    monthStart: '', // 右の月のマスの1日目
     form: null,
     saving: false,
     closing: '' // 見送りの理由を入れている問い合わせの受付番号
@@ -133,7 +137,8 @@
       }
       state.board = res;
       if (!state.board.inquiries) state.board.inquiries = [];
-      if (!state.weekStart) state.weekStart = res.today;
+      if (!state.weekStart) state.weekStart = mondayOf(res.today);
+      if (!state.monthStart) state.monthStart = res.today;
       updateBadges();
       render();
     });
@@ -148,21 +153,24 @@
     });
   }
 
-  // ---------- 4週間カレンダー ----------
+  // ---------- カレンダー（右：30日のマス、左：選んだ週の部屋ごとの表） ----------
+
+  function mondayOf(iso) { return Lib.addDays(iso, -WEEKDAYS.indexOf(Lib.weekday(iso))); }
+
+  // その日を含む週を左に出す。月のマスの範囲外なら月も動かす
+  function showWeek(iso) {
+    showWeekOnly(iso);
+    render();
+  }
+  function showWeekOnly(iso) {
+    state.weekStart = mondayOf(iso);
+    var mEnd = Lib.addDays(state.monthStart, MONTH_DAYS - 1);
+    if (iso < mondayOf(state.monthStart) || iso > Lib.addDays(mondayOf(mEnd), 6)) state.monthStart = iso;
+  }
 
   function renderCalendar() {
     var b = state.board;
     var start = state.weekStart;
-    var end = Lib.addDays(start, DAYS - 1);
-
-    append($view, h('div', { class: 'cal-head' },
-      h('h1', null, Lib.shortLabel(start) + ' 〜 ' + Lib.shortLabel(end)),
-      h('div', { class: 'pager' },
-        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の週', onclick: function () { shiftWeek(-STEP); } }, svg(ICON_PREV)),
-        h('button', { type: 'button', class: 'pill', onclick: function () { state.weekStart = b.today; render(); } }, '今日'),
-        h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の週', onclick: function () { shiftWeek(STEP); } }, svg(ICON_NEXT))
-      )
-    ));
 
     // ダブルブッキング（今日以降に泊まりがかかるもの）
     Lib.findConflicts(b.bookings)
@@ -170,12 +178,26 @@
       .forEach(function (c) {
         append($view, h('button', {
           type: 'button', class: 'alert',
-          onclick: function () { state.weekStart = c.first < b.today ? b.today : c.first; render(); }
+          onclick: function () { showWeek(c.first < b.today ? b.today : c.first); }
         },
           svg(ICON_WARN, 22, '#FF8A8A'),
           h('span', { class: 'grow' },
             h('strong', null, c.room + ' ' + md(c.first) + ' に2件入ってる'),
             h('span', { class: 's' }, (c.a.channel || '?') + ' と ' + (c.b.channel || '?') + ' が重なってる')
+          ),
+          svg(ICON_NEXT, 18, '#FFC2C2')
+        ));
+      });
+
+    // 部屋が決まっていない予約（Agodaの部屋タイプが紐付いていないときなど）。カレンダーの行に乗らないので、ここに出す
+    b.bookings
+      .filter(function (x) { return Lib.isActive(x) && x.checkOut > b.today && !String(x.room || '').trim(); })
+      .forEach(function (x) {
+        append($view, h('button', { type: 'button', class: 'alert', onclick: function () { openDetail(x); } },
+          svg(ICON_WARN, 22, '#FF8A8A'),
+          h('span', { class: 'grow' },
+            h('strong', null, '部屋が決まってない ' + md(x.checkIn) + '〜' + md(x.checkOut) + ' ' + displayName(x) + '（' + (x.channel || '?') + '）'),
+            h('span', { class: 's' }, 'カレンダーに出ない。台帳で部屋を選んで（Agodaは「Agoda」タブで部屋タイプに部屋を紐付けると次から自動で入る）')
           ),
           svg(ICON_NEXT, 18, '#FFC2C2')
         ));
@@ -204,16 +226,27 @@
       h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
     ));
 
+    var end = Lib.addDays(start, DAYS - 1);
+    var week = h('section', { class: 'week', 'aria-label': '週の予約' },
+      h('div', { class: 'cal-head' },
+        h('h1', null, Lib.shortLabel(start) + ' 〜 ' + Lib.shortLabel(end)),
+        h('div', { class: 'pager' },
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の週', onclick: function () { shiftWeek(-STEP); } }, svg(ICON_PREV)),
+          h('button', { type: 'button', class: 'pill', onclick: function () { state.monthStart = b.today; showWeek(b.today); } }, '今週'),
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の週', onclick: function () { shiftWeek(STEP); } }, svg(ICON_NEXT))
+        )
+      ));
+
     var grid = h('div', { class: 'grid', role: 'table', 'aria-label': '部屋ごとの予約', style: '--cols: ' + DAYS });
     var days = h('div', { class: 'grow-row days', role: 'row' }, h('div', { class: 'corner', role: 'columnheader' }, '部屋'));
     for (var d = 0; d < DAYS; d++) {
       var iso = Lib.addDays(start, d);
       var wd = Lib.weekday(iso);
       var p = iso.split('-');
-      var cls = 'day' + (wd === '月' && d > 0 ? ' wk' : '') + (wd === '土' ? ' sat' : wd === '日' ? ' sun' : '') + (iso === b.today ? ' today' : '');
+      var cls = 'day' + (wd === '土' ? ' sat' : wd === '日' ? ' sun' : '') + (iso === b.today ? ' today' : '') + (iso < b.today ? ' past' : '');
       append(days, h('div', { class: cls, role: 'columnheader' },
         h('span', { class: 'wd' }, wd),
-        h('span', { class: 'dn' }, (+p[2] === 1 || d === 0) ? (+p[1]) + '/' + (+p[2]) : String(+p[2]))
+        h('span', { class: 'dn' }, (+p[1]) + '/' + (+p[2]))
       ));
     }
     append(grid, days);
@@ -221,14 +254,65 @@
     Lib.layoutWeek(b.rooms, b.bookings, start, DAYS).forEach(function (row) {
       append(grid, roomRow(row, start));
     });
-    append($view, h('div', { class: 'grid-scroll' }, grid));
+    append(week, h('div', { class: 'grid-scroll' }, grid));
+
+    append($view, h('div', { class: 'cal-split' }, renderMonth(), week));
 
     renderTodayCards();
   }
 
   function shiftWeek(n) {
-    state.weekStart = Lib.addDays(state.weekStart, n);
-    render();
+    showWeek(Lib.addDays(state.weekStart, n));
+  }
+
+  // 右の30日のマス。1マス＝1泊。点は泊まっている部屋（色は媒体）、「空n」は売れる部屋の空き。押すとその週を左に出す
+  function renderMonth() {
+    var b = state.board;
+    var mStart = state.monthStart;
+    var mEnd = Lib.addDays(mStart, MONTH_DAYS - 1);
+    var gridStart = mondayOf(mStart);
+    var gridEnd = Lib.addDays(mondayOf(mEnd), 6);
+    var active = b.bookings.filter(function (x) { return Lib.isActive(x) && String(x.room || '').trim(); });
+    var sellable = b.rooms.filter(function (r) { return r.state === Lib.SELLABLE; });
+    var clash = {};
+    Lib.findConflicts(b.bookings).forEach(function (c) {
+      for (var d = c.a.checkIn > c.b.checkIn ? c.a.checkIn : c.b.checkIn; d < (c.a.checkOut < c.b.checkOut ? c.a.checkOut : c.b.checkOut); d = Lib.addDays(d, 1)) clash[d] = true;
+    });
+
+    var box = h('section', { class: 'month', 'aria-label': '30日の空き' },
+      h('div', { class: 'cal-head' },
+        h('h2', null, Lib.shortLabel(mStart) + ' 〜 ' + Lib.shortLabel(mEnd)),
+        h('div', { class: 'pager' },
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の4週間', onclick: function () { state.monthStart = Lib.addDays(mStart, -MONTH_STEP); render(); } }, svg(ICON_PREV)),
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の4週間', onclick: function () { state.monthStart = Lib.addDays(mStart, MONTH_STEP); render(); } }, svg(ICON_NEXT))
+        )));
+    var grid = h('div', { class: 'mgrid', role: 'grid' });
+    WEEKDAYS.forEach(function (w) { append(grid, h('div', { class: 'mwd' + (w === '土' || w === '日' ? ' we' : '') }, w)); });
+    for (var iso = gridStart; iso <= gridEnd; iso = Lib.addDays(iso, 1)) {
+      (function (iso) {
+        var stays = active.filter(function (x) { return x.checkIn <= iso && iso < x.checkOut; });
+        var used = {};
+        stays.forEach(function (x) { used[x.room] = true; });
+        var free = sellable.filter(function (r) { return !used[r.name]; }).length;
+        var p = iso.split('-');
+        var inRange = iso >= mStart && iso <= mEnd;
+        var cls = 'mcell' + (inRange ? '' : ' out') + (iso < b.today ? ' past' : '') + (iso === b.today ? ' today' : '') +
+          (iso >= state.weekStart && iso <= Lib.addDays(state.weekStart, 6) ? ' sel' : '') + (clash[iso] ? ' clash' : '') +
+          (free === 0 && sellable.length ? ' full' : '');
+        append(grid, h('button', {
+          type: 'button', class: cls,
+          'aria-label': md(iso) + '（' + Lib.weekday(iso) + '） 予約' + stays.length + '件・空き' + free + '室' + (clash[iso] ? '・重複あり' : ''),
+          onclick: function () { showWeek(iso); }
+        },
+          h('span', { class: 'mtop' },
+            h('span', { class: 'mn' }, (+p[2] === 1 || iso === gridStart) ? (+p[1]) + '/' + (+p[2]) : String(+p[2])),
+            iso >= b.today ? h('span', { class: 'mfree' }, free === 0 ? '満' : '空' + free) : null),
+          h('span', { class: 'mdots', 'aria-hidden': 'true' }, stays.map(function (x) { return h('i', { class: 'sw ' + channelClass(x) }); }))
+        ));
+      })(iso);
+    }
+    append(box, grid);
+    return box;
   }
 
   function roomRow(row, start) {
@@ -831,7 +915,7 @@
       state.saving = false;
       if (!res.ok) { toast(res.message, true); state.updateForm(); return; }
       toast('入れた。予約番号 ' + res.no);
-      state.weekStart = f.checkIn < state.board.today ? state.board.today : f.checkIn;
+      showWeekOnly(f.checkIn < state.board.today ? state.board.today : f.checkIn);
       state.form = null;
       state.view = 'cal';
       go('cal');
