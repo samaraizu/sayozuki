@@ -7,7 +7,7 @@
   var TAX_PER_NIGHT = 300; // 入湯税の目安（2026/4/1以降の予約）。正式な額は台帳側で計算
   var ARRIVALS = ['15:00', '16:00', '17:00', '18:00以降', '未定'];
   var PAYS = ['当日Square', 'あとで決める'];
-  var CHANNEL_CLASS = { 'Airbnb': 'airbnb', '楽天': 'rakuten', '楽天トラベル': 'rakuten', '直販': 'direct' };
+  var CHANNEL_CLASS = { 'Airbnb': 'airbnb', 'Agoda': 'agoda', '楽天': 'rakuten', '楽天トラベル': 'rakuten', '直販': 'direct' };
 
   var state = {
     board: null,
@@ -193,11 +193,12 @@
 
     var needCount = b.bookings.filter(function (x) { return Lib.isActive(x) && x.checkOut > b.today && Lib.needsInput(x); }).length;
     append($view, h('div', { class: 'status' },
-      h('span', null, h('span', { class: 'dot', 'aria-hidden': 'true' }), 'Airbnb取り込み ' + (b.lastImport || '—')),
+      h('span', null, h('span', { class: 'dot', 'aria-hidden': 'true' }), 'Airbnb・Agoda取り込み ' + (b.lastImport || '—')),
       needCount ? h('span', { class: 'need' }, '要入力 ' + needCount + '件') : null
     ));
     append($view, h('div', { class: 'legend' },
       h('span', null, h('i', { class: 'sw airbnb' }), 'Airbnb'),
+      h('span', null, h('i', { class: 'sw agoda' }), 'Agoda'),
       h('span', null, h('i', { class: 'sw rakuten' }), '楽天'),
       h('span', null, h('i', { class: 'sw direct' }), '直販'),
       h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
