@@ -59,6 +59,14 @@ const html = src('Index.html')
   .replace("<?!= include_('Styles') ?>", () => src('Styles.html'))
   .replace("<?!= include_('App') ?>", () => shim + src('App.html') + '\n<script src="/push.js" defer></script>')
   .replace('<?!= libSource_() ?>', () => lib.replace(/<\/script/gi, '<\\/script'));
-if (/<\?/.test(html)) throw new Error('組み立て漏れのスクリプトレットがある');
-out('public/index.html', html);
+// 客室オーダーのスタッフ画面への入口（Cloudflare版だけ。/staff/ は src/order.ts が客室オーダーへ中継する）
+const bell = (n) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18"></path><path d="M5 18a7 7 0 0 1 14 0"></path><path d="M12 8V6"></path><path d="M10 6h4"></path></svg>`;
+const navs = html.split('</nav>');
+if (navs.length !== 3) throw new Error('Index.html の nav が2つ（上・下）ではない');
+const withOrder = navs[0] + `  <a href="/staff/">${bell(20)}<span>オーダー</span></a>\n    </nav>` +
+  navs[1] + `  <a href="/staff/">\n      ${bell(22)}\n      オーダー\n    </a>\n  </nav>` + navs[2];
+const page = withOrder.replace('</head>', '<style>.bottomnav { grid-template-columns: repeat(4, 1fr); }</style>\n</head>');
+if (page === withOrder) throw new Error('</head> が無い');
+if (/<\?/.test(page)) throw new Error('組み立て漏れのスクリプトレットがある');
+out('public/index.html', page);
 console.log('built public/index.html, src/lib.gen.js');

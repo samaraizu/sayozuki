@@ -27,6 +27,7 @@ import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
 import { cancelBooking, type CancelForm } from './cancel';
 import { setMeals, type MealForm } from './meals';
 import { latest, notify, subscribe, unsubscribe, vapid } from './push';
+import { isOrderPath, proxyOrder } from './order';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -128,6 +129,9 @@ async function handle(req: Request, env: Env): Promise<Response> {
     }
     return json({ ok: false, message: 'not found' }, 404);
   }
+
+  // 客室オーダーのスタッフ画面（src/order.ts）
+  if (isOrderPath(path)) return proxyOrder(req, env, url);
 
   return env.ASSETS.fetch(req);
 }
