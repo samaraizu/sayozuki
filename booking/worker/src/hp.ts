@@ -6,7 +6,8 @@
  * 1. startCheckout：空室を確かめながら bookings に「仮」で1行入れて部屋を押さえ、Squareの支払いリンクを作る
  * 2. お客様が Square で払う → HPの完了画面に戻る → checkoutStatus が Square に聞いて「確定」にする
  * 3. 戻ってこなくても、毎分の sweep が Square に聞いて確定する。HOLD_MINUTES を過ぎて払われていなければ、
- *    支払いリンクを消し、仮の行を消して部屋を戻す
+ *    支払いリンクを消し、仮の行を「キャンセル」にして部屋を戻す（申込みの記録として台帳には残す）
+ * 仮のうちから台帳とGoogleカレンダーに出す（db.ts の pendingForSheet）。確定・取り消しは取り込みGASが台帳に書く
  *
  * 料金はHPが決める（lib/pricing.ts）。ここは受け取った明細の合計と額が合っているかだけ確かめる。
  */
@@ -324,13 +325,23 @@ async function confirm(env: Env, row: CheckoutRow) {
   if (mail.innSubject && mail.innBody) await sendMail(env, inn, mail.innSubject, mail.innBody, row.email || undefined);
 }
 
-/** 押さえを外す（仮の行を消す）。まだスプシに載っていない、HPの仮の行だけが対象 */
+/** 押さえを外す。HPの仮の行を「キャンセル」にしてメモに理由を足す（行は消さない。申込みの記録として台帳に残す） */
 async function release(env: Env, no: string, status: 'expired' | 'failed') {
+  const why = releaseNote(status);
   await env.DB.batch([
-    env.DB.prepare("DELETE FROM bookings WHERE no = ?1 AND created_by = 'hp' AND status = '仮' AND in_sheet = 0").bind(no),
+    env.DB.prepare(
+      `UPDATE bookings SET status = 'キャンセル', memo = CASE WHEN memo = '' THEN ?2 ELSE memo || char(10) || ?2 END,
+         updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+       WHERE no = ?1 AND created_by = 'hp' AND status = '仮'`,
+    ).bind(no, why),
     env.DB.prepare("UPDATE hp_checkouts SET status = ?2 WHERE no = ?1 AND status = 'pending'").bind(no, status),
   ]);
   await log(env, status === 'expired' ? 'HP予約（期限切れで取り消し）' : 'HP予約（決済の準備に失敗）', no, '');
+}
+
+/** 取り消したHP申込みのメモに足す1行（台帳のメモにも同じ文が入る） */
+export function releaseNote(status: 'expired' | 'failed') {
+  return status === 'expired' ? `HP申込み：${HOLD_MINUTES}分以内に決済されず取り消し` : 'HP申込み：決済の準備に失敗して取り消し';
 }
 
 async function log(env: Env, action: string, no: string, detail: string) {

@@ -1,5 +1,6 @@
 import { Lib, type Room } from './lib.gen.js';
 import { UserError, nowText, todayIso, type Env } from './env';
+import { PAID_LABEL, releaseNote } from './hp';
 import { openInquiries } from './inquiries';
 import { readMealPlans } from './meals';
 import { notify, summarizeNotes } from './push';
@@ -155,14 +156,20 @@ export interface SyncPayload {
   notes?: string[];
 }
 
-/** アプリで入れて、まだスプシに載っていない予約（GASがスプシに足す）。スプシの見出し名で返す */
+/**
+ * アプリで入れて、まだスプシに載っていない予約（GASがスプシに足す）。スプシの見出し名で返す。
+ * HPの申込みは決済待ちの「仮」のうちから送る（台帳とGoogleカレンダーに出すため）。
+ * 決済の結果（hpResults）は、台帳で「仮」のままの行をGASが「確定」か「キャンセル」に書き換える
+ */
 export async function pendingForSheet(env: Env) {
   const { results } = await env.DB.prepare(
-    `SELECT ${SELECT_COLS}, created_at AS createdAt FROM bookings WHERE source = 'app' AND in_sheet = 0
-       -- HPの予約は払われるまで送らない（決済待ちの仮でカレンダーや通知が出ないように）
-       AND NOT EXISTS (SELECT 1 FROM hp_checkouts h WHERE h.no = bookings.no AND h.status <> 'paid')
-     ORDER BY id`,
+    `SELECT ${SELECT_COLS}, created_at AS createdAt FROM bookings WHERE source = 'app' AND in_sheet = 0 ORDER BY id`,
   ).all<Row>();
+  // 台帳に載っているHPの申込みで、決済の結果が出たもの（直近14日）。GASは台帳で「仮」の行だけ書き換えるので、毎回送ってよい
+  const hp = await env.DB.prepare(
+    `SELECT h.no AS no, h.status AS status FROM hp_checkouts h JOIN bookings b ON b.no = h.no
+     WHERE h.status <> 'pending' AND b.in_sheet = 1 AND h.created_at >= datetime('now', '-14 days') ORDER BY h.created_at`,
+  ).all<{ no: string; status: 'paid' | 'expired' | 'failed' }>();
   // アプリでキャンセルにした、台帳に載っている予約。GASが台帳のステータスを「キャンセル」にし、メモに1行足す
   const cancels = await env.DB.prepare(
     `SELECT c.no AS no, c.note AS note FROM cancellations c JOIN bookings b ON b.no = c.no
@@ -183,6 +190,12 @@ export async function pendingForSheet(env: Env) {
     cancels: cancels.results.map((c) => ({ '予約番号': c.no, 'メモ': c.note })),
     // アプリで入れた・直した食事。GASが台帳の「食事」列に書く
     meals: meals.results.map((m) => ({ '予約番号': m.no, '食事': m.meals })),
+    // HPの申込みの決済結果。paid → 確定（支払い状況は HPで決済済）、expired・failed → キャンセル（メモに理由）
+    hpResults: hp.results.map((h) =>
+      h.status === 'paid'
+        ? { '予約番号': h.no, 'ステータス': '確定', '支払い状況': PAID_LABEL }
+        : { '予約番号': h.no, 'ステータス': 'キャンセル', 'メモ': releaseNote(h.status) },
+    ),
   };
 }
 
@@ -241,6 +254,15 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
        WHERE applied = 0 AND no IN (SELECT no FROM bookings WHERE status = 'キャンセル' AND in_sheet = 1)`,
     ),
     env.DB.prepare("UPDATE bookings SET status = 'キャンセル' WHERE no IN (SELECT no FROM cancellations WHERE applied = 0)"),
+    // HPの申込み：台帳がまだ「仮」でも、決済の結果が出ていればD1はその結果にしておく（空室の計算を正しく保つ）
+    env.DB.prepare(
+      `UPDATE bookings SET status = '確定', payment = ?1
+       WHERE status = '仮' AND created_by = 'hp' AND no IN (SELECT no FROM hp_checkouts WHERE status = 'paid')`,
+    ).bind(PAID_LABEL),
+    env.DB.prepare(
+      `UPDATE bookings SET status = 'キャンセル'
+       WHERE status = '仮' AND created_by = 'hp' AND no IN (SELECT no FROM hp_checkouts WHERE status IN ('expired', 'failed'))`,
+    ),
     // アプリで入れた食事：台帳が同じ値になっていれば反映済み。まだなら台帳の値で戻さない
     env.DB.prepare(
       `UPDATE meal_plans SET applied = 1
