@@ -11,8 +11,11 @@
     "directory": "./public",
     "binding": "ASSETS",
     // 画面（index.html・login.html）は静的に配る。中身のデータは /api/* だけで、そこはログインを確かめる
-    "run_worker_first": ["/api/*"]
+    // /staff/ 以下・/dishes.js・/images/menu/ は客室オーダーのスタッフ画面の中継（src/order.ts）
+    "run_worker_first": ["/api/*", "/staff", "/staff/*", "/dishes.js", "/images/menu/*"]
   },
+  // 客室オーダーの Worker。スタッフ画面をこの入口（/staff/）からも開けるようにする
+  "services": [{ "binding": "ORDER", "service": "sayozuki-order" }],
   "d1_databases": [
     {
       "binding": "DB",

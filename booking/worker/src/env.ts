@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
+  ORDER?: Fetcher; // 客室オーダーの Worker「sayozuki-order」（スタッフ画面の中継。src/order.ts）
   GOOGLE_CLIENT_ID?: string; // Google Cloud の OAuth クライアント（ウェブアプリケーション）
   GOOGLE_CLIENT_SECRET?: string;
   SESSION_SECRET?: string; // ログイン状態のクッキーの署名（32文字以上の乱数）

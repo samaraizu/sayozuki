@@ -3,6 +3,11 @@ import { ALLERGENS, DISHES, DISH_CATS, dishByKey } from '../dishes.js';
 const root = document.getElementById('root');
 const dlg = document.getElementById('dlg');
 const PIN_KEY = 'syz_staff_pin';
+// 予約管理アプリ（booking.sayozuki.com）の中から開いているか。そのときは予約へ戻る入口を出し、
+// 商品の紹介ページなど客室オーダーにしか無いページは order.sayozuki.com で開く
+const IN_BOOKING = location.hostname.startsWith('booking.');
+const ORDER_ORIGIN = IN_BOOKING ? 'https://order.sayozuki.com' : '';
+const backToBooking = IN_BOOKING ? '<a class="b" href="/">← 予約</a>' : '';
 let pin = localStorage.getItem(PIN_KEY);
 let board = null;
 let seen = new Set(JSON.parse(localStorage.getItem('syz_staff_seen') || '[]'));
@@ -68,6 +73,11 @@ async function api(path, opts = {}) {
     renderLogin(ERRORS.unauthorized);
     throw new Error('unauthorized');
   }
+  // 予約管理の入口（booking.sayozuki.com/staff/）から開いていて、そちらのログインが切れたとき
+  if (res.status === 403 && data.error === 'login') {
+    location.href = '/login';
+    throw new Error('login');
+  }
   if (!res.ok) throw Object.assign(new Error(data.error), { code: data.error, detail: data.detail });
   return data;
 }
@@ -103,7 +113,7 @@ function renderLogin(msg = '') {
   root.innerHTML = `<div class="login"><div class="logo">小夜月<small>スタッフ</small></div>
     <input id="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="PIN" aria-label="PIN">
     <label class="muted" style="display:flex;align-items:center;gap:8px"><input id="showpin" type="checkbox"> PINを表示する</label>
-    <button class="b p" id="go">ログイン</button><div class="muted">${esc(msg)}</div></div>`;
+    <button class="b p" id="go">ログイン</button>${backToBooking}<div class="muted">${esc(msg)}</div></div>`;
   const go = () => {
     pin = document.getElementById('pin').value.trim();
     if (!pin) return;
@@ -193,7 +203,7 @@ function render(fresh = new Set()) {
 
   root.innerHTML = `<div class="wrap">
     <header><div class="logo">小夜月<small>スタッフ</small> ${b.mock ? '<span class="pill">モック動作中（Square未接続）</span>' : ''}</div>
-      <div class="btns"><button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu-open">メニュー</button><button class="b" data-act="logout">ログアウト</button></div></header>
+      <div class="btns">${backToBooking}<button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu-open">メニュー</button><button class="b" data-act="logout">ログアウト</button></div></header>
     <section style="margin-bottom:16px"><h2>チャット <span class="n${unreadTotal ? ' hot' : ''}">${unreadTotal}</span></h2>${chats}</section>
     <div class="grid">
       <section><h2>新しい注文 <span class="n">${b.orders.length}</span></h2>${orders}</section>
@@ -407,7 +417,7 @@ function detailFields(i) {
     const attrs = `name="d_${f}_${l}" maxlength="${max}" placeholder="${l === 'ja' ? esc(ph) : '空欄なら日本語から訳します'}"`;
     return `<label>${label}${kind === 'textarea' ? `<textarea ${attrs} rows="${f === 'story' ? 4 : 3}">${esc(val)}</textarea>` : `<input ${attrs} value="${esc(val)}">`}</label>`;
   };
-  const link = i?.detail ? `<a class="b" href="/menu/${encodeURIComponent(i.detail.slug)}" target="_blank" rel="noopener">詳細ページを開く ↗</a>` : '';
+  const link = i?.detail ? `<a class="b" href="${ORDER_ORIGIN}/menu/${encodeURIComponent(i.detail.slug)}" target="_blank" rel="noopener">詳細ページを開く ↗</a>` : '';
   return `<h3>詳細ページ</h3>
     <label class="chk"><input type="checkbox" name="d_on"${x.on ? ' checked' : ''}> 詳細ページを作る</label>
     <p class="muted">お客様が商品をタップしたときの紹介と、URLで共有できるページ。写真は上の商品写真を使います。一時停止中でもURLを開けば見られるので、公開前の下見に使えます。${x.fromFile && !x.on ? '<br>用意してある文章を入れてあります。チェックを入れて保存すると使われます。' : ''}</p>
