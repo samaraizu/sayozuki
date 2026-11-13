@@ -19,6 +19,7 @@
  *   refreshAgoda … Agodaの読み方を直したあとに1回。直近60日のAgodaのメールを読み直して台帳を上書きする
  *
  * Googleカレンダー：キャンセル以外の予約を「小夜月 予約」カレンダーに終日の予定で書く（泊まる夜の日に出る）。
+ * 「仮」（HPの決済待ちなど）も【仮】を付けて灰色で出す。
  * 台帳を直せば次の実行でカレンダーも直る。カレンダー側で直しても台帳には戻らない（台帳が正）。
  *
  * 台帳の持ち主のGoogleアカウント（Airbnbのメールが届くアカウント）で作ること。
@@ -737,9 +738,11 @@ function calendarPlan_(r, ssUrl) {
   const people = adults + kids + babies;
   const channel = str_(r.v['媒体']) || '?';
   const who = str_(r.v['代表者名']) || str_(r.v['予約番号']) || '名前なし';
-  const title = (tags.length ? '【要確認】' : '') + (str_(r.v['部屋']) || '部屋未設定') + '｜' + who +
+  const tentative = str_(r.v['ステータス']) === '仮';
+  const title = (tentative ? '【仮】' : '') + (tags.length ? '【要確認】' : '') + (str_(r.v['部屋']) || '部屋未設定') + '｜' + who +
     (people ? ' ' + people + '名' : '') + '（' + channel + '）';
   const desc = [
+    (tentative ? 'ステータス：仮（まだ確定していない。HPの申込みは決済されなければ取り消し）\n' : '') +
     '予約番号：' + (str_(r.v['予約番号']) || '—'),
     '日程：' + md_(s) + ' チェックイン 〜 ' + md_(e) + ' チェックアウト（' + nights_(s, e) + '泊）',
     '人数：大人' + adults + (kids ? '・子ども' + kids : '') + (babies ? '・乳幼児' + babies : ''),
@@ -752,7 +755,7 @@ function calendarPlan_(r, ssUrl) {
     str_(r.v['予約URL']) ? '予約画面：' + str_(r.v['予約URL']) : '',
     '予約台帳：' + ssUrl,
   ].filter(function (x, i) { return x !== '' || i === 8; }).join('\n');
-  const color = tags.length ? 'RED' : ({ 'Airbnb': 'ORANGE', 'Agoda': 'MAUVE', '楽天': 'BLUE', '直販': 'YELLOW' }[channel] || 'GRAY');
+  const color = tags.length ? 'RED' : tentative ? 'GRAY' : ({ 'Airbnb': 'ORANGE', 'Agoda': 'MAUVE', '楽天': 'BLUE', '直販': 'YELLOW' }[channel] || 'GRAY');
   return { title: title, start: s, end: e, desc: desc, color: color, sig: hash_([title, s, e, desc, color].join('|')) };
 }
 
@@ -852,6 +855,7 @@ function pullFromCloudflare_(cf, ctx, todayIso, notes) {
     const got = cfFetch_(cf, '/api/sync/pending');
     cfAppendPending_(ctx, got.bookings || [], notes);
     cfApplyCancels_(ctx, got.cancels || [], notes);
+    cfApplyHpResults_(ctx, got.hpResults || [], notes);
     cfApplyMeals_(ctx, got.meals || [], notes);
   } catch (e) {
     alertOnce_(cf.props, 'cfPullAlert', todayIso, notes, 'Cloudflare版から予約を受け取れなかった：' + String((e && e.message) || e));
@@ -873,8 +877,11 @@ function cfAppendPending_(ctx, list, notes) {
     ctx.byCode[no] = r;
     added++;
     if (notes && CONFIG.NOTIFY_NEW_BOOKING) {
+      const status = str_(vals['ステータス']);
       const from = str_(vals['支払い状況']) === 'HPで決済済' ? 'HP' : 'アプリ';
-      notes.push('新しい予約（' + from + '）：' + rowLabel_(r));
+      if (status === '仮') notes.push('新しい申込み（HP・決済待ち）：' + rowLabel_(r));
+      else if (status === 'キャンセル') notes.push('HPの申込み（決済されず取り消し）：' + rowLabel_(r));
+      else notes.push('新しい予約（' + from + '）：' + rowLabel_(r));
     }
   });
   return added;
@@ -891,6 +898,29 @@ function cfApplyCancels_(ctx, list, notes) {
     if (note && str_(r.v['メモ']).indexOf(note) < 0) set_(r, 'メモ', str_(r.v['メモ']) ? str_(r.v['メモ']) + '\n' + note : note);
     done++;
     if (notes) notes.push('キャンセル（アプリ）：' + rowLabel_(r) + (note ? '\n  ' + note : ''));
+  });
+  return done;
+}
+
+// HPの申込みの決済結果を台帳に書く。台帳で「仮」のままの行だけが対象（毎回同じものが届いても二重にしない）
+//   確定：ステータスを確定、支払い状況を HPで決済済 に
+//   キャンセル：ステータスをキャンセルにし、メモに理由を1行足す（行は消さない）
+function cfApplyHpResults_(ctx, list, notes) {
+  let done = 0;
+  list.forEach(function (h) {
+    const r = ctx.byCode[str_(h['予約番号'])];
+    const status = str_(h['ステータス']);
+    if (!r || str_(r.v['ステータス']) !== '仮' || (status !== '確定' && status !== 'キャンセル')) return;
+    set_(r, 'ステータス', status);
+    if (status === '確定') {
+      if (str_(h['支払い状況'])) set_(r, '支払い状況', str_(h['支払い状況']));
+      if (notes && CONFIG.NOTIFY_NEW_BOOKING) notes.push('HPの申込みが決済された（確定）：' + rowLabel_(r));
+    } else {
+      const note = str_(h['メモ']);
+      if (note && str_(r.v['メモ']).indexOf(note) < 0) set_(r, 'メモ', str_(r.v['メモ']) ? str_(r.v['メモ']) + '\n' + note : note);
+      if (notes) notes.push('HPの申込みは決済されず取り消し：' + rowLabel_(r));
+    }
+    done++;
   });
   return done;
 }

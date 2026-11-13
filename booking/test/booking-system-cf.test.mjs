@@ -6,7 +6,7 @@ import { test } from 'node:test';
 
 const src = fs.readFileSync(new URL('../booking-system/Code.js', import.meta.url), 'utf8');
 const ctx = vm.createContext({ console });
-vm.runInContext(src + '\n;this.__x = { cfAppendPending_, cfApplyCancels_, cfApplyMeals_, cfPayload_, makeCtx_, newRow_ };', ctx);
+vm.runInContext(src + '\n;this.__x = { cfAppendPending_, cfApplyCancels_, cfApplyHpResults_, cfApplyMeals_, cfPayload_, makeCtx_, newRow_ };', ctx);
 const X = ctx.__x;
 
 const table = (rows) => ({ rows: rows.map((v, i) => ({ _row: i + 2, v, dirty: {}, isNew: false })) });
@@ -103,4 +103,38 @@ test('アプリで入れた食事を台帳の「食事」列に書く（同じ�
   assert.strictEqual(res.rows[1].v['食事'], '');
   assert.deepStrictEqual(notes, ['食事（アプリ）：301 12/5〜12/6 Alex（Airbnb）\n  夕食2名・朝食2名']);
   assert.strictEqual(X.cfApplyMeals_(c, list), 0);
+});
+
+test('HPの申込み：仮のうちに台帳に足し、決済の結果で確定かキャンセルにする', () => {
+  const res = table([]);
+  const c = X.makeCtx_(res, table([]), table([]));
+  const notes = [];
+  X.cfAppendPending_(c, [
+    { '媒体': '直販', '予約番号': 'SZ-20261120-0001', 'ステータス': '仮', '部屋': '月山', 'チェックイン': '2026-11-20', 'チェックアウト': '2026-11-21', '代表者名': '山田', '支払い状況': '未収', 'メモ': 'HP予約・事前決済 6,500円' },
+    { '媒体': '直販', '予約番号': 'SZ-20261120-0002', 'ステータス': '仮', '部屋': '蔵王', 'チェックイン': '2026-11-20', 'チェックアウト': '2026-11-21', '代表者名': 'Lee', '支払い状況': '未収' },
+    { '媒体': '直販', '予約番号': 'SZ-20261120-0003', 'ステータス': 'キャンセル', '部屋': '301', 'チェックイン': '2026-11-22', 'チェックアウト': '2026-11-23', '代表者名': 'Kim', '支払い状況': '未収', 'メモ': 'HP申込み：30分以内に決済されず取り消し' },
+  ], notes);
+  assert.strictEqual(res.rows.length, 3);
+  assert.strictEqual(res.rows[0].v['ステータス'], '仮');
+  assert.match(notes[0], /^新しい申込み（HP・決済待ち）：月山/);
+  assert.match(notes[2], /^HPの申込み（決済されず取り消し）：301/);
+
+  const done = X.cfApplyHpResults_(c, [
+    { '予約番号': 'SZ-20261120-0001', 'ステータス': '確定', '支払い状況': 'HPで決済済' },
+    { '予約番号': 'SZ-20261120-0002', 'ステータス': 'キャンセル', 'メモ': 'HP申込み：30分以内に決済されず取り消し' },
+    { '予約番号': 'SZ-20261120-0003', 'ステータス': 'キャンセル', 'メモ': 'HP申込み：30分以内に決済されず取り消し' }, // もうキャンセル
+    { '予約番号': 'SZ-99999999-0000', 'ステータス': '確定' }, // 台帳にない
+  ], notes);
+  assert.strictEqual(done, 2);
+  assert.strictEqual(res.rows[0].v['ステータス'], '確定');
+  assert.strictEqual(res.rows[0].v['支払い状況'], 'HPで決済済');
+  assert.strictEqual(res.rows[1].v['ステータス'], 'キャンセル');
+  assert.strictEqual(res.rows[1].v['メモ'], 'HP申込み：30分以内に決済されず取り消し');
+  assert.strictEqual(res.rows[2].v['メモ'], 'HP申込み：30分以内に決済されず取り消し'); // 二重に足さない
+
+  // 同じ結果が次の回にも届くが、もう仮ではないので何もしない
+  assert.strictEqual(X.cfApplyHpResults_(c, [{ '予約番号': 'SZ-20261120-0001', 'ステータス': '確定', '支払い状況': 'HPで決済済' }], notes), 0);
+  // 手で直した行（仮→確定済み）にキャンセルが来ても上書きしない
+  assert.strictEqual(X.cfApplyHpResults_(c, [{ '予約番号': 'SZ-20261120-0001', 'ステータス': 'キャンセル' }], notes), 0);
+  assert.strictEqual(res.rows[0].v['ステータス'], '確定');
 });

@@ -124,3 +124,20 @@ console.log('OK 手で消された予定は作り直す：', r6);
 
 console.log('\nカレンダーもぜんぶ通った');
 });
+
+test('取り込みGAS：仮の予約は【仮】を付けて灰色でカレンダーに出し、確定したら普通の予定に変わる', () => {
+  const ctx = vm.createContext({ console });
+  vm.runInContext(fs.readFileSync(CODE, 'utf8') + '\n;this.__x = { calendarPlan_ };', ctx);
+  const r = { v: { '媒体': '直販', '予約番号': 'SZ-20261120-0001', 'ステータス': '仮', '部屋': '月山', 'チェックイン': '2026-11-20', 'チェックアウト': '2026-11-21', '大人': 2, '代表者名': '山田' } };
+  const kari = ctx.__x.calendarPlan_(r, 'https://example.com/sheet');
+  assert.strictEqual(kari.title, '【仮】月山｜山田 2名（直販）');
+  assert.strictEqual(kari.color, 'GRAY');
+  assert.match(kari.desc, /^ステータス：仮/);
+  r.v['ステータス'] = '確定';
+  const done = ctx.__x.calendarPlan_(r, 'https://example.com/sheet');
+  assert.strictEqual(done.title, '月山｜山田 2名（直販）');
+  assert.strictEqual(done.color, 'YELLOW');
+  assert.notStrictEqual(done.sig, kari.sig); // 署名が変わるので、次の実行で予定が書き換わる
+  r.v['ステータス'] = 'キャンセル';
+  assert.strictEqual(ctx.__x.calendarPlan_(r, 'https://example.com/sheet'), null);
+});
