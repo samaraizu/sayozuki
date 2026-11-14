@@ -22,6 +22,8 @@
   ],
   // チャットの自動翻訳（無料枠：1日10,000ニューロン）
   "ai": { "binding": "AI" },
+  // 予約管理（booking/worker の sayozuki-booking）。いまお客様がいる部屋だけを聞く入口 OrderApi を呼ぶ（スタッフ画面の「客室」の数）
+  "services": [{ "binding": "BOOKING", "service": "sayozuki-booking", "entrypoint": "OrderApi" }],
   "durable_objects": {
     "bindings": [{ "name": "DESK", "class_name": "OrderDesk" }]
   },

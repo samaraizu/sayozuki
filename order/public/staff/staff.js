@@ -3,6 +3,8 @@ import { ALLERGENS, DISHES, DISH_CATS, dishByKey } from '../dishes.js';
 const root = document.getElementById('root');
 const dlg = document.getElementById('dlg');
 const PIN_KEY = 'syz_staff_pin';
+// 見出しの件数。0 のときは薄いグレー（index.html の h2 .n.zero）
+const count = (v, hot = false) => `<span class="n${v ? (hot ? ' hot' : '') : ' zero'}">${v}</span>`;
 // ヘッダーのボタン（文字は出さずアイコンだけ。読み上げ・長押しの説明は aria-label と title）
 const ico = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICON = {
@@ -191,10 +193,14 @@ function render(fresh = new Set()) {
         )
         .join('')
     : '<div class="empty">未対応のリクエストはありません</div>';
+  // 客室の数は「いまお客様がいる部屋」（予約管理の台帳から。取れないときは部屋の数）
+  const stayKnown = b.rooms.some((r) => r.stay !== null && r.stay !== undefined);
+  const stayCount = stayKnown ? b.rooms.filter((r) => r.stay).length : b.rooms.length;
+  const stayNote = stayKnown ? '<span class="muted">滞在中の部屋</span>' : '';
   const rooms = b.rooms.length
     ? b.rooms
         .map((s) => {
-          const tags = `${s.payUrl ? '<span class="tag w">お支払い待ち</span>' : ''}${s.dnd ? ' <span class="tag w">起こさないで</span>' : ''}`;
+          const tags = `${s.stay ? '<span class="tag">滞在中</span> ' : ''}${s.payUrl ? '<span class="tag w">お支払い待ち</span>' : ''}${s.dnd ? ' <span class="tag w">起こさないで</span>' : ''}`;
           const btns = s.payUrl
             ? `<button class="b p" data-act="payqr" data-id="${s.id}">支払いQR</button><button class="b" data-act="verify" data-id="${s.id}">支払いを確認</button><button class="b" data-act="reopen" data-id="${s.id}">精算をやめる</button><button class="b" data-act="settle" data-id="${s.id}">現金で受領済み</button>`
             : s.unsettled > 0
@@ -225,12 +231,12 @@ function render(fresh = new Set()) {
   root.innerHTML = `<div class="wrap">
     <header>${b.mock ? '<span class="pill" style="margin-right:auto">モック動作中（Square未接続）</span>' : ''}
       <div class="btns"><button class="b" data-act="menu-open">メニュー</button><button class="b icon-b${pushOn ? ' on' : ''}" data-act="push" aria-label="${pushLabel()}" title="${pushLabel()}">${ICON.bell}</button><button class="b icon-b" data-act="refresh" aria-label="更新" title="更新">${ICON.refresh}</button><button class="b icon-b" data-act="logout" aria-label="ログアウト" title="ログアウト">${ICON.logout}</button></div></header>
-    <section style="margin-bottom:16px"><h2>チャット <span class="n${unreadTotal ? ' hot' : ''}">${unreadTotal}</span></h2>${chats}</section>
+    <section style="margin-bottom:16px"><h2>チャット ${count(unreadTotal, true)}</h2>${chats}</section>
     <div class="grid">
-      <section><h2>新しい注文 <span class="n">${b.orders.length}</span></h2>${orders}</section>
-      <section><h2>リクエスト <span class="n">${b.requests.length}</span></h2>${reqs}</section>
+      <section><h2>新しい注文 ${count(b.orders.length)}</h2>${orders}</section>
+      <section><h2>リクエスト ${count(b.requests.length)}</h2>${reqs}</section>
     </div>
-    <section style="margin-top:16px"><div class="row"><h2>客室 <span class="n">${b.rooms.length}</span></h2></div>${rooms}</section>
+    <section style="margin-top:16px"><div class="row"><h2>客室 ${count(stayCount)}</h2>${stayNote}</div>${rooms}</section>
   </div>`;
 }
 
@@ -365,7 +371,7 @@ function draftSection() {
         <span class="dbtns"><a class="b" href="${previewUrl(s.slug)}" target="_blank" rel="noopener">プレビュー</a><button class="b p" data-act="seed-publish" data-id="${esc(s.slug)}">公開</button></span></div>`
     )
   ];
-  return `<section class="mgroup"><h2>下書き <span class="n">${rows.length}</span></h2>
+  return `<section class="mgroup"><h2>下書き ${count(rows.length)}</h2>
     <p class="muted">お客様には見えません。「プレビュー」で詳細ページを確かめて、「公開」でお客様の画面に出ます。</p>
     ${rows.length ? rows.join('') : '<div class="empty">下書きはありません</div>'}</section>`;
 }
@@ -387,7 +393,7 @@ function showMenuList() {
             )
             .join('')
         : '<div class="empty">このカテゴリの商品はありません</div>';
-      return `<section class="mgroup"><h2>${esc(c.name)} <span class="n">${items.length}</span>${c.cutoff ? `<span class="muted" style="font-weight:400">当日${esc(c.cutoff)}締め</span>` : ''}</h2>${cards}</section>`;
+      return `<section class="mgroup"><h2>${esc(c.name)} ${count(items.length)}${c.cutoff ? `<span class="muted" style="font-weight:400">当日${esc(c.cutoff)}締め</span>` : ''}</h2>${cards}</section>`;
     })
     .join('');
   dlg.innerHTML = `<div class="chat-head"><button class="b" data-act="close">← 戻る</button><span class="room">メニュー</span><button class="b p" data-act="menu-new">＋ 追加</button></div>
