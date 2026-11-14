@@ -61,7 +61,17 @@ const html = src('Index.html')
   .replace('<?!= libSource_() ?>', () => lib.replace(/<\/script/gi, '<\\/script'));
 // 一番下の切り替え「予約管理／リクエスト」（Cloudflare版だけ。GAS版の Index.html は触らない）
 // リクエスト＝客室オーダーのスタッフ画面（/staff/。src/order.ts が客室オーダーへ中継し、向こうにも同じ切り替えが出る）
-// カレンダー・問い合わせ・手動入力は、スマホでは画面の上（ロゴの下）のタブ、PCでは左のサイドバー
+// 予約登録・問い合わせ・カレンダーは、スマホでは画面の上（ロゴの下）、PCでは左のサイドバー
+// 上のナビ（Cloudflare版だけ）：並びは「＋ 予約登録」「問い合わせ」「カレンダー」。
+// スマホでは問い合わせ・カレンダーを文字なしの大きめのアイコンにする（PCの左サイドバーは文字も出す）
+const top = html.match(/<nav class="topnav"[\s\S]*?<\/nav>/);
+if (!top) throw new Error('Index.html の上のナビが見つからない');
+const svg = (n, d) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const topnav = `<nav class="topnav" aria-label="メイン">
+      <a href="#new" data-view="new" class="nav-new">${svg(20, '<path d="M12 5v14"></path><path d="M5 12h14"></path>')}<span>予約登録</span></a>
+      <a href="#inbox" data-view="inbox" class="nav-ico" aria-label="問い合わせ" title="問い合わせ">${svg(26, '<path d="M4 13l2.5-7h11L20 13"></path><path d="M4 13v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"></path><path d="M4 13h4.5l1 2h5l1-2H20"></path>')}<span class="label">問い合わせ</span><span class="badge" data-inbox-count hidden></span></a>
+      <a href="#cal" data-view="cal" class="nav-ico" aria-label="カレンダー" title="カレンダー">${svg(26, '<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path>')}<span class="label">カレンダー</span></a>
+    </nav>`;
 const bottom = html.match(/\n\s*<nav class="bottomnav"[\s\S]*?<\/nav>/);
 if (!bottom) throw new Error('Index.html の下のナビが見つからない');
 const appnav = `
@@ -75,20 +85,24 @@ const css = `<style>
   .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); }
   .appnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 12px; }
   .appnav a[aria-current="page"] { color: var(--accent); font-weight: 700; }
-  /* スマホ：カレンダー・問い合わせ・手動入力はロゴの下に横並び */
+  /* スマホ：ロゴの下に「＋ 予約登録」と、問い合わせ・カレンダーの大きめのアイコンを横並び */
   @media (max-width: 899px) {
     .top { padding-bottom: 8px; }
-    .topnav { display: flex; width: 100%; gap: 6px; }
-    .topnav a { flex: 1; justify-content: center; height: 40px; padding: 0 8px; gap: 0; border: 1px solid var(--line); font-size: 13px; white-space: nowrap; }
-    .topnav a svg { display: none; }
-    .topnav a[aria-current="page"] { border-color: #2E3A4D; }
+    .topnav { display: flex; width: 100%; gap: 8px; }
+    .topnav a { position: relative; justify-content: center; height: 52px; border: 1px solid var(--line); white-space: nowrap; }
+    .topnav .nav-new { flex: 1; gap: 6px; padding: 0 12px; font-size: 15px; font-weight: 700; color: var(--accent); border-color: #2E3A4D; }
+    .topnav .nav-ico { flex: none; width: 60px; padding: 0; color: var(--muted); }
+    .topnav .nav-ico .label { display: none; }
+    .topnav .nav-ico .badge { position: absolute; top: 4px; right: 6px; margin: 0; }
+    .topnav a[aria-current="page"] { border-color: #2E3A4D; color: var(--accent); }
   }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
     .view { padding-bottom: 96px; }
+    .topnav .nav-ico svg { width: 20px; height: 20px; }
   }
 </style>`;
-const page = html.replace(bottom[0], appnav).replace('</head>', css + '\n</head>');
+const page = html.replace(top[0], topnav).replace(bottom[0], appnav).replace('</head>', css + '\n</head>');
 if (!page.includes('class="appnav"') || !page.includes('.appnav {')) throw new Error('切り替えを入れられなかった');
 if (/<\?/.test(page)) throw new Error('組み立て漏れのスクリプトレットがある');
 out('public/index.html', page);
