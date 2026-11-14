@@ -3,11 +3,24 @@ import { ALLERGENS, DISHES, DISH_CATS, dishByKey } from '../dishes.js';
 const root = document.getElementById('root');
 const dlg = document.getElementById('dlg');
 const PIN_KEY = 'syz_staff_pin';
-// 予約管理アプリ（booking.sayozuki.com）の中から開いているか。そのときは予約へ戻る入口を出し、
+// 予約管理アプリ（booking.sayozuki.com）の中から開いているか。そのときは一番下に「予約管理／リクエスト」の切り替えを出し、
 // 商品の紹介ページなど客室オーダーにしか無いページは order.sayozuki.com で開く
 const IN_BOOKING = location.hostname.startsWith('booking.');
 const ORDER_ORIGIN = IN_BOOKING ? 'https://order.sayozuki.com' : '';
-const backToBooking = IN_BOOKING ? '<a class="b" href="/">← 予約</a>' : '';
+if (IN_BOOKING) {
+  // 見た目は予約管理の一番下（booking/worker/scripts/build.mjs の appnav）と同じ
+  const icon = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  document.head.insertAdjacentHTML('beforeend', `<style>
+    body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+    .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #262B37; background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); font-family: 'Zen Kaku Gothic New', system-ui, sans-serif; }
+    .appnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #A4A9B6; text-decoration: none; font-size: 12px; }
+    .appnav a[aria-current="page"] { color: #7CC4FF; font-weight: 700; }
+  </style>`);
+  document.body.insertAdjacentHTML('beforeend', `<nav class="appnav" aria-label="切り替え">
+    <a href="/">${icon('<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path>')}<span>予約管理</span></a>
+    <a href="/staff/" aria-current="page">${icon('<path d="M3 18h18"></path><path d="M5 18a7 7 0 0 1 14 0"></path><path d="M12 8V6"></path><path d="M10 6h4"></path>')}<span>リクエスト</span></a>
+  </nav>`);
+}
 let pin = localStorage.getItem(PIN_KEY);
 let board = null;
 let seen = new Set(JSON.parse(localStorage.getItem('syz_staff_seen') || '[]'));
@@ -113,7 +126,7 @@ function renderLogin(msg = '') {
   root.innerHTML = `<div class="login"><div class="logo">小夜月<small>スタッフ</small></div>
     <input id="pin" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="PIN" aria-label="PIN">
     <label class="muted" style="display:flex;align-items:center;gap:8px"><input id="showpin" type="checkbox"> PINを表示する</label>
-    <button class="b p" id="go">ログイン</button>${backToBooking}<div class="muted">${esc(msg)}</div></div>`;
+    <button class="b p" id="go">ログイン</button><div class="muted">${esc(msg)}</div></div>`;
   const go = () => {
     pin = document.getElementById('pin').value.trim();
     if (!pin) return;
@@ -203,7 +216,7 @@ function render(fresh = new Set()) {
 
   root.innerHTML = `<div class="wrap">
     <header><div class="logo">小夜月<small>スタッフ</small> ${b.mock ? '<span class="pill">モック動作中（Square未接続）</span>' : ''}</div>
-      <div class="btns">${backToBooking}<button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu-open">メニュー</button><button class="b" data-act="logout">ログアウト</button></div></header>
+      <div class="btns"><button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu-open">メニュー</button><button class="b" data-act="logout">ログアウト</button></div></header>
     <section style="margin-bottom:16px"><h2>チャット <span class="n${unreadTotal ? ' hot' : ''}">${unreadTotal}</span></h2>${chats}</section>
     <div class="grid">
       <section><h2>新しい注文 <span class="n">${b.orders.length}</span></h2>${orders}</section>
