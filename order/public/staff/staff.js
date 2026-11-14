@@ -3,6 +3,13 @@ import { ALLERGENS, DISHES, DISH_CATS, dishByKey } from '../dishes.js';
 const root = document.getElementById('root');
 const dlg = document.getElementById('dlg');
 const PIN_KEY = 'syz_staff_pin';
+// ヘッダーのボタン（文字は出さずアイコンだけ。読み上げ・長押しの説明は aria-label と title）
+const ico = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICON = {
+  bell: ico('<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>'),
+  refresh: ico('<path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path>'),
+  logout: ico('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path>')
+};
 // 予約管理アプリ（booking.sayozuki.com）の中から開いているか。そのときは一番下に「予約管理／リクエスト」の切り替えを出し、
 // 商品の紹介ページなど客室オーダーにしか無いページは order.sayozuki.com で開く
 const IN_BOOKING = location.hostname.startsWith('booking.');
@@ -216,8 +223,8 @@ function render(fresh = new Set()) {
     : '<div class="empty">お客様からのメッセージはまだありません</div>';
 
   root.innerHTML = `<div class="wrap">
-    <header><div class="logo">小夜月<small>スタッフ</small> ${b.mock ? '<span class="pill">モック動作中（Square未接続）</span>' : ''}</div>
-      <div class="btns"><button class="b" data-act="push">${pushLabel()}</button><button class="b" data-act="refresh">更新</button><button class="b" data-act="menu-open">メニュー</button><button class="b" data-act="logout">ログアウト</button></div></header>
+    <header>${b.mock ? '<span class="pill" style="margin-right:auto">モック動作中（Square未接続）</span>' : ''}
+      <div class="btns"><button class="b" data-act="menu-open">メニュー</button><button class="b icon-b${pushOn ? ' on' : ''}" data-act="push" aria-label="${pushLabel()}" title="${pushLabel()}">${ICON.bell}</button><button class="b icon-b" data-act="refresh" aria-label="更新" title="更新">${ICON.refresh}</button><button class="b icon-b" data-act="logout" aria-label="ログアウト" title="ログアウト">${ICON.logout}</button></div></header>
     <section style="margin-bottom:16px"><h2>チャット <span class="n${unreadTotal ? ' hot' : ''}">${unreadTotal}</span></h2>${chats}</section>
     <div class="grid">
       <section><h2>新しい注文 <span class="n">${b.orders.length}</span></h2>${orders}</section>
