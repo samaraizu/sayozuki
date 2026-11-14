@@ -50,6 +50,14 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
     const unread = await env.DB.prepare(
       "SELECT room_id, COUNT(*) AS n FROM messages WHERE closed = 0 AND sender = 'guest' AND read_at IS NULL GROUP BY room_id"
     ).all<{ room_id: string; n: number }>();
+    // いまお客様がいる部屋（予約管理の台帳から。名前は「201号室」と「201」のように「号室」を外して突き合わせる）
+    const roomKey = (name: string) => String(name).replace(/号室$/, '').trim();
+    let occupied: Set<string> | null = null;
+    try {
+      if (env.BOOKING) occupied = new Set((await env.BOOKING.occupied()).rooms.map(roomKey));
+    } catch (e) {
+      console.error('予約管理から滞在中の部屋を取れなかった', e);
+    }
     const list = [];
     for (const r of rooms.results ?? []) {
       const bill = await roomBill(env, r.id);
@@ -62,6 +70,7 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
         pendingTotal: bill.pendingTotal,
         payUrl: bill.payUrl,
         url: roomUrl(url, r.id),
+        stay: occupied ? occupied.has(roomKey(r.name)) : null,
         chat: last ? { unread: (unread.results ?? []).find((u) => u.room_id === r.id)?.n ?? 0, last: forStaff(last) } : null
       });
     }

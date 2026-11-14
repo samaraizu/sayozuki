@@ -28,6 +28,7 @@ import { cancelBooking, type CancelForm } from './cancel';
 import { setMeals, type MealForm } from './meals';
 import { latest, notify, subscribe, unsubscribe, vapid } from './push';
 import { isOrderPath, proxyOrder } from './order';
+import { occupiedRooms } from './stay';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -134,6 +135,16 @@ async function handle(req: Request, env: Env): Promise<Response> {
   if (isOrderPath(path)) return proxyOrder(req, env, url);
 
   return env.ASSETS.fetch(req);
+}
+
+/**
+ * 客室オーダー（Worker「sayozuki-order」）専用の入口。サービスバインディング（entrypoint: "OrderApi"）でしか呼べない。
+ * いまお客様がいる部屋の名前だけを返す（名前・人数などは出さない）。
+ */
+export class OrderApi extends WorkerEntrypoint<Env> {
+  async occupied() {
+    return occupiedRooms(this.env);
+  }
 }
 
 /**
