@@ -53,10 +53,12 @@ const CONFIG = {
   GMAIL_LABEL_AGODA: '小夜月/Agoda取り込み済み',
   // Googleカレンダー連携。予約をこの名前のカレンダーに書く（なければ自動で作る）。空にすると連携しない
   CALENDAR_NAME: '小夜月 予約',
+  // 満室アラート：今日から何日先までの夜を見るか
+  CLOSE_ALERT_DAYS: 365,
 };
 
 // ===== シートの形 =====
-const SHEETS = { RES: '予約', ROOMS: '部屋', AIRBNB: 'Airbnb', AGODA: 'Agoda', LOG: 'ログ' };
+const SHEETS = { RES: '予約', ROOMS: '部屋', AIRBNB: 'Airbnb', AGODA: 'Agoda', LOG: 'ログ', CLOSE: '閉じる作業' };
 
 const RES_COLS = [
   '媒体', '予約番号', 'ステータス', '要確認', '部屋', 'チェックイン', 'チェックアウト', '泊数',
@@ -75,6 +77,12 @@ const AIRBNB_COLS = ['リスティングID', 'Airbnbでの名前', '部屋', 'iC
 // Agodaの部屋タイプ → 部屋。1つのタイプが複数の部屋にまたがるなら「部屋」は空のままにして、予約ごとに選ぶ
 const AGODA_COLS = ['Agodaの部屋タイプ', '部屋', '最初に見た日'];
 const LOG_COLS = ['日時', '種類', '予約番号', '件名', '結果', 'メッセージID', 'Gmail'];
+// 満室アラートで出た「媒体で閉じる（開け直す）」作業。1行＝媒体×対象×1泊。
+// 対象：Airbnbはリスティング ID、Agodaは部屋タイプ。日付はその夜（チェックインの日付の形）
+const CLOSE_COLS = ['状態', '媒体', '対象', '部屋', '日付', '理由', '見つけた日時', '状態が変わった日時', 'メモ'];
+// 未：閉じて／済：閉じた（AirbnbはiCalで自動判定、Agodaは人が付ける）／不要：閉じる前に理由が消えた
+// 開け直す：閉じたあとに理由が消えた（キャンセルなど）／開け直し済：開け直した
+const CLOSE_STATES = ['未', '済', '不要', '開け直す', '開け直し済'];
 
 const CHANNELS = ['Airbnb', 'Agoda', '楽天', '直販'];
 const STATUSES = ['仮', '確定', '滞在中', 'チェックアウト済', 'キャンセル'];
@@ -251,6 +259,7 @@ function runCore_(opts) {
     const rooms = loadTable_(mustSheet_(ss, SHEETS.ROOMS), ROOM_COLS, [], tz);
     const agoda = loadTable_(ss.getSheetByName(SHEETS.AGODA) || ensureSheet_(ss, SHEETS.AGODA, AGODA_COLS), AGODA_COLS, ['最初に見た日'], tz);
     const log = loadTable_(mustSheet_(ss, SHEETS.LOG), LOG_COLS, [], tz, LOG_COLS.length);
+    const close = loadTable_(closeSheet_(ss), CLOSE_COLS, ['日付'], tz);
     const ctx = makeCtx_(res, airbnb, rooms, agoda);
     const notes = [];
     const cf = cfConfig_();
@@ -302,6 +311,9 @@ function runCore_(opts) {
     // 3. 台帳ルール
     applyRules_(ctx, todayIso, notes);
 
+    // 3.5 満室アラート（媒体で閉じる・開け直す夜を「閉じる作業」タブに出して知らせる）
+    checkFullRooms_(ctx, close, todayIso, now, notes);
+
     // 4. Googleカレンダー
     const calResult = syncCalendar_(ctx, ss.getUrl(), todayIso, notes);
 
@@ -311,6 +323,7 @@ function runCore_(opts) {
     saveTable_(airbnb, tz);
     saveTable_(agoda, tz);
     saveTable_(log, tz);
+    saveTable_(close, tz);
     log.sheet.getRange('I1:J1').setValues([['最終実行', now]]);
 
     // 6. 台帳の中身を Cloudflare版に送る
@@ -664,6 +677,10 @@ function syncIcal_(ctx, todayIso, now, notes, log) {
       return;
     }
     props.deleteProperty(key);
+    // 満室アラート用：Airbnbで売れない夜（予約「Reserved」も、手で閉じた「Not available」も）
+    ctx.icalNights = ctx.icalNights || {};
+    ctx.icalNights[lid] = {};
+    events.forEach(function (e) { nightsOf_(e.start, e.end).forEach(function (d) { ctx.icalNights[lid][d] = true; }); });
     const booked = events.filter(function (e) { return e.code; });
     set_(ar, 'iCal最終取得', now);
     set_(ar, 'iCal予約数', booked.length);
@@ -710,6 +727,155 @@ function applyIcal_(ctx, lid, events, todayIso, notes) {
       notes.push(rowLabel_(r) + '：Airbnbのカレンダーに見当たらない。キャンセルされてないか確認');
     }
   });
+}
+
+// ===== 満室アラート =====
+//
+// ほかの媒体の予約で部屋が埋まった夜を見つけて、まだ売っている媒体を「閉じる作業」タブに出し、通知に載せる。
+// - Airbnb：リスティングの部屋が、ほかの媒体（またはAirbnbの別のリスティング）の予約で埋まった夜。
+//   AirbnbのiCalにその夜が載っていれば（予約・手で閉じた日）閉じてあるとみなし、自動で「済」にする
+// - Agoda：部屋タイプの候補の部屋（「Agoda」タブの「部屋」、空ならすべての販売可の部屋）がすべて埋まり、
+//   そのうち1件でもAgoda以外の予約がある夜。閉じたかどうかは分からないので、人が「済」にする
+// - HP：予約管理（Cloudflare版）が空室を見て売るので対象外
+// 閉じたあとにキャンセルなどで理由が消えたら「開け直す」にして知らせる
+function checkFullRooms_(ctx, close, todayIso, now, notes) {
+  if (!close) return;
+  const until = addDays_(todayIso, CONFIG.CLOSE_ALERT_DAYS);
+  const occ = occupancy_(ctx, todayIso, until);
+  const need = {};
+  const add = function (channel, target, room, night, by) {
+    need[closeKey_(channel, target, night)] = { channel: channel, target: target, room: room, night: night, why: by.map(shortLabel_).join(' / ') };
+  };
+
+  ctx.airbnb.rows.forEach(function (ar) {
+    const lid = str_(ar.v['リスティングID']), room = str_(ar.v['部屋']);
+    if (!lid || !room || /[,、，\s]/.test(room) || !occ[room]) return;
+    Object.keys(occ[room]).forEach(function (d) {
+      const others = occ[room][d].filter(function (b) {
+        return !(str_(b.v['媒体']) === 'Airbnb' && str_(b.v['リスティングID']) === lid);
+      });
+      if (others.length) add('Airbnb', lid, room, d, others);
+    });
+  });
+
+  const order = ctx.rooms ? ctx.rooms.rows.map(function (r) { return str_(r.v['部屋']); }).filter(Boolean) : Object.keys(ctx.roomInfo);
+  if (ctx.agoda) ctx.agoda.rows.forEach(function (tr) {
+    const type = str_(tr.v['Agodaの部屋タイプ']);
+    if (!type) return;
+    const listed = str_(tr.v['部屋']).split(/[,、，\s]+/).filter(Boolean);
+    const cands = listed.length ? listed : order.filter(function (n) { return ctx.roomInfo[n] && ctx.roomInfo[n].state === '販売可'; });
+    if (!cands.length) return;
+    const nights = {};
+    cands.forEach(function (n) { Object.keys(occ[n] || {}).forEach(function (d) { nights[d] = true; }); });
+    Object.keys(nights).forEach(function (d) {
+      if (!cands.every(function (n) { return occ[n] && occ[n][d]; })) return;
+      const by = [];
+      cands.forEach(function (n) { occ[n][d].forEach(function (b) { if (by.indexOf(b) < 0) by.push(b); }); });
+      if (by.some(function (b) { return str_(b.v['媒体']) !== 'Agoda'; })) add('Agoda', type, cands.join(','), d, by);
+    });
+  });
+
+  // Airbnbで売れない夜か（iCalが取れなかった回は分からない＝null）
+  const closedOnAirbnb = function (lid, night) {
+    const n = ctx.icalNights && ctx.icalNights[lid];
+    return n ? !!n[night] : null;
+  };
+  const setState = function (r, state) {
+    if (set_(r, '状態', state)) set_(r, '状態が変わった日時', now);
+  };
+  const toClose = {}, toReopen = {};
+  const remember = function (bucket, channel, target, room, night) {
+    const k = channel + '|' + target;
+    (bucket[k] = bucket[k] || { channel: channel, target: target, room: room, nights: [] }).nights.push(night);
+  };
+
+  const existing = {};
+  close.rows.forEach(function (r) {
+    if (!r.v['日付'] || r.v['日付'] < todayIso) return; // 過ぎた夜は触らない
+    existing[closeKey_(str_(r.v['媒体']), str_(r.v['対象']), r.v['日付'])] = r;
+  });
+
+  Object.keys(need).sort().forEach(function (k) {
+    const n = need[k];
+    const shut = n.channel === 'Airbnb' ? closedOnAirbnb(n.target, n.night) : null;
+    let r = existing[k];
+    if (!r) {
+      if (shut) return; // もう閉じてある（自分で閉じた・Airbnbの予約）。作業は要らない
+      newRow_(close, { '状態': '未', '媒体': n.channel, '対象': n.target, '部屋': n.room, '日付': n.night, '理由': n.why, '見つけた日時': now, '状態が変わった日時': now });
+      remember(toClose, n.channel, n.target, n.room, n.night);
+      return;
+    }
+    set_(r, '理由', n.why);
+    set_(r, '部屋', n.room);
+    const st = str_(r.v['状態']);
+    if (st === '済') {
+      if (shut === false) { setState(r, '未'); remember(toClose, n.channel, n.target, n.room, n.night); } // Airbnbで開いていた
+    } else if (st === '開け直す') {
+      setState(r, shut === false ? '未' : '済'); // 開け直す前に、また閉じる理由ができた
+      if (shut === false) remember(toClose, n.channel, n.target, n.room, n.night);
+    } else if (shut) {
+      setState(r, '済');
+    } else if (st !== '未') {
+      setState(r, '未'); // 不要・開け直し済・空欄からの出直し
+      remember(toClose, n.channel, n.target, n.room, n.night);
+    }
+  });
+
+  Object.keys(existing).forEach(function (k) {
+    if (need[k]) return;
+    const r = existing[k];
+    const st = str_(r.v['状態']);
+    const shut = str_(r.v['媒体']) === 'Airbnb' ? closedOnAirbnb(str_(r.v['対象']), r.v['日付']) : null;
+    if (st === '未') setState(r, '不要');
+    else if (st === '済' || st === '開け直す') {
+      if (shut === false) setState(r, '開け直し済');
+      else if (st === '済') {
+        setState(r, '開け直す');
+        remember(toReopen, str_(r.v['媒体']), str_(r.v['対象']), str_(r.v['部屋']), r.v['日付']);
+      }
+    }
+  });
+
+  const say = function (bucket, verb) {
+    Object.keys(bucket).forEach(function (k) {
+      const b = bucket[k];
+      const what = b.channel === 'Airbnb' ? 'Airbnb（' + b.room + '）' : b.channel + '「' + b.target + '」';
+      notes.push('満室アラート：' + what + 'の ' + b.nights.sort().map(md_).join('・') + ' を' + verb + '（「' + SHEETS.CLOSE + '」タブ）');
+    });
+  };
+  say(toClose, '閉じて');
+  say(toReopen, '開け直して（予約がなくなった）');
+}
+
+// 部屋 → 夜 → その夜に泊まる予約（キャンセル以外。仮も含む）。from 以上 until 未満の夜だけ
+function occupancy_(ctx, from, until) {
+  const occ = {};
+  ctx.res.rows.forEach(function (r) {
+    if (!hasData_(r) || isCancelled_(r)) return;
+    const room = str_(r.v['部屋']), s = r.v['チェックイン'], e = r.v['チェックアウト'];
+    if (!room || !s || !e || e <= from) return;
+    nightsOf_(s < from ? from : s, e < until ? e : until).forEach(function (d) {
+      ((occ[room] = occ[room] || {})[d] = occ[room][d] || []).push(r);
+    });
+  });
+  return occ;
+}
+
+function closeKey_(channel, target, night) { return channel + '|' + target + '|' + night; }
+
+// 「閉じる作業」タブ。なければ作って、状態の選択肢と書式を付ける
+function closeSheet_(ss) {
+  const found = ss.getSheetByName(SHEETS.CLOSE);
+  if (found) return found;
+  const sh = ensureSheet_(ss, SHEETS.CLOSE, CLOSE_COLS);
+  const idx = headerIndex_(sh);
+  const range = function (name) { return sh.getRange(2, idx[name] + 1, sh.getMaxRows() - 1, 1); };
+  range('状態').setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(CLOSE_STATES, true).setAllowInvalid(true).build());
+  range('日付').setNumberFormat('yyyy/mm/dd(ddd)');
+  range('対象').setNumberFormat('@');
+  ['見つけた日時', '状態が変わった日時'].forEach(function (n) { range(n).setNumberFormat('yyyy/mm/dd hh:mm'); });
+  sh.setColumnWidth(idx['理由'] + 1, 360);
+  return sh;
 }
 
 // ===== Googleカレンダー =====
@@ -1447,6 +1613,13 @@ function iso_(y, m, d) { return y + '-' + pad2_(m) + '-' + pad2_(d); }
 function utc_(iso) { const p = ymd_(iso); return Date.UTC(p.y, p.m - 1, p.d); }
 function nights_(a, b) { return Math.round((utc_(b) - utc_(a)) / 864e5); }
 function pad2_(n) { return ('0' + n).slice(-2); }
+function addDays_(iso, n) { return new Date(utc_(iso) + n * 864e5).toISOString().slice(0, 10); }
+// start の夜から end の前の夜まで（チェックアウトの日は含まない）
+function nightsOf_(start, end) {
+  const out = [];
+  for (let d = start; d < end && out.length < 1000; d = addDays_(d, 1)) out.push(d);
+  return out;
+}
 function md_(iso) { if (!iso) return '?'; const p = ymd_(iso); return p.m + '/' + p.d; }
 function icsDate_(v) { const m = String(v || '').match(/(\d{4})(\d{2})(\d{2})/); return m ? m[1] + '-' + m[2] + '-' + m[3] : ''; }
 
