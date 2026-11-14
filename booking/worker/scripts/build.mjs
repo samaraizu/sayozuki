@@ -96,6 +96,22 @@ const css = `<style>
     .topnav .nav-ico .badge { position: absolute; top: 4px; right: 6px; margin: 0; }
     .topnav a[aria-current="page"] { border-color: #2E3A4D; color: var(--accent); }
   }
+  /* 月のカレンダー：四角い枠をなくし、数字を大きく。数字の下に「予〜」「空〜」を小さく（卓上カレンダーのような見た目） */
+  .mgrid { gap: 2px 0; }
+  .mwd { font-size: 11px; letter-spacing: 0.08em; padding: 4px 0 8px; }
+  .mcell { aspect-ratio: auto; min-height: 60px; padding: 6px 0 4px; border: 0; border-radius: 14px; background: transparent; justify-content: flex-start; align-items: center; gap: 3px; text-align: center; }
+  .mcell:hover { background: #171B23; }
+  .mn { font-size: 19px; font-weight: 500; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; }
+  .mcount { align-items: center; gap: 1px; font-size: 10px; }
+  .mfree { font-size: 10px; color: var(--faint); }
+  .mcell.today { border: 0; }
+  .mcell.today .mn { color: var(--accent); font-weight: 700; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .mcell.sel { background: transparent; border: 0; }
+  .mcell.sel .mn { color: var(--accent-soft); }
+  .mcell.clash { border: 0; box-shadow: none; }
+  .mcell.clash .mn { color: var(--red); font-weight: 700; }
+  .mcell.clash .mfree { color: var(--red-soft); }
+  @media (min-width: 1200px) { .mn { font-size: 18px; } }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
     .view { padding-bottom: 96px; }

@@ -85,6 +85,8 @@
   .mn { font-size: 12px; font-weight: 700; line-height: 1.1; }
   .mfree { font-size: 9px; color: var(--muted); white-space: nowrap; }
   .mdots { display: flex; flex-wrap: wrap; gap: 2px; }
+  .mcount { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; font-size: 9px; line-height: 1.15; white-space: nowrap; }
+  .mres { color: var(--accent); font-weight: 700; }
   .mdots .sw { width: 7px; height: 7px; border-radius: 2px; }
   .mcell.full .mfree { color: var(--red-soft); font-weight: 700; }
   .mcell.out { opacity: 0.35; }
@@ -120,6 +122,13 @@
 
   /* 週の表。狭い画面で収まらないときだけ横スクロール。部屋の列は左に貼り付けておく */
   .grid-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  /* 週を動かしたとき、表を横から滑り込ませる */
+  .week { overflow-x: clip; } /* 滑り込む間に画面が横に揺れないように */
+  .grid-scroll.slide-next { animation: slide-next 0.22s ease-out; }
+  .grid-scroll.slide-prev { animation: slide-prev 0.22s ease-out; }
+  @keyframes slide-next { from { transform: translateX(40px); opacity: 0.3; } to { transform: none; opacity: 1; } }
+  @keyframes slide-prev { from { transform: translateX(-40px); opacity: 0.3; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .grid-scroll.slide-next, .grid-scroll.slide-prev { animation: none; } }
   .grid { --cols: 7; min-width: calc(54px + var(--cols) * 44px); }
   .grow-row { display: grid; grid-template-columns: 54px repeat(var(--cols), minmax(44px, 1fr)); border-bottom: 1px solid var(--line); }
   .days { border-top: 1px solid var(--line); background: var(--panel-2); }
@@ -144,17 +153,15 @@
   .bar.clip-e { border-top-right-radius: 0; border-bottom-right-radius: 0; margin-right: 0; }
   .bar .bn { font-size: 11.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar .bs { font-size: 10px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 3px; }
-  .bar.airbnb { background: var(--airbnb); color: #15181F; }
-  .bar.airbnb .bs { color: #3A3F4B; }
-  .bar.agoda { background: var(--agoda); color: #15181F; }
-  .bar.agoda .bs { color: #3B3550; }
-  .bar.rakuten { background: var(--panel); box-shadow: inset 0 0 0 1.5px var(--rakuten-line); color: var(--text); }
-  .bar.rakuten .bs { color: var(--muted); }
-  .bar.direct { background: var(--direct); color: var(--on-accent); }
-  .bar.direct .bs { color: #24405C; }
+  /* 予約のブロック：すりガラスのような半透明の枠（角丸）。下の一辺だけ媒体の色 */
+  .bar { background: rgba(255, 255, 255, 0.07); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.14); border-bottom: 3px solid var(--line-2); border-radius: 10px; color: var(--text); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset; }
+  .bar .bs { color: var(--muted); }
+  .bar.airbnb { border-bottom-color: var(--airbnb); }
+  .bar.agoda { border-bottom-color: var(--agoda); }
+  .bar.rakuten { border-bottom-color: var(--rakuten-line); }
+  .bar.direct { border-bottom-color: var(--direct); }
   .bar.need-input { outline: 2px dashed var(--red); outline-offset: -2px; }
-  .bar.need-input .bs { color: #9E1C1C; font-weight: 700; }
-  .bar.rakuten.need-input .bs { color: var(--red-soft); }
+  .bar.need-input .bs { color: var(--red-soft); font-weight: 700; }
   .prep { grid-column: 2 / -1; margin: 6px 6px 6px 2px; border-radius: 7px; background: repeating-linear-gradient(135deg, #20242E 0 6px, #161A22 6px 12px); display: flex; align-items: center; padding-left: 10px; font-size: 11px; color: var(--muted); }
   .grow-row.off .rn { color: var(--faint); }
 
