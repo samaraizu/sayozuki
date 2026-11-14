@@ -115,13 +115,18 @@ const css = `<style>
   .mcell.clash .mn { color: var(--red); font-weight: 700; }
   .mcell.clash .mfree { color: var(--red-soft); }
   @media (min-width: 1200px) { .mn { font-size: 18px; } }
+  @media (max-width: 899px) { .top { padding-top: calc(10px + env(safe-area-inset-top)); } }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
     .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .topnav .nav-ico svg { width: 20px; height: 20px; }
   }
 </style>`;
-const page = html.replace(top[0], topnav).replace(bottom[0], appnav).replace('</head>', css + '\n</head>');
+// ヘッダーのロゴと「小夜月 予約」の文字は出さない（Cloudflare版だけ。ホーム画面のアプリ名で分かるため）
+const brand = html.match(/\n\s*<div class="brand">[\s\S]*?<\/div>/);
+if (!brand) throw new Error('Index.html のロゴが見つからない');
+const page = html.replace(brand[0], '').replace(top[0], topnav).replace(bottom[0], appnav).replace('</head>', css + '\n</head>');
+if (page.includes('class="brand"')) throw new Error('ロゴを消せなかった');
 if (!page.includes('class="appnav"') || !page.includes('.appnav {')) throw new Error('切り替えを入れられなかった');
 if (/<\?/.test(page)) throw new Error('組み立て漏れのスクリプトレットがある');
 out('public/index.html', page);
