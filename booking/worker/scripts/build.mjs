@@ -59,14 +59,37 @@ const html = src('Index.html')
   .replace("<?!= include_('Styles') ?>", () => src('Styles.html'))
   .replace("<?!= include_('App') ?>", () => shim + src('App.html') + '\n<script src="/push.js" defer></script>')
   .replace('<?!= libSource_() ?>', () => lib.replace(/<\/script/gi, '<\\/script'));
-// 客室オーダーのスタッフ画面への入口（Cloudflare版だけ。/staff/ は src/order.ts が客室オーダーへ中継する）
-const bell = (n) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18"></path><path d="M5 18a7 7 0 0 1 14 0"></path><path d="M12 8V6"></path><path d="M10 6h4"></path></svg>`;
-const navs = html.split('</nav>');
-if (navs.length !== 3) throw new Error('Index.html の nav が2つ（上・下）ではない');
-const withOrder = navs[0] + `  <a href="/staff/">${bell(20)}<span>オーダー</span></a>\n    </nav>` +
-  navs[1] + `  <a href="/staff/">\n      ${bell(22)}\n      オーダー\n    </a>\n  </nav>` + navs[2];
-const page = withOrder.replace('</head>', '<style>.bottomnav { grid-template-columns: repeat(4, 1fr); }</style>\n</head>');
-if (page === withOrder) throw new Error('</head> が無い');
+// 一番下の切り替え「予約管理／リクエスト」（Cloudflare版だけ。GAS版の Index.html は触らない）
+// リクエスト＝客室オーダーのスタッフ画面（/staff/。src/order.ts が客室オーダーへ中継し、向こうにも同じ切り替えが出る）
+// カレンダー・問い合わせ・手動入力は、スマホでは画面の上（ロゴの下）のタブ、PCでは左のサイドバー
+const bottom = html.match(/\n\s*<nav class="bottomnav"[\s\S]*?<\/nav>/);
+if (!bottom) throw new Error('Index.html の下のナビが見つからない');
+const appnav = `
+  <nav class="appnav" aria-label="切り替え">
+    <a href="/" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg><span>予約管理</span></a>
+    <a href="/staff/"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18"></path><path d="M5 18a7 7 0 0 1 14 0"></path><path d="M12 8V6"></path><path d="M10 6h4"></path></svg><span>リクエスト</span></a>
+  </nav>`;
+const css = `<style>
+  /* 一番下の切り替え（予約管理／リクエスト）。客室オーダーのスタッフ画面（order/public/staff/staff.js）と同じ見た目 */
+  .bottomnav { display: none !important; }
+  .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); }
+  .appnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 12px; }
+  .appnav a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  /* スマホ：カレンダー・問い合わせ・手動入力はロゴの下に横並び */
+  @media (max-width: 899px) {
+    .top { padding-bottom: 8px; }
+    .topnav { display: flex; width: 100%; gap: 6px; }
+    .topnav a { flex: 1; justify-content: center; height: 40px; padding: 0 8px; gap: 0; border: 1px solid var(--line); font-size: 13px; white-space: nowrap; }
+    .topnav a svg { display: none; }
+    .topnav a[aria-current="page"] { border-color: #2E3A4D; }
+  }
+  @media (min-width: 900px) {
+    .top { height: calc(100vh - 66px); }
+    .view { padding-bottom: 96px; }
+  }
+</style>`;
+const page = html.replace(bottom[0], appnav).replace('</head>', css + '\n</head>');
+if (!page.includes('class="appnav"') || !page.includes('.appnav {')) throw new Error('切り替えを入れられなかった');
 if (/<\?/.test(page)) throw new Error('組み立て漏れのスクリプトレットがある');
 out('public/index.html', page);
 console.log('built public/index.html, src/lib.gen.js');
