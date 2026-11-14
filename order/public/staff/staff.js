@@ -11,10 +11,11 @@ if (IN_BOOKING) {
   // 見た目は予約管理の一番下（booking/worker/scripts/build.mjs の appnav）と同じ
   const icon = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   document.head.insertAdjacentHTML('beforeend', `<style>
-    body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
-    .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #262B37; background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); font-family: 'Zen Kaku Gothic New', system-ui, sans-serif; }
-    .appnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #A4A9B6; text-decoration: none; font-size: 12px; }
-    .appnav a[aria-current="page"] { color: #7CC4FF; font-weight: 700; }
+    body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+    .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #262B37; background: #131720; font-family: 'Zen Kaku Gothic New', system-ui, sans-serif; }
+    .appnav a { min-height: 60px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #A4A9B6; text-decoration: none; font-size: 12px; }
+    .appnav a + a { border-left: 1px solid #2C3240; }
+    .appnav a[aria-current="page"] { background: #F3F0E8; color: #15181F; font-weight: 700; }
   </style>`);
   document.body.insertAdjacentHTML('beforeend', `<nav class="appnav" aria-label="切り替え">
     <a href="/">${icon('<rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path>')}<span>予約管理</span></a>

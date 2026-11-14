@@ -82,9 +82,12 @@ const appnav = `
 const css = `<style>
   /* 一番下の切り替え（予約管理／リクエスト）。客室オーダーのスタッフ画面（order/public/staff/staff.js）と同じ見た目 */
   .bottomnav { display: none !important; }
-  .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); background: #131720; padding: 6px 4px calc(8px + env(safe-area-inset-bottom)); }
-  .appnav a { min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 12px; }
-  .appnav a[aria-current="page"] { color: var(--accent); font-weight: 700; }
+  /* 真ん中に線。選んでいる方は背景をオフホワイト、もう片方は黒系のまま */
+  .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); background: #131720; }
+  .appnav a { min-height: 60px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 12px; }
+  .appnav a + a { border-left: 1px solid var(--line-2); }
+  .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  .appnav a[aria-current="page"] { background: #F3F0E8; color: #15181F; font-weight: 700; }
   /* スマホ：ロゴの下に「＋ 予約登録」と、問い合わせ・カレンダーの大きめのアイコンを横並び */
   @media (max-width: 899px) {
     .top { padding-bottom: 8px; }
@@ -114,7 +117,7 @@ const css = `<style>
   @media (min-width: 1200px) { .mn { font-size: 18px; } }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
-    .view { padding-bottom: 96px; }
+    .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .topnav .nav-ico svg { width: 20px; height: 20px; }
   }
 </style>`;
