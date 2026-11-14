@@ -1,4 +1,4 @@
-// 「通知をオンにする」ボタン。画面の上（ロゴの右）に出す。iPhoneはホーム画面に追加したアプリからだけ使える
+// 「通知をオンにする」ボタン。画面の一番上に出す。iPhoneはホーム画面に追加したアプリからだけ使える
 (function () {
   var supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   var ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -10,15 +10,16 @@
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'pill';
-  btn.style.cssText = 'margin-left:auto;font-size:13px;height:34px;padding:0 12px;';
+  btn.style.cssText = 'margin-left:auto;font-size:13px;height:34px;padding:0 12px;align-self:flex-end;';
   function label() {
     btn.textContent = on ? '通知：オン' : '通知をオンにする';
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
     btn.style.color = on ? 'var(--accent)' : '';
   }
   label();
+  // 画面の一番上（「＋ 予約登録」の行の上、右寄せ）。PCは左のサイドバーの一番上
   var top = document.querySelector('header.top');
-  if (top) top.appendChild(btn);
+  if (top) top.insertBefore(btn, top.firstChild);
 
   function say(msg) {
     var t = document.getElementById('toast');

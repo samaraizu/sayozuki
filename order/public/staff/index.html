@@ -153,6 +153,10 @@
   @keyframes bloom { to { transform: scale(10); opacity: 0; } }
   .done-out { animation: done-out .45s cubic-bezier(.6,-.3,.7,1) forwards; }
   @keyframes done-out { to { opacity: 0; transform: translateX(60px) scale(.9); } }
+  /* 一番上の「通知をオンにする」（予約管理の push.js と同じ見た目） */
+  .pushrow { display: flex; justify-content: flex-end; padding: 2px 0 8px; }
+  .pushb { height: 34px; padding: 0 12px; white-space: nowrap; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 13px; }
+  .pushb.on { color: var(--accent); }
   /* QRのダイアログは白地のまま（読み取り・印刷用） */
   dialog:has(.qr) { background: #fff; color: #1D2A3B; }
   .login .b.p { height: 52px; }

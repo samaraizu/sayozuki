@@ -229,8 +229,9 @@ function render(fresh = new Set()) {
     : '<div class="empty">お客様からのメッセージはまだありません</div>';
 
   root.innerHTML = `<div class="wrap">
+    <div class="pushrow"><button class="pushb${pushOn ? ' on' : ''}" data-act="push" aria-pressed="${pushOn}">${pushLabel()}</button></div>
     <header>${b.mock ? '<span class="pill" style="margin-right:auto">モック動作中（Square未接続）</span>' : ''}
-      <div class="btns"><button class="b" data-act="menu-open">メニュー</button><button class="b icon-b${pushOn ? ' on' : ''}" data-act="push" aria-label="${pushLabel()}" title="${pushLabel()}">${ICON.bell}</button><button class="b icon-b" data-act="refresh" aria-label="更新" title="更新">${ICON.refresh}</button><button class="b icon-b" data-act="logout" aria-label="ログアウト" title="ログアウト">${ICON.logout}</button></div></header>
+      <div class="btns"><button class="b" data-act="menu-open">メニュー</button><button class="b icon-b" data-act="refresh" aria-label="更新" title="更新">${ICON.refresh}</button><button class="b icon-b" data-act="logout" aria-label="ログアウト" title="ログアウト">${ICON.logout}</button></div></header>
     <section style="margin-bottom:16px"><h2>チャット ${count(unreadTotal, true)}</h2>${chats}</section>
     <div class="grid">
       <section><h2>新しい注文 ${count(b.orders.length)}</h2>${orders}</section>
