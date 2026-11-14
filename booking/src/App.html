@@ -229,8 +229,9 @@
     var end = Lib.addDays(start, DAYS - 1);
     var week = h('section', { class: 'week', 'aria-label': '週の予約' },
       h('div', { class: 'cal-head' },
-        h('h1', null, Lib.shortLabel(start) + ' 〜 ' + Lib.shortLabel(end)),
-        h('div', { class: 'pager' },
+        // 週の期間の文字は画面に出さない（日付は表の見出しにある）。読み上げ用にだけ残す
+        h('h1', { class: 'visually-hidden' }, Lib.shortLabel(start) + ' 〜 ' + Lib.shortLabel(end)),
+        h('div', { class: 'pager', style: 'margin-left: auto' },
           h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の週', onclick: function () { shiftWeek(-STEP); } }, svg(ICON_PREV)),
           h('button', { type: 'button', class: 'pill', onclick: function () { state.monthStart = b.today; showWeek(b.today); } }, '今週'),
           h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の週', onclick: function () { shiftWeek(STEP); } }, svg(ICON_NEXT))
@@ -254,7 +255,10 @@
     Lib.layoutWeek(b.rooms, b.bookings, start, DAYS).forEach(function (row) {
       append(grid, roomRow(row, start));
     });
-    append(week, h('div', { class: 'grid-scroll' }, grid));
+    var scroller = h('div', { class: 'grid-scroll' + (state.slide ? ' slide-' + state.slide : '') }, grid);
+    state.slide = '';
+    swipeWeeks(scroller);
+    append(week, scroller);
 
     append($view, h('div', { class: 'cal-split' }, renderMonth(), week));
 
@@ -262,7 +266,44 @@
   }
 
   function shiftWeek(n) {
+    state.slide = n > 0 ? 'next' : 'prev'; // 表を横から滑り込ませる
     showWeek(Lib.addDays(state.weekStart, n));
+  }
+
+  // 週の表を横にスワイプ（スマホ）・横スクロール（PCのトラックパッド）しても前後の週へ動かす。
+  // 表がはみ出して横に動ける間は、端に着くまでふつうのスクロールを優先する
+  function swipeWeeks(el) {
+    var atStart = function () { return el.scrollLeft <= 1; };
+    var atEnd = function () { return el.scrollLeft + el.clientWidth >= el.scrollWidth - 1; };
+    var sx = 0, sy = 0, s0 = true, s1 = true, tracking = false;
+    el.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1) { tracking = false; return; }
+      tracking = true;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+      s0 = atStart(); s1 = atEnd();
+    }, { passive: true });
+    el.addEventListener('touchend', function (e) {
+      if (!tracking) return;
+      tracking = false;
+      var t = e.changedTouches[0];
+      var dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // 縦のスクロールや小さな動きは無視
+      if (dx < 0 && s1) shiftWeek(STEP);
+      else if (dx > 0 && s0) shiftWeek(-STEP);
+    }, { passive: true });
+    var acc = 0, lock = 0;
+    el.addEventListener('wheel', function (e) {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      if ((e.deltaX > 0 && !atEnd()) || (e.deltaX < 0 && !atStart())) { acc = 0; return; }
+      e.preventDefault(); // ブラウザの「戻る」ジェスチャーにしない
+      if (Date.now() < lock) return;
+      acc += e.deltaX;
+      if (Math.abs(acc) < 80) return;
+      lock = Date.now() + 700; // 1回のスワイプで何週も飛ばない
+      var n = acc > 0 ? STEP : -STEP;
+      acc = 0;
+      shiftWeek(n);
+    }, { passive: false });
   }
 
   // 右の30日のマス。1マス＝1泊。点は泊まっている部屋（色は媒体）、「空n」は売れる部屋の空き。押すとその週を左に出す
@@ -304,10 +345,11 @@
           'aria-label': md(iso) + '（' + Lib.weekday(iso) + '） 予約' + stays.length + '件・空き' + free + '室' + (clash[iso] ? '・重複あり' : ''),
           onclick: function () { showWeek(iso); }
         },
-          h('span', { class: 'mtop' },
-            h('span', { class: 'mn' }, (+p[2] === 1 || iso === gridStart) ? (+p[1]) + '/' + (+p[2]) : String(+p[2])),
-            iso >= b.today ? h('span', { class: 'mfree' }, free === 0 ? '満' : '空' + free) : null),
-          h('span', { class: 'mdots', 'aria-hidden': 'true' }, stays.map(function (x) { return h('i', { class: 'sw ' + channelClass(x) }); }))
+          h('span', { class: 'mn' }, (+p[2] === 1 || iso === gridStart) ? (+p[1]) + '/' + (+p[2]) : String(+p[2])),
+          // 数字の下に「予〜（予約の数）」「空〜（空き部屋の数）」。空きは今日から先だけ
+          h('span', { class: 'mcount', 'aria-hidden': 'true' },
+            stays.length ? h('span', { class: 'mres' }, '予' + stays.length) : null,
+            iso >= b.today ? h('span', { class: 'mfree' }, free === 0 ? '満' : '空' + free) : null)
         ));
       })(iso);
     }
