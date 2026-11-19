@@ -6,7 +6,7 @@ import { addDays, roomStatus, type Availability, type RoomStatus } from "@/lib/a
 import { fmt, formatYen, htmlLang, type Dict, type Locale } from "@/lib/i18n";
 import { isBusyNight, quote, type MealPlan } from "@/lib/pricing";
 import { ARRIVAL_TIMES, HOLD_MINUTES } from "@/lib/reserve-config";
-import { bookingRules, meals, rooms } from "@/lib/site";
+import { bookingRules, dinnerAllowed, meals, rooms } from "@/lib/site";
 
 type Avail = { status: "loading" | "error" } | { status: "ready"; data: Availability };
 
@@ -49,7 +49,10 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
   // 朝食・夕食はそれぞれオン・オフ。送るときは素泊まり／朝食／夕食／両方の1つにまとめる
   const [breakfast, setBreakfast] = useState(false);
   const [dinner, setDinner] = useState(false);
-  const plan: MealPlan = breakfast && dinner ? "both" : breakfast ? "breakfast" : dinner ? "dinner" : "none";
+  // 当日チェックインは夕食を付けられない（bookingRules.dinnerLeadDays）
+  // 夕食のチェックが残っていても、当日チェックインの日を選んだら送らない（画面もオフに見せる）
+  const noDinner = !!checkIn && !dinnerAllowed(checkIn);
+  const plan: MealPlan = breakfast && dinner && !noDinner ? "both" : breakfast ? "breakfast" : dinner && !noDinner ? "dinner" : "none";
   const [month, setMonth] = useState<string | null>(null);
   const [agree, setAgree] = useState(false);
 
@@ -333,6 +336,7 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
               {b.stepMeal}
             </h2>
             <p className="mt-2 text-[13px] text-slate">{b.mealHint}</p>
+            {noDinner && <p className="mt-1 text-[13px] text-slate">{b.dinnerLead}</p>}
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {(
                 [
@@ -342,9 +346,15 @@ export function Reservation({ lang, t, roomNames }: { lang: Locale; t: Dict; roo
               ).map(([key, label, price, on, set]) => (
                 <label
                   key={key}
-                  className={`flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3.5 ${on ? "border-2 border-sea bg-sel" : "border-steel bg-white"}`}
+                  className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 ${key === "dinner" && noDinner ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${on && !(key === "dinner" && noDinner) ? "border-2 border-sea bg-sel" : "border-steel bg-white"}`}
                 >
-                  <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} className="size-5 shrink-0 accent-sea" />
+                  <input
+                    type="checkbox"
+                    checked={on && !(key === "dinner" && noDinner)}
+                    disabled={key === "dinner" && noDinner}
+                    onChange={(e) => set(e.target.checked)}
+                    className="size-5 shrink-0 accent-sea"
+                  />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="text-[15px] font-bold">{label}</span>
                     <span className="text-[12px] text-slate">{fmt(b.mealPrice, { price: yen(price) })}</span>

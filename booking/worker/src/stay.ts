@@ -15,6 +15,21 @@ export function currentNight(now = new Date()): string {
   return hour < SWITCH_HOUR ? Lib.addDays(today, -1) : today;
 }
 
+/**
+ * その日（日本時間）にチェックアウトした部屋（客室オーダーが、前のお客様の会話などを片付けるのに使う）。
+ * 同じ部屋に続けて泊まる予約（チェックアウト日をまたいでいる）がある部屋は除く
+ */
+export async function departedRooms(env: Env, date: string): Promise<{ date: string; rooms: string[] }> {
+  const res = await env.DB.prepare(
+    `SELECT DISTINCT room FROM bookings
+      WHERE status <> 'キャンセル' AND room <> '' AND check_out = ?1
+        AND room NOT IN (SELECT room FROM bookings WHERE status <> 'キャンセル' AND check_in < ?1 AND check_out > ?1)`,
+  )
+    .bind(date)
+    .all<{ room: string }>();
+  return { date, rooms: (res.results ?? []).map((r) => String(r.room)) };
+}
+
 export async function occupiedRooms(env: Env, now = new Date()): Promise<{ night: string; rooms: string[] }> {
   const night = currentNight(now);
   const res = await env.DB.prepare(

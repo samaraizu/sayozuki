@@ -35,6 +35,12 @@ export async function orderPaid(env: Env, orderId: string) {
   return o.state === 'COMPLETED' || (Boolean(o.tenders?.length) && (o.net_amount_due_money?.amount ?? 1) === 0);
 }
 
+/** 支払いリンクの注文の、税・割引の前の明細の合計（円）。精算の額と Square の請求がずれていないか確かめる */
+export async function orderGross(env: Env, orderId: string) {
+  const r = await sq<{ order: { line_items?: { gross_sales_money?: { amount?: number } }[] } }>(env, `/v2/orders/${orderId}`);
+  return (r.order.line_items ?? []).reduce((a, l) => a + Number(l.gross_sales_money?.amount ?? 0), 0);
+}
+
 export async function deletePaymentLink(env: Env, id: string) {
   try {
     await sq(env, `/v2/online-checkout/payment-links/${id}`, { method: 'DELETE' });

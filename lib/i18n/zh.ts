@@ -178,6 +178,7 @@ export const zh: Dict = {
     mealDinner: "含晚餐",
     mealPrice: "每人每晚 {price}",
     mealHint: "早餐和晚餐可分别添加。都不选即为仅住宿。",
+    dinnerLead: "晚餐需在入住前一天预订。当天入住仅可添加早餐。",
     mealTotal: "{guests}人・{nights}晚 {price}",
     arrival: "预计到达时间",
     arrivalUndecided: "未定",

@@ -180,6 +180,7 @@ export const en: Dict = {
     mealDinner: "With dinner",
     mealPrice: "{price} per person per night",
     mealHint: "Add breakfast and dinner separately. Leave both unchecked for a room-only stay.",
+    dinnerLead: "Dinner must be booked by the day before arrival. For same-day arrivals, only breakfast can be added.",
     mealTotal: "{guests} guests · {nights} nights {price}",
     arrival: "Estimated arrival",
     arrivalUndecided: "Not sure yet",

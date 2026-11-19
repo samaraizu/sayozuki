@@ -26,7 +26,7 @@ async function sq<T>(env: Env, path: string, init: { method?: string; body?: unk
   const data = text ? JSON.parse(text) : {};
   if (!res.ok) {
     console.error('square error', path, res.status, text);
-    throw new Error(`square_error: ${data?.errors?.[0]?.detail ?? res.status}`);
+    throw new Error(`square_error ${res.status}: ${data?.errors?.[0]?.detail ?? ""}`);
   }
   return data as T;
 }
@@ -79,33 +79,47 @@ export async function orderPaid(env: Env, orderId: string) {
   return isPaidOrder(r.order);
 }
 
-/** 期限切れの支払いリンクを消す（あとから払われないように） */
-export async function deletePaymentLink(env: Env, id: string) {
-  if (squareMock(env) || !id) return;
+/** 期限切れの支払いリンクを消す（あとから払われないように）。消せたか（もう無いのも含む）を返す */
+export async function deletePaymentLink(env: Env, id: string): Promise<boolean> {
+  if (squareMock(env) || !id) return true;
   try {
     await sq(env, `/v2/online-checkout/payment-links/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    return true;
   } catch (e) {
+    if (String(e).includes('square_error 404')) return true;
     console.error('支払いリンクを消せなかった', e);
+    return false;
   }
 }
 
 /**
  * 返金（予約管理アプリの「キャンセル」）。支払いリンクの注文から支払いIDを引いて、その支払いから返金する。
- * idempotency key は予約番号で決めるので、押し直しても二重に返金しない
+ * - すでに返金がある支払い（前に押したとき返金だけ通って記録が残らなかった等）は、二重に返金せずその額を返す
+ * - Square に断られた返金（REJECTED・FAILED）はエラーにする
  */
-export async function refundOrder(env: Env, p: { no: string; orderId: string; amount: number; reason: string }) {
-  if (squareMock(env)) return { id: `mock-refund-${p.no}` };
+export async function refundOrder(
+  env: Env,
+  p: { no: string; orderId: string; amount: number; reason: string },
+): Promise<{ id: string; amount: number; already: boolean }> {
+  if (squareMock(env)) return { id: `mock-refund-${p.no}`, amount: p.amount, already: false };
   const o = await sq<{ order: { tenders?: { id?: string; payment_id?: string }[] } }>(env, `/v2/orders/${encodeURIComponent(p.orderId)}`);
   const tender = o.order.tenders?.[0];
   const paymentId = tender?.payment_id || tender?.id;
   if (!paymentId) throw new Error('square_payment_not_found');
-  const r = await sq<{ refund: { id: string; status: string } }>(env, '/v2/refunds', {
+  const pay = await sq<{ payment: { refund_ids?: string[]; refunded_money?: { amount?: number } } }>(
+    env,
+    `/v2/payments/${encodeURIComponent(paymentId)}`,
+  );
+  const refunded = Number(pay.payment.refunded_money?.amount ?? 0);
+  if (refunded > 0) return { id: pay.payment.refund_ids?.[0] ?? '', amount: refunded, already: true };
+  const r = await sq<{ refund: { id: string; status: string; amount_money?: { amount?: number } } }>(env, '/v2/refunds', {
     body: {
-      idempotency_key: `cancel-${p.no}`,
+      idempotency_key: `cancel-${p.no}-${p.amount}`,
       payment_id: paymentId,
       amount_money: { amount: p.amount, currency: 'JPY' },
       reason: p.reason.slice(0, 192),
     },
   });
-  return { id: r.refund.id };
+  if (r.refund.status === 'REJECTED' || r.refund.status === 'FAILED') throw new Error(`square_refund_${r.refund.status}`);
+  return { id: r.refund.id, amount: Number(r.refund.amount_money?.amount ?? p.amount), already: false };
 }

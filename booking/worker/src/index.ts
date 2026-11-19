@@ -21,14 +21,14 @@ import {
 } from './auth';
 import { WorkerEntrypoint } from 'cloudflare:workers';
 import { createBooking, getBoard, pendingForSheet, syncFromSheet, type ManualForm, type SyncPayload } from './db';
-import { UserError, json, type Env } from './env';
+import { UserError, json, todayIso, type Env } from './env';
 import { calendar, checkoutStatus, startCheckout, sweep, type CheckoutInput } from './hp';
 import { addInquiry, closeInquiry, type InquiryInput } from './inquiries';
 import { cancelBooking, type CancelForm } from './cancel';
 import { setMeals, type MealForm } from './meals';
 import { latest, notify, subscribe, unsubscribe, vapid } from './push';
 import { isOrderPath, proxyOrder } from './order';
-import { occupiedRooms } from './stay';
+import { departedRooms, occupiedRooms } from './stay';
 
 function redirect(location: string, cookies: string[] = []): Response {
   const headers = new Headers({ location, 'cache-control': 'no-store' });
@@ -144,6 +144,10 @@ async function handle(req: Request, env: Env): Promise<Response> {
 export class OrderApi extends WorkerEntrypoint<Env> {
   async occupied() {
     return occupiedRooms(this.env);
+  }
+  /** その日（yyyy-MM-dd）にチェックアウトした部屋の名前だけ */
+  async departed(date: string) {
+    return departedRooms(this.env, /^\d{4}-\d{2}-\d{2}$/.test(String(date)) ? String(date) : todayIso());
   }
 }
 

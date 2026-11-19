@@ -3,7 +3,11 @@ export interface Env {
   DESK: DurableObjectNamespace;
   ASSETS: Fetcher;
   /** 予約管理の OrderApi（いまお客様がいる部屋）。ローカルでは無いことがあるので任意 */
-  BOOKING?: { occupied(): Promise<{ night: string; rooms: string[] }> };
+  BOOKING?: {
+    occupied(): Promise<{ night: string; rooms: string[] }>;
+    /** その日（yyyy-MM-dd）にチェックアウトした部屋 */
+    departed(date: string): Promise<{ date: string; rooms: string[] }>;
+  };
   /** 翻訳（Workers AI）。ローカルでは無いことがあるので任意 */
   AI?: Ai;
 

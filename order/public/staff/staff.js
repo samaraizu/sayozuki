@@ -80,7 +80,10 @@ const ERRORS = {
   bad_slug: '詳細ページのURLは、英小文字・数字・ハイフン（-）で41文字までにしてください。',
   slug_taken: 'その詳細ページのURLは、ほかの商品が使っています。別のURLにしてください。',
   item_not_found: 'この商品が見つかりません。一覧を読み込み直してください。',
-  staff_pin_not_set: 'サーバーにSTAFF_PINが設定されていません。'
+  staff_pin_not_set: 'サーバーにSTAFF_PINが設定されていません。',
+  locked: 'PINの間違いが続いたため、15分ほどログインを止めています。',
+  already_paid: 'お客様がSquareで払い済みでした。精算済みにしたので、現金は受け取らないでください。',
+  price_changed: 'Squareの値段が注文のときと変わっていたので、支払いリンクを出していません。Squareの値段を戻すか、現金で精算してください。'
 };
 
 async function api(path, opts = {}) {
@@ -90,6 +93,12 @@ async function api(path, opts = {}) {
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 429 && data.error === 'locked') {
+    localStorage.removeItem(PIN_KEY);
+    pin = null;
+    renderLogin(ERRORS.locked);
+    throw new Error('locked');
+  }
   if (res.status === 401) {
     localStorage.removeItem(PIN_KEY);
     pin = null;
@@ -853,7 +862,8 @@ document.addEventListener('click', async (ev) => {
       case 'close': return dlg.close();
     }
   } catch (e) {
-    if (e.message !== 'unauthorized') fail(e);
+    if (e.message !== 'unauthorized' && e.message !== 'locked') fail(e);
+    if (e.code === 'already_paid') load();
   }
 });
 

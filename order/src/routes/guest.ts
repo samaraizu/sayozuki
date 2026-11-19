@@ -4,6 +4,7 @@ import { REQUEST_KINDS } from '../config/requests';
 import { forGuest, guestSend, openMessages } from '../lib/chat';
 import { notifyStaff } from '../lib/notify';
 import { markSettled, syncPendingPayments } from '../lib/settle';
+import { isOccupied, resetKey } from '../lib/reset';
 import { nowIso } from '../lib/time';
 import { HttpError, json, newId, readJson } from '../lib/util';
 import type { OrderDesk } from '../desk';
@@ -129,7 +130,12 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
     const body = await readJson<{ lines: { id: string; qty: number }[]; delivery: 'door' | 'hand' }>(req);
     const r = await desk(env).placeOrder({ roomId: room.id, lines: Array.isArray(body.lines) ? body.lines.slice(0, 30) : [], delivery: body.delivery });
     if (!r.ok) return json({ error: r.code, detail: r.detail }, r.status);
-    ctx.waitUntil(notifyStaff(env, `🛎 ${r.room} 注文 ${r.lines.map((l) => `${l.name}×${l.qty}`).join('、')}（${body.delivery === 'hand' ? '手渡し' : '扉前'}）`));
+    // 台帳でお客様のいない部屋からの注文（前のお客様がQRを控えていた等）は、通知で分かるようにする
+    ctx.waitUntil(
+      isOccupied(env, r.room).then((occ) =>
+        notifyStaff(env, `🛎 ${occ === false ? '【空室からの注文・要確認】' : ''}${r.room} 注文 ${r.lines.map((l) => `${l.name}×${l.qty}`).join('、')}（${body.delivery === 'hand' ? '手渡し' : '扉前'}）`)
+      )
+    );
     return json({ id: r.id, total: r.total });
   }
 
@@ -178,9 +184,14 @@ export async function handleGuest(req: Request, env: Env, url: URL, ctx: Executi
   if (path === '/api/receipt' && method === 'GET') {
     const room = await roomFromHeader(req, env);
     const s = await env.DB.prepare(
-      "SELECT * FROM settlements WHERE room_id = ? AND status = 'settled' AND settled_at >= ? ORDER BY settled_at DESC LIMIT 1"
+      // 部屋を片付けた（前のお客様がチェックアウトした）より前の精算は、次のお客様に見せない
+      "SELECT * FROM settlements WHERE room_id = ? AND status = 'settled' AND settled_at >= ? AND settled_at >= COALESCE(?, '') ORDER BY settled_at DESC LIMIT 1"
     )
-      .bind(room.id, new Date(Date.now() - 48 * 3600e3).toISOString())
+      .bind(
+        room.id,
+        new Date(Date.now() - 48 * 3600e3).toISOString(),
+        (await env.DB.prepare('SELECT value FROM settings WHERE key = ?').bind(resetKey(room.id)).first<{ value: string }>())?.value ?? null
+      )
       .first<SettlementRow>();
     if (!s) throw new HttpError(409, 'not_settled');
     return json({

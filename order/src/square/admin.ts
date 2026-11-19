@@ -1,7 +1,7 @@
 import type { Env } from '../env';
 import { isMock } from '../env';
 import { CATEGORIES, type Tr } from '../config/i18n-menu';
-import { nowIso } from '../lib/time';
+import { jstDayStartIso, nowIso } from '../lib/time';
 import { translate } from '../lib/translate';
 import { HttpError } from '../lib/util';
 import { sq, sqUpload } from './client';
@@ -107,16 +107,16 @@ async function inOpenOrders(env: Env, variationId: string) {
   return Boolean(r);
 }
 
-/** 精算前の注文で押さえている数（在庫を数える商品のみ） */
+/** 精算前の注文で押さえている数（在庫を数える商品のみ・今日の注文だけ。desk.ts の pending と同じ数え方） */
 export async function heldCounts(env: Env) {
   const r = await env.DB.prepare(
     `SELECT l.variation_id AS id, SUM(l.qty) AS qty
        FROM order_lines l
        JOIN orders o ON o.id = l.order_id
        LEFT JOIN settlements st ON st.id = o.settlement_id
-      WHERE l.tracked = 1 AND o.status != 'canceled' AND (o.settlement_id IS NULL OR st.status = 'pending')
+      WHERE l.tracked = 1 AND o.status != 'canceled' AND (o.settlement_id IS NULL OR st.status = 'pending') AND o.created_at >= ?
       GROUP BY l.variation_id`
-  ).all<{ id: string; qty: number }>();
+  ).bind(jstDayStartIso()).all<{ id: string; qty: number }>();
   return Object.fromEntries((r.results ?? []).map((x) => [x.id, Number(x.qty)]));
 }
 
@@ -312,4 +312,42 @@ export async function changeImage(env: Env, itemId: string, imageId: string, op:
   await upsert(env, o);
   if (op === 'remove')
     await sq(env, `/v2/catalog/object/${encodeURIComponent(imageId)}`, { method: 'DELETE' }).catch((e) => console.error('image delete failed', e));
+}
+
+/**
+ * 現金などで精算したとき、今日の注文の在庫を数える商品を Square の在庫から引く（IN_STOCK → SOLD）。
+ * Squareの支払いリンクで払われたときは Square が自分で引くので呼ばない。失敗しても精算は止めない
+ */
+export async function consumeStock(env: Env, settlementId: string) {
+  if (isMock(env) || !env.SQUARE_ACCESS_TOKEN) return;
+  const r = await env.DB.prepare(
+    `SELECT l.variation_id AS id, SUM(l.qty) AS qty FROM order_lines l JOIN orders o ON o.id = l.order_id
+      WHERE o.settlement_id = ? AND o.status != 'canceled' AND l.tracked = 1 AND o.created_at >= ?
+      GROUP BY l.variation_id`
+  )
+    .bind(settlementId, jstDayStartIso())
+    .all<{ id: string; qty: number }>();
+  const rows = r.results ?? [];
+  if (!rows.length) return;
+  const at = new Date().toISOString();
+  try {
+    await sq(env, '/v2/inventory/changes/batch-create', {
+      body: {
+        idempotency_key: `cash-${settlementId}`,
+        changes: rows.map((x) => ({
+          type: 'ADJUSTMENT',
+          adjustment: {
+            catalog_object_id: x.id,
+            from_state: 'IN_STOCK',
+            to_state: 'SOLD',
+            location_id: env.SQUARE_LOCATION_ID,
+            quantity: String(x.qty),
+            occurred_at: at
+          }
+        }))
+      }
+    });
+  } catch (e) {
+    console.error('現金精算の在庫を引けなかった', settlementId, e);
+  }
 }

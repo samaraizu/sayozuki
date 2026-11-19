@@ -7,16 +7,50 @@ import { closeChat, forStaff, openMessages, staffSend, type MessageRow } from '.
 import { notifyStaff } from '../lib/notify';
 import { vapid } from '../lib/push';
 import { markSettled, syncPendingPayments } from '../lib/settle';
-import { createCheckoutLink, deletePaymentLink } from '../square/checkout';
-import { addImage, archiveItem, changeImage, createItem, heldCounts, parseInput, suggestTr, updateItem } from '../square/admin';
+import { createCheckoutLink, deletePaymentLink, orderGross, orderPaid } from '../square/checkout';
+import { addImage, archiveItem, changeImage, consumeStock, createItem, heldCounts, parseInput, suggestTr, updateItem } from '../square/admin';
 import { desk, pendingSettlement, roomBill, type RoomRow } from './guest';
 import { setDraft } from '../square/detail';
+import { roomKey } from '../lib/reset';
 
-function authStaff(req: Request, env: Env) {
+/** PINを続けて間違えたら、その送り元をしばらく止める（総当たり対策） */
+const PIN_FAIL_MAX = 10;
+const PIN_LOCK_MS = 15 * 60_000;
+
+async function authStaff(req: Request, env: Env) {
   const pin = env.STAFF_PIN;
   if (!pin) throw new HttpError(503, 'staff_pin_not_set');
+  const ip = req.headers.get('cf-connecting-ip') ?? 'unknown';
+  const key = `pinfail:${ip}`;
+  const row = await env.DB.prepare('SELECT value FROM settings WHERE key = ?').bind(key).first<{ value: string }>();
+  let fail = { n: 0, since: 0 };
+  try {
+    if (row) fail = JSON.parse(row.value);
+  } catch {}
+  const now = Date.now();
+  const fresh = now - fail.since < PIN_LOCK_MS;
+  if (fresh && fail.n >= PIN_FAIL_MAX) throw new HttpError(429, 'locked');
   const got = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!got || !timingSafeEqual(got, pin)) throw new HttpError(401, 'unauthorized');
+  if (!got || !timingSafeEqual(got, pin)) {
+    const next = fresh ? { n: fail.n + 1, since: fail.since } : { n: 1, since: now };
+    await env.DB.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .bind(key, JSON.stringify(next))
+      .run();
+    if (next.n === PIN_FAIL_MAX) console.log('スタッフ画面：PINの間違いが続いたので止めた');
+    throw new HttpError(401, 'unauthorized');
+  }
+  if (row) await env.DB.prepare('DELETE FROM settings WHERE key = ?').bind(key).run();
+}
+
+/** お支払い待ちの精算が、もう Square で払われているか。確かめられなければ null */
+async function paidOnSquare(env: Env, orderId: string | null) {
+  if (!orderId || isMock(env)) return false;
+  try {
+    return await orderPaid(env, orderId);
+  } catch (e) {
+    console.error('支払いを確かめられなかった', orderId, e);
+    return null;
+  }
 }
 
 /** 客室QRと支払い後の戻り先は、スタッフ画面を開いているドメインに合わせる */
@@ -30,7 +64,7 @@ async function getRoom(env: Env, id: string) {
 }
 
 export async function handleStaff(req: Request, env: Env, url: URL, ctx: ExecutionContext): Promise<Response> {
-  authStaff(req, env);
+  await authStaff(req, env);
   const p = url.pathname.replace(/^\/staff\/api/, '');
   const m = req.method;
   let mt: RegExpMatchArray | null;
@@ -51,7 +85,6 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
       "SELECT room_id, COUNT(*) AS n FROM messages WHERE closed = 0 AND sender = 'guest' AND read_at IS NULL GROUP BY room_id"
     ).all<{ room_id: string; n: number }>();
     // いまお客様がいる部屋（予約管理の台帳から。名前は「201号室」と「201」のように「号室」を外して突き合わせる）
-    const roomKey = (name: string) => String(name).replace(/号室$/, '').trim();
     let occupied: Set<string> | null = null;
     try {
       if (env.BOOKING) occupied = new Set((await env.BOOKING.occupied()).rooms.map(roomKey));
@@ -134,6 +167,12 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
         lines: [...agg].map(([variation_id, qty]) => ({ variation_id, qty })),
         redirectUrl: `${roomUrl(url, room.id)}&paid=1`
       });
+      // Square の管理画面で値段が変わっていると、画面の明細と請求額がずれる。ずれていたら出さない
+      const gross = link.orderId ? await orderGross(env, link.orderId).catch(() => null) : null;
+      if (gross !== null && gross !== total) {
+        if (link.id) await deletePaymentLink(env, link.id);
+        throw new HttpError(409, 'price_changed', `Square ¥${gross.toLocaleString('ja-JP')}／明細 ¥${total.toLocaleString('ja-JP')}`);
+      }
     }
     await env.DB.batch([
       env.DB.prepare(
@@ -156,6 +195,13 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
     const room = await getRoom(env, mt[1]);
     const s = await pendingSettlement(env, room.id);
     if (!s) throw new HttpError(409, 'not_pending');
+    // 押す直前にお客様が払っていたら、戻さずに精算済みにする（二重請求を防ぐ）
+    const paid = await paidOnSquare(env, s.square_order_id);
+    if (paid === null) throw new HttpError(502, 'square_error', 'お支払いを確かめられませんでした');
+    if (paid) {
+      if (await markSettled(env, s.id, room.id, 'square')) ctx.waitUntil(notifyStaff(env, `✅ ${room.name} お支払い完了`));
+      throw new HttpError(409, 'already_paid');
+    }
     if (s.payment_link_id && !isMock(env)) await deletePaymentLink(env, s.payment_link_id);
     await env.DB.batch([
       env.DB.prepare("UPDATE settlements SET status = 'canceled' WHERE id = ?").bind(s.id),
@@ -169,8 +215,13 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
     const room = await getRoom(env, mt[1]);
     const s = await pendingSettlement(env, room.id);
     if (s) {
+      // 押す直前にお客様が Square で払っていたら、現金は受け取らない（確かめられないときは現金で締める）
+      if ((await paidOnSquare(env, s.square_order_id)) === true) {
+        if (await markSettled(env, s.id, room.id, 'square')) ctx.waitUntil(notifyStaff(env, `✅ ${room.name} お支払い完了`));
+        throw new HttpError(409, 'already_paid');
+      }
       if (s.payment_link_id && !isMock(env)) await deletePaymentLink(env, s.payment_link_id);
-      await markSettled(env, s.id, room.id, 'manual');
+      if (await markSettled(env, s.id, room.id, 'manual')) ctx.waitUntil(consumeStock(env, s.id));
       return json({ ok: true });
     } else {
       const bill = await roomBill(env, room.id);
@@ -187,6 +238,7 @@ export async function handleStaff(req: Request, env: Env, url: URL, ctx: Executi
         ),
         env.DB.prepare(`UPDATE orders SET settlement_id = ? WHERE id IN (${targets.map(() => '?').join(',')})`).bind(sid, ...targets.map((o) => o.id))
       ]);
+      ctx.waitUntil(consumeStock(env, sid));
     }
     await env.DB.batch([env.DB.prepare('UPDATE rooms SET dnd = 0 WHERE id = ?').bind(room.id), closeChat(env, room.id)]);
     await desk(env).purgeMenu();

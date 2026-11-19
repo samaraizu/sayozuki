@@ -6,7 +6,7 @@ import { addDays, ledgerName, roomStatus } from "@/lib/availability";
 import { bookingApi, forgetAvailability, getAvailability } from "@/lib/booking-api";
 import { dictionaries, fmt, formatYen, isLocale, localePath, type Locale } from "@/lib/i18n";
 import { mealPlans, payLines, quote, type MealPlan } from "@/lib/pricing";
-import { bookingRules, site } from "@/lib/site";
+import { bookingRules, dinnerAllowed, site } from "@/lib/site";
 import { ARRIVAL_TIMES, HOLD_MINUTES } from "@/lib/reserve-config";
 
 export type ReserveState = {
@@ -44,6 +44,8 @@ export async function startReservation(_prev: ReserveState, formData: FormData):
   if (!tel) fields.push("tel");
   const q = quote(room, checkIn, nights, guests, plan);
   if (!q) fields.push("stay");
+  // 夕食は bookingRules.dinnerLeadDays 日前まで（当日は用意できない）
+  if ((plan === "dinner" || plan === "both") && !dinnerAllowed(checkIn)) fields.push("stay");
   if (fields.length || !q) return { error: "invalid", fields };
   if (get("agree") !== "on") return { error: "agree" };
 
@@ -129,6 +131,7 @@ export async function startReservation(_prev: ReserveState, formData: FormData):
     lines,
     amount: q.total,
     returnUrl,
+    clientIp: h.get("cf-connecting-ip") ?? h.get("x-real-ip") ?? undefined,
     mail: {
       guestSubject: t.book.mailSubject,
       guestBody,
@@ -139,6 +142,7 @@ export async function startReservation(_prev: ReserveState, formData: FormData):
   forgetAvailability();
   if (!res.ok) {
     if (res.code === "unavailable") return { error: "unavailable" };
+    // busy：同じ送り元からの申込みが多い（予約管理が止めた）。「時間をおいて再度」の案内で返す
     if (res.code === "invalid") {
       console.error("[reserve] 予約管理に断られた", res.message);
       return { error: "invalid" };

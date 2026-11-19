@@ -24,6 +24,11 @@ export function withinWindow(open: string, close: string, d = new Date()) {
   return o <= c ? now >= o && now < c : now >= o || now < c;
 }
 
+/** 日本時間の今日の0時（UTCのISO）。注文の created_at と比べる */
+export function jstDayStartIso(d = new Date()) {
+  return new Date(`${jstParts(d).date}T00:00:00+09:00`).toISOString();
+}
+
 export function addDays(date: string, n: number) {
   const t = new Date(date + 'T00:00:00Z');
   t.setUTCDate(t.getUTCDate() + n);

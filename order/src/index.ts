@@ -1,6 +1,7 @@
 import type { Env } from './env';
 import { HttpError, json } from './lib/util';
 import { syncPendingPayments } from './lib/settle';
+import { resetDepartedRooms } from './lib/reset';
 import { handleGuest } from './routes/guest';
 import { handleStaff } from './routes/staff';
 import { handleSquareWebhook } from './routes/webhook';
@@ -27,5 +28,7 @@ export default {
   // Webhookが届かなくても、お支払い待ちの精算を毎分Squareに確かめる
   async scheduled(_ctl: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(syncPendingPayments(env, { force: true }));
+    // 1日1回（11:00〜）、チェックアウトした部屋を次のお客様向けに片付ける
+    ctx.waitUntil(resetDepartedRooms(env).catch((e) => console.error('部屋の片付けに失敗', e)));
   }
 } satisfies ExportedHandler<Env>;

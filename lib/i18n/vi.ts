@@ -180,6 +180,7 @@ export const vi: Dict = {
     mealDinner: "Kèm bữa tối",
     mealPrice: "{price} / người / đêm",
     mealHint: "Có thể thêm bữa sáng và bữa tối riêng. Không chọn gì là chỉ thuê phòng.",
+    dinnerLead: "Bữa tối cần đặt trước ít nhất một ngày. Nếu nhận phòng trong ngày, chỉ có thể thêm bữa sáng.",
     mealTotal: "{guests} người · {nights} đêm {price}",
     arrival: "Giờ đến dự kiến",
     arrivalUndecided: "Chưa rõ",

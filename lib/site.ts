@@ -116,7 +116,37 @@ export const bookingRules = {
    * 「他の予約サイトより最安値」とうたうので、OTA の料金は lib/site.ts の rooms の定価より下げないこと
    */
   directDiscount: 10,
+  /** 当日のネット予約を受ける締め（日本時間）。これを過ぎると翌日以降のチェックインだけ選べる */
+  sameDayUntil: "12:00",
+  /** 夕食付きは何日前までの予約か（1 = 前日まで。当日チェックインは夕食を付けられない） */
+  dinnerLeadDays: 1,
 };
+
+/** 日本時間の今日（yyyy-MM-dd）と時刻（分） */
+export function japanNow(now = new Date()) {
+  const t = new Date(now.getTime() + 9 * 3600_000);
+  return { date: t.toISOString().slice(0, 10), minutes: t.getUTCHours() * 60 + t.getUTCMinutes() };
+}
+
+/** ネットで予約できる一番早いチェックイン日。当日の締めを過ぎていれば翌日 */
+export function firstBookableDay(ledgerToday: string, now = new Date()) {
+  const j = japanNow(now);
+  const [h, m] = bookingRules.sameDayUntil.split(":").map(Number);
+  const day = j.minutes >= h * 60 + m ? nextDay(j.date) : j.date;
+  return day > ledgerToday ? day : ledgerToday;
+}
+
+/** 夕食を付けられるチェックイン日か */
+export function dinnerAllowed(checkIn: string, now = new Date()) {
+  let d = japanNow(now).date;
+  for (let i = 0; i < bookingRules.dinnerLeadDays; i++) d = nextDay(d);
+  return checkIn >= d;
+}
+
+function nextDay(iso: string) {
+  const [y, mo, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, d + 1)).toISOString().slice(0, 10);
+}
 
 /** 公式サイト価格（室料の定価から directDiscount を引いた額） */
 export const directPrice = (list: number) => list - Math.round((list * bookingRules.directDiscount) / 100);

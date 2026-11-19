@@ -13,17 +13,26 @@ export async function sendMail(env: Env, to: string | string[], subject: string,
     console.log(`[mail] 未設定のため送らなかった：${subject}`);
     return false;
   }
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from, to: list, subject, text, reply_to: replyTo }),
-  });
+  let res: Response;
+  try {
+    res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ from, to: list, subject, text, reply_to: replyTo }),
+    });
+  } catch (e) {
+    console.error('[mail] 送れなかった', e);
+    return false;
+  }
   if (!res.ok) {
     console.error('[mail] 送れなかった', res.status, await res.text());
     return false;
   }
   return true;
 }
+
+/** メールを送れる設定になっているか（RESEND_API_KEY と MAIL_FROM） */
+export const mailConfigured = (env: Env) => Boolean(env.RESEND_API_KEY?.trim() && env.MAIL_FROM?.trim());
 
 export const innAddresses = (env: Env) =>
   String(env.MAIL_TO || '')

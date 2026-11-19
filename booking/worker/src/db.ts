@@ -204,6 +204,7 @@ const str = (v: unknown) => (v === null || v === undefined ? '' : String(v).trim
 /**
  * スプシの中身でD1を上書きする。1回のバッチ（＝1つのトランザクション）でやるので、途中で止まっても半端にならない。
  * - 予約番号のある行：同じ番号があれば上書き（アプリで入れた予約なら in_sheet=1 にする）、なければ足す。スプシ内で番号が重なれば後の行
+ * - 中身が変わらない行は書かない（D1の書き込み量を抑える）
  * - 予約番号のない行：毎回入れ直す
  * - 今回のスプシにない行（スプシ由来・スプシに載ったことのあるアプリ由来）は消す
  * - まだスプシに載っていないアプリの予約は触らない
@@ -226,7 +227,8 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
   const gen = (genRow ? Number(genRow.value) : 0) + 1;
 
   // 行ごとに文を作ると無料プランの「1回あたり50クエリ」を超えるので、
-  // 全行を1つのJSONで渡し、SQLite の json_each で1文にまとめて書く
+  // 全行を1つのJSONで渡し、SQLite の json_each で1文にまとめて書く。
+  // 5分ごとに全行を書き直すと D1 の書き込みの無料枠（1日10万行）を食うので、中身が変わった行だけ書く
   const rows = bookings.map((b) => {
     const o: Record<string, string | null> = {};
     for (const [k, c] of FIELDS) o[c] = k === 'checkIn' || k === 'checkOut' || k === 'bookedOn' ? Lib.toIso(b[k]) : str(b[k]);
@@ -237,7 +239,8 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
   const upsert = `INSERT INTO bookings (${cols.join(', ')}, source, in_sheet, seen)
     SELECT ${cols.map((c) => `json_extract(value, '$.${c}')`).join(', ')}, 'sheet', 1, ?2 FROM json_each(?1) WHERE true
     ON CONFLICT(no) DO UPDATE SET ${cols.filter((c) => c !== 'no').map((c) => `${c} = excluded.${c}`).join(', ')},
-      in_sheet = 1, seen = excluded.seen, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`;
+      in_sheet = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+    WHERE bookings.in_sheet = 0 OR ${cols.filter((c) => c !== 'no').map((c) => `bookings.${c} IS NOT excluded.${c}`).join(' OR ')}`;
   const roomRows = rooms.map((r, i) => ({ name: str(r.name), capacity: Lib.toInt(r.capacity), state: str(r.state) || '停止', sort: i }));
   const metaRows = [
     { key: 'syncGen', value: String(gen) },
@@ -246,8 +249,14 @@ export async function syncFromSheet(env: Env, body: SyncPayload) {
   ];
 
   const stmts: D1PreparedStatement[] = [
+    // 予約番号のない行は突き合わせられないので入れ直す（ふつうは数行）
+    env.DB.prepare("DELETE FROM bookings WHERE no IS NULL AND (source = 'sheet' OR in_sheet = 1)"),
     env.DB.prepare(upsert).bind(JSON.stringify(rows), gen),
-    env.DB.prepare("DELETE FROM bookings WHERE (source = 'sheet' OR in_sheet = 1) AND seen <> ?").bind(gen),
+    // 今回のスプシにない行（スプシ由来・スプシに載ったことのあるアプリ由来）は消す
+    env.DB.prepare(
+      `DELETE FROM bookings WHERE (source = 'sheet' OR in_sheet = 1) AND no IS NOT NULL
+         AND no NOT IN (SELECT json_extract(value, '$.no') FROM json_each(?1) WHERE json_extract(value, '$.no') IS NOT NULL)`,
+    ).bind(JSON.stringify(rows)),
     // アプリでのキャンセル：台帳もキャンセルになっていれば反映済み。まだなら台帳の値で戻さない
     env.DB.prepare(
       `UPDATE cancellations SET applied = 1

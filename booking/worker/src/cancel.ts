@@ -48,6 +48,8 @@ export async function cancelBooking(env: Env, email: string, form: CancelForm, n
       try {
         const r = await refundOrder(env, { no, orderId: hp.order_id, amount: refund, reason: `小夜月 ${no} キャンセル` });
         refundId = r.id;
+        // 前に押したときの返金が Square には通っていた：その額で記録する（二重に返金しない）
+        if (r.already) refund = r.amount;
       } catch (e) {
         console.error('返金できなかった', no, e);
         throw new UserError('Square で返金できなかった。キャンセルはしていない。Square の管理画面を確かめて');

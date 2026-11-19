@@ -3,7 +3,7 @@ import type { Env } from './env';
 import { isMock } from './env';
 import { CATEGORIES } from './config/i18n-menu';
 import { HttpError, newId } from './lib/util';
-import { hhmmToMin, jstParts, nowIso, withinWindow } from './lib/time';
+import { hhmmToMin, jstDayStartIso, jstParts, nowIso, withinWindow } from './lib/time';
 import { fetchSquareMenu } from './square/menu';
 import { mockMenu } from './square/mock';
 import type { Menu } from './square/types';
@@ -34,16 +34,19 @@ export class OrderDesk extends DurableObject<Env> {
     this.menu = null;
   }
 
-  /** 未精算の滞在で押さえ済みの数量（在庫追跡している商品のみ） */
+  /**
+   * 未精算の滞在で押さえ済みの数量（在庫追跡している商品のみ）。
+   * 在庫は毎朝その日の数を入れるので、今日（日本時間）の注文だけ数える（前日以前の未精算で今日の数を減らさない）
+   */
   private async pending(): Promise<Map<string, number>> {
     const r = await this.env.DB.prepare(
       `SELECT l.variation_id AS id, SUM(l.qty) AS qty
          FROM order_lines l
          JOIN orders o ON o.id = l.order_id
          LEFT JOIN settlements st ON st.id = o.settlement_id
-        WHERE l.tracked = 1 AND o.status != 'canceled' AND (o.settlement_id IS NULL OR st.status = 'pending')
+        WHERE l.tracked = 1 AND o.status != 'canceled' AND (o.settlement_id IS NULL OR st.status = 'pending') AND o.created_at >= ?
         GROUP BY l.variation_id`
-    ).all<{ id: string; qty: number }>();
+    ).bind(jstDayStartIso()).all<{ id: string; qty: number }>();
     return new Map((r.results ?? []).map((x) => [x.id, Number(x.qty)]));
   }
 

@@ -183,6 +183,7 @@ export const ja = {
     mealDinner: "夕食付き",
     mealPrice: "お一人様1泊 {price}",
     mealHint: "朝食・夕食はそれぞれ付けられます。どちらも付けなければ素泊まりです。",
+    dinnerLead: "夕食は前日までのご予約で承ります。本日ご到着の場合は朝食のみお付けできます。",
     mealTotal: "{guests}名・{nights}泊 {price}",
     arrival: "ご到着予定",
     arrivalUndecided: "未定",

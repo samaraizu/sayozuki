@@ -1,6 +1,7 @@
 import "server-only";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { Availability } from "@/lib/availability";
+import { firstBookableDay } from "@/lib/site";
 
 /**
  * 予約管理（Worker「sayozuki-booking」）の HP専用の入口。wrangler.jsonc の services で BOOKING としてつないである。
@@ -25,11 +26,13 @@ export type CheckoutInput = {
   amount: number;
   returnUrl: string;
   mail: { guestSubject: string; guestBody: string; innSubject: string; innBody: string };
+  /** 申込みの送り元IP（予約管理が押さえすぎを止めるのに使う。ハッシュにして残す） */
+  clientIp?: string;
 };
 
 export type CheckoutResult =
   | { ok: true; no: string; key: string; url: string }
-  | { ok: false; code: "invalid" | "unavailable" | "payment_error"; message?: string };
+  | { ok: false; code: "invalid" | "unavailable" | "payment_error" | "busy"; message?: string };
 
 export type CheckoutStatus = {
   status: "pending" | "paid" | "expired" | "failed" | "unknown";
@@ -83,8 +86,16 @@ export function forgetAvailability() {
   memo = null;
 }
 
-/** 空室カレンダー。取れなければ null（画面は空室表示なしで動く） */
+/**
+ * 空室カレンダー。取れなければ null（画面は空室表示なしで動く）。
+ * today は「ネットで予約できる一番早い日」にずらす（当日の締め bookingRules.sameDayUntil を過ぎたら翌日）
+ */
 export async function getAvailability(force = false): Promise<Availability | null> {
+  const data = await readAvailability(force);
+  return data ? { ...data, today: firstBookableDay(data.today) } : null;
+}
+
+async function readAvailability(force: boolean): Promise<Availability | null> {
   if (!force && memo && Date.now() - memo.at < TTL_MS) return memo.data;
   const api = await bookingApi();
   if (!api) return null;

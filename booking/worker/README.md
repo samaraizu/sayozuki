@@ -167,11 +167,14 @@ HP（Worker「sayozuki」）の `/reserve` から入る予約。HPからはサ�
 | `src/square.ts` | Square の支払いリンク・注文の確認・リンクの削除。`SQUARE_MOCK=1` で払ったことにする（手元だけ） |
 | `src/mail.ts` | 確認メール（Resend） |
 | `migrations/0002_hp_checkout.sql` | `hp_checkouts`（決済待ち・済み・期限切れ） |
+| `migrations/0007_hp_safety.sql` | 確認メールの送り直しの回数・送り元IPのハッシュ |
 
-- 押さえてから30分（`HOLD_MINUTES`）で払われなければ、毎分の cron が支払いリンクを消して仮の行を消す
-- 払われたら `bookings` を「確定」・支払い状況「HPで決済済」にし、お客様と `MAIL_TO` に確認メールを1回だけ送る
-- 決済待ちは `/api/sync/pending` に出さない（台帳には払われてから載る）
-- 期限切れのあとに払われたら（ふつうは起きない）、操作ログと `MAIL_TO` に「返金か手で予約」を知らせる
+- 押さえてから30分（`HOLD_MINUTES`）で払われなければ、毎分の cron が支払いリンクを消し、仮の行を「キャンセル」にして部屋を戻す
+- Square に払ったか聞けない・支払いリンクを消せないあいだは、部屋を押さえたまま次の回に回す（払われた予約を消さないため）。2時間続いたら戻す
+- 部屋を戻したあとも24時間は5分ごとに支払いを見回る。払われていたら操作ログ・`MAIL_TO`・スマホに「返金か手で予約」を知らせる
+- 払われたら `bookings` を「確定」・支払い状況「HPで決済済」にし、お客様と `MAIL_TO` に確認メールを送る。送れなければ毎分3回まで送り直し、だめならスマホと `MAIL_TO` に「お客様に連絡を」と知らせる
+- 押さえすぎ対策：同じ人（メールと送り元が同じ）が申し込み直したら前の押さえを外す。同じ送り元（IP）は決済待ち2件・1時間に6件まで
+- 当日のネット予約は HP の `bookingRules.sameDayUntil`（12:00）まで、夕食付きは `dinnerLeadDays`（前日）まで。HP の空室（`lib/booking-api.ts`）と予約の確定ボタンで止める
 
 Secrets（Worker「sayozuki-booking」→ 設定 → 変数とシークレット、種類は **シークレット**）
 
@@ -217,7 +220,7 @@ npx wrangler dev -c wrangler.jsonc -c booking/worker/wrangler.jsonc --local
 - 現地払い・未収の予約は返金しない。規定のキャンセル料の額だけ出す（請求するかは宿の判断）
 - 台帳（スプシ）は取り込みGASが次の同期（5分以内）で「キャンセル」にし、メモに1行足す（`src/cancel.ts`、`cancellations` 表、`/api/sync/pending` の `cancels`）。台帳がキャンセルになるまでは、台帳の値で D1 のステータスを戻さない
 - 規定は `../src/lib.js` の `CANCEL_POLICY`。HPの `lib/site.ts` の `cancellationPolicy` と `lib/i18n` の `book.policy` もそろえる
-- 返金の idempotency key は予約番号から作るので、押し直しても二重に返金しない。Square で返金できなかったときはキャンセルもしない
+- 返金の前に Square の支払いを見て、もう返金があればその額で記録する（押し直しても二重に返金しない）。Square で返金できなかった・断られた（REJECTED・FAILED）ときはキャンセルもしない
 
 ## この先（第2段・第3段）
 
