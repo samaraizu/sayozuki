@@ -1,8 +1,8 @@
 /**
- * 小夜月 予約台帳 — Airbnb・Agodaメールの自動取り込み（Google Apps Script）
+ * 小夜月 予約台帳 — Airbnb・Agoda・Expediaメールの自動取り込み（Google Apps Script）
  *
  * 5分ごとにやること
- *   1. Gmailから Airbnb・Agoda の「予約確定」「キャンセル」「予約変更」メールを探す
+ *   1. Gmailから Airbnb・Agoda・Expedia の「予約確定」「キャンセル」「予約変更」メールを探す
  *   2. 中身を読んで「予約」タブに書く（AIは使わない。メールの決まった位置から文字を抜く）
  *   3. 「Airbnb」タブにiCal URLを入れたリスティングは、Airbnbのカレンダーと日程を照合する
  *   4. 同じ部屋・同じ日の重複、準備中の部屋への予約、定員超えを「要確認」に出す
@@ -17,6 +17,8 @@
  *   importPast … 過去1年分のメールをさかのぼって取り込む（ふだんの run は直近14日だけ）。並べ替えはしない
  *   useThisAccount … 取り込みを、今エディタを開いているアカウントで動かす（そのアカウントのGmailを読む）
  *   refreshAgoda … Agodaの読み方を直したあとに1回。直近60日のAgodaのメールを読み直して台帳を上書きする
+ *   setupExpedia … Expediaの取り込みを足したときに1回だけ。「Expedia」タブを作り、媒体の選択肢にExpediaを足す
+ *   refreshExpedia … Expediaの読み方を直したあとに1回。直近60日のExpediaのメールを読み直して台帳を上書きする
  *
  * Googleカレンダー：キャンセル以外の予約を「小夜月 予約」カレンダーに終日の予定で書く（泊まる夜の日に出る）。
  * 「仮」（HPの決済待ちなど）も【仮】を付けて灰色で出す。
@@ -51,6 +53,7 @@ const CONFIG = {
   // 取り込んだメールに付けるGmailラベル（目印だけ。処理済みの判定は「ログ」タブでやる）
   GMAIL_LABEL: '小夜月/Airbnb取り込み済み',
   GMAIL_LABEL_AGODA: '小夜月/Agoda取り込み済み',
+  GMAIL_LABEL_EXPEDIA: '小夜月/Expedia取り込み済み',
   // Googleカレンダー連携。予約をこの名前のカレンダーに書く（なければ自動で作る）。空にすると連携しない
   CALENDAR_NAME: '小夜月 予約',
   // 満室アラート：今日から何日先までの夜を見るか
@@ -58,7 +61,7 @@ const CONFIG = {
 };
 
 // ===== シートの形 =====
-const SHEETS = { RES: '予約', ROOMS: '部屋', AIRBNB: 'Airbnb', AGODA: 'Agoda', LOG: 'ログ', CLOSE: '閉じる作業' };
+const SHEETS = { RES: '予約', ROOMS: '部屋', AIRBNB: 'Airbnb', AGODA: 'Agoda', EXPEDIA: 'Expedia', LOG: 'ログ', CLOSE: '閉じる作業' };
 
 const RES_COLS = [
   '媒体', '予約番号', 'ステータス', '要確認', '部屋', 'チェックイン', 'チェックアウト', '泊数',
@@ -76,15 +79,17 @@ const ROOMS_INIT = [
 const AIRBNB_COLS = ['リスティングID', 'Airbnbでの名前', '部屋', 'iCal URL', 'iCal最終取得', 'iCal予約数'];
 // Agodaの部屋タイプ → 部屋。1つのタイプが複数の部屋にまたがるなら「部屋」は空のままにして、予約ごとに選ぶ
 const AGODA_COLS = ['Agodaの部屋タイプ', '部屋', '最初に見た日'];
+// Expediaの部屋タイプ → 部屋（Agodaと同じ使い方）
+const EXPEDIA_COLS = ['Expediaの部屋タイプ', '部屋', '最初に見た日'];
 const LOG_COLS = ['日時', '種類', '予約番号', '件名', '結果', 'メッセージID', 'Gmail'];
 // 満室アラートで出た「媒体で閉じる（開け直す）」作業。1行＝媒体×対象×1泊。
-// 対象：Airbnbはリスティング ID、Agodaは部屋タイプ。日付はその夜（チェックインの日付の形）
+// 対象：Airbnbはリスティング ID、Agoda・Expediaは部屋タイプ。日付はその夜（チェックインの日付の形）
 const CLOSE_COLS = ['状態', '媒体', '対象', '部屋', '日付', '理由', '見つけた日時', '状態が変わった日時', 'メモ'];
-// 未：閉じて／済：閉じた（AirbnbはiCalで自動判定、Agodaは人が付ける）／不要：閉じる前に理由が消えた
+// 未：閉じて／済：閉じた（AirbnbはiCalで自動判定、Agoda・Expediaは人が付ける）／不要：閉じる前に理由が消えた
 // 開け直す：閉じたあとに理由が消えた（キャンセルなど）／開け直し済：開け直した
 const CLOSE_STATES = ['未', '済', '不要', '開け直す', '開け直し済'];
 
-const CHANNELS = ['Airbnb', 'Agoda', '楽天', '直販'];
+const CHANNELS = ['Airbnb', 'Agoda', 'Expedia', '楽天', '直販'];
 const STATUSES = ['仮', '確定', '滞在中', 'チェックアウト済', 'キャンセル'];
 const PAY_STATUSES = ['媒体で決済済', '現地でSquare', 'HPで決済済', '未収'];
 const TAX_STATUSES = ['未', '徴収済', '対象外'];
@@ -103,6 +108,7 @@ const TAG = {
   ICAL_MISSING: '[iCalにない]',
   ICAL_ONLY: '[メールなし]',
   AGODA_READ: '[Agoda要確認]',
+  EXPEDIA_READ: '[Expedia要確認]',
 };
 const DERIVED_TAGS = [TAG.DUP, TAG.ROOM_UNSET, TAG.NOT_FOR_SALE, TAG.OVER_CAP, TAG.TAX_CHILD];
 const NOTIFY_DERIVED = [TAG.DUP, TAG.NOT_FOR_SALE, TAG.OVER_CAP];
@@ -112,7 +118,17 @@ const CODE_RE = /HM[A-Z0-9]{8}(?![A-Z0-9])/;
 // 件名「Agoda予約ID 1700000001 - 予約確定 Hotel ホテル所在国: Japan」（英語版は Agoda Booking ID）
 const AGODA_SUBJECT_RE = /Agoda\s*(?:予約\s*ID|Booking\s*ID)\s*[:：#]?\s*(\d{6,12})/i;
 
-function kindLabel_(f) { return (f.source === 'agoda' ? 'Agoda ' : '') + KIND_LABEL[f.kind]; }
+// 件名「Expedia - New Booking - Arriving on 21 Nov 2026」（Cancelled／Modified も同じ形。Hotels.com・Vrbo 経由でも件名は Expedia）
+const EXPEDIA_SUBJECT_RE = /(?:Expedia|Hotels\.com|Vrbo)\s*[-–:]\s*(New|Cancel+ed|Modified|Changed?)\s*(?:Booking|Reservation)/i;
+
+// 部屋タイプで部屋を決める媒体。メールには部屋タイプしか書いていないので、媒体ごとのタブで部屋に紐付ける
+const TYPED = {
+  Agoda: { source: 'agoda', sheet: SHEETS.AGODA, cols: AGODA_COLS, col: 'Agodaの部屋タイプ', tag: TAG.AGODA_READ, admin: 'YCS', label: CONFIG.GMAIL_LABEL_AGODA },
+  Expedia: { source: 'expedia', sheet: SHEETS.EXPEDIA, cols: EXPEDIA_COLS, col: 'Expediaの部屋タイプ', tag: TAG.EXPEDIA_READ, admin: 'Partner Central', label: CONFIG.GMAIL_LABEL_EXPEDIA },
+};
+const TYPED_BY_SOURCE = { agoda: 'Agoda', expedia: 'Expedia' };
+
+function kindLabel_(f) { return (TYPED_BY_SOURCE[f.source] ? TYPED_BY_SOURCE[f.source] + ' ' : '') + KIND_LABEL[f.kind]; }
 
 // ===== 実行する関数 =====
 
@@ -126,6 +142,7 @@ function setup() {
   if (rooms.getLastRow() < 2) rooms.getRange(2, 1, ROOMS_INIT.length, ROOM_COLS.length).setValues(ROOMS_INIT);
   ensureSheet_(ss, SHEETS.AIRBNB, AIRBNB_COLS);
   ensureSheet_(ss, SHEETS.AGODA, AGODA_COLS);
+  ensureSheet_(ss, SHEETS.EXPEDIA, EXPEDIA_COLS);
   ensureSheet_(ss, SHEETS.LOG, LOG_COLS);
   formatSheets_(ss);
 
@@ -166,21 +183,26 @@ function setupCalendar() {
 }
 
 // 動いている台帳に、Agodaのタブと媒体の選択肢を足す（setup と違って並べ替えも取り込みもしない。何度押してもいい）
-function setupAgoda() {
+function setupAgoda() { setupTyped_('Agoda'); }
+// 同じくExpedia。Expediaの予約メールが来ると部屋タイプが足されるので、「部屋」を選ぶ
+function setupExpedia() { setupTyped_('Expedia'); }
+
+function setupTyped_(channel) {
+  const t = TYPED[channel];
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('スプレッドシートの「拡張機能 → Apps Script」から開いたエディタで実行して');
-  const ag = ensureSheet_(ss, SHEETS.AGODA, AGODA_COLS);
+  const ag = ensureSheet_(ss, t.sheet, t.cols);
   const rooms = mustSheet_(ss, SHEETS.ROOMS);
   const res = mustSheet_(ss, SHEETS.RES);
   const roomList = SpreadsheetApp.newDataValidation().requireValueInRange(rooms.getRange('A2:A'), true).setAllowInvalid(true).build();
   const agIdx = headerIndex_(ag);
   ag.getRange(2, agIdx['部屋'] + 1, ag.getMaxRows() - 1, 1).setDataValidation(roomList);
   ag.getRange(2, agIdx['最初に見た日'] + 1, ag.getMaxRows() - 1, 1).setNumberFormat('yyyy/mm/dd');
-  ag.setColumnWidth(agIdx['Agodaの部屋タイプ'] + 1, 360);
+  ag.setColumnWidth(agIdx[t.col] + 1, 360);
   const resIdx = headerIndex_(res);
   res.getRange(2, resIdx['媒体'] + 1, res.getMaxRows() - 1, 1)
     .setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(CHANNELS, true).setAllowInvalid(true).build());
-  Logger.log('「Agoda」タブを作った。Agodaの予約メールが来ると部屋タイプが足されるので、「部屋」を選んで');
+  Logger.log('「' + t.sheet + '」タブを作った。' + channel + 'の予約メールが来ると部屋タイプが足されるので、「部屋」を選んで');
 }
 
 // 過去のメールをさかのぼって取り込む（Agodaを足したときなど）。setup と違って並べ替えはしない。
@@ -204,12 +226,34 @@ function checkAgodaMail() {
   });
 }
 
+// Expediaのメールが拾えないときの確認用。直近60日のExpediaらしいメールを、差出人・件名・判定結果つきで実行ログに出す
+function checkExpediaMail() {
+  const threads = GmailApp.search('{from:expedia from:expediapartnercentral subject:Expedia subject:"Hotels.com"} newer_than:60d', 0, 50);
+  Logger.log('このスクリプトが読んでいるGmail：' + Session.getEffectiveUser().getEmail() + '／見つかったスレッド ' + threads.length + '件');
+  threads.forEach(function (th) {
+    th.getMessages().forEach(function (m) {
+      const ok = EXPEDIA_FROM_RE.test(m.getFrom()) || isForwardedFrom_(m, EXPEDIA_FROM_RE);
+      const kind = ok ? classifyExpedia_(m.getSubject()) : '（差出人にexpediaがない）';
+      Logger.log((kind || '読まない') + '｜' + m.getFrom() + '｜' + m.getSubject());
+      if (ok && kind) Logger.log(JSON.stringify(parseExpedia_(kind, m.getSubject(), m.getPlainBody(), ''), null, 1));
+    });
+  });
+}
+
+// Expediaの読み方を直したあとに1回。直近60日のExpediaのメールを読み直し、台帳の名前・人数・部屋タイプ・金額を上書きする
+function refreshExpedia() {
+  const r = runCore_({ silent: true, days: 60, refresh: 'expedia' });
+  if (!r) return;
+  Logger.log('Expediaのメールを読み直した');
+  if (r.notes.length) Logger.log('気になる点：\n' + r.notes.join('\n'));
+}
+
 // 取り込みを、今エディタを開いているアカウントで動かす（そのアカウントのGmailを読むようになる）。
 // 並べ替えも取り込みもしない。前のアカウントの自動実行は、前のアカウントで「トリガー」画面から消す
 // Agodaの読み方を直したあとに1回。直近60日のAgodaのメールを読み直し、台帳の名前・人数・部屋タイプ・金額を上書きする。
 // 手で選んだ部屋はそのまま。通知メールは出さず、結果は実行ログに出す
 function refreshAgoda() {
-  const r = runCore_({ silent: true, days: 60, refreshAgoda: true });
+  const r = runCore_({ silent: true, days: 60, refresh: 'agoda' });
   if (!r) return;
   Logger.log('Agodaのメールを読み直した');
   if (r.notes.length) Logger.log('気になる点：\n' + r.notes.join('\n'));
@@ -258,9 +302,10 @@ function runCore_(opts) {
     const airbnb = loadTable_(mustSheet_(ss, SHEETS.AIRBNB), AIRBNB_COLS, [], tz);
     const rooms = loadTable_(mustSheet_(ss, SHEETS.ROOMS), ROOM_COLS, [], tz);
     const agoda = loadTable_(ss.getSheetByName(SHEETS.AGODA) || ensureSheet_(ss, SHEETS.AGODA, AGODA_COLS), AGODA_COLS, ['最初に見た日'], tz);
+    const expedia = loadTable_(ss.getSheetByName(SHEETS.EXPEDIA) || ensureSheet_(ss, SHEETS.EXPEDIA, EXPEDIA_COLS), EXPEDIA_COLS, ['最初に見た日'], tz);
     const log = loadTable_(mustSheet_(ss, SHEETS.LOG), LOG_COLS, [], tz, LOG_COLS.length);
     const close = loadTable_(closeSheet_(ss), CLOSE_COLS, ['日付'], tz);
-    const ctx = makeCtx_(res, airbnb, rooms, agoda);
+    const ctx = makeCtx_(res, airbnb, rooms, agoda, expedia);
     const notes = [];
     const cf = cfConfig_();
 
@@ -274,7 +319,8 @@ function runCore_(opts) {
     const found = searchMail_(opts.days, processed, opts);
     const labels = {};
     const labelFor = function (source) {
-      const name = source === 'agoda' ? CONFIG.GMAIL_LABEL_AGODA : CONFIG.GMAIL_LABEL;
+      const typed = TYPED[TYPED_BY_SOURCE[source]];
+      const name = typed ? typed.label : CONFIG.GMAIL_LABEL;
       if (!(name in labels)) {
         try { labels[name] = GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name); } catch (e) { labels[name] = null; }
       }
@@ -288,7 +334,7 @@ function runCore_(opts) {
       let p;
       try { p = parseMail_(f, subject, m.getPlainBody(), refIso); }
       catch (e) { p = { ok: false, error: String((e && e.message) || e) }; }
-      if (opts.refreshAgoda && f.source === 'agoda') p.refresh = true;
+      if (opts.refresh && f.source === opts.refresh) p.refresh = true;
       let result;
       if (p.ok) {
         try { result = applyMail_(ctx, p, refIso, notes); }
@@ -322,6 +368,7 @@ function runCore_(opts) {
     saveTable_(res, tz);
     saveTable_(airbnb, tz);
     saveTable_(agoda, tz);
+    saveTable_(expedia, tz);
     saveTable_(log, tz);
     saveTable_(close, tz);
     log.sheet.getRange('I1:J1').setValues([['最終実行', now]]);
@@ -341,7 +388,9 @@ function runCore_(opts) {
 const MAIL_SOURCES = [
   { source: 'airbnb', q: 'from:automated@airbnb.com {subject:予約確定 subject:キャンセル subject:"ご予約が変更されました"}', from: /airbnb\.com/i, classify: function (s) { return classify_(s); } },
   { source: 'agoda', q: '{from:agoda subject:Agoda}', from: /agoda/i, forwarded: true, classify: function (s) { return classifyAgoda_(s); } },
+  { source: 'expedia', q: '{from:expedia from:expediapartnercentral subject:Expedia subject:"Hotels.com"}', from: /expedia/i, forwarded: true, classify: function (s) { return classifyExpedia_(s); } },
 ];
+const EXPEDIA_FROM_RE = /expedia/i;
 
 // 手で転送したメール（件名が「Fwd:」「転送:」で始まり、本文の転送元ヘッダーが agoda.com）も読む
 function isForwardedFrom_(m, re) {
@@ -352,14 +401,14 @@ function isForwardedFrom_(m, re) {
 
 function searchMail_(days, processed, opts) {
   const out = [];
-  const again = !!(opts && opts.refreshAgoda);
+  const again = (opts && opts.refresh) || '';
   MAIL_SOURCES.forEach(function (src) {
     const q = src.q + ' newer_than:' + days + 'd';
     for (let start = 0; ; start += 100) {
       const threads = GmailApp.search(q, start, 100);
       threads.forEach(function (th) {
         th.getMessages().forEach(function (m) {
-          if (processed[m.getId()] && !(again && src.source === 'agoda')) return;
+          if (processed[m.getId()] && again !== src.source) return;
           if (!src.from.test(m.getFrom()) && !(src.forwarded && isForwardedFrom_(m, src.from))) return;
           const kind = src.classify(m.getSubject());
           if (kind) out.push({ thread: th, message: m, kind: kind, source: src.source });
@@ -396,6 +445,7 @@ function classify_(subject) {
 
 function parseMail_(f, subject, body, refIso) {
   if (f.source === 'agoda') return parseAgoda_(f.kind, subject, body, refIso);
+  if (f.source === 'expedia') return parseExpedia_(f.kind, subject, body, refIso);
   const kind = f.kind;
   if (kind === 'confirm') return parseConfirmation_(subject, body, refIso);
   if (kind === 'cancel') return parseCancellation_(subject, body, refIso);
@@ -628,6 +678,102 @@ function parseAgoda_(kind, subject, rawBody, refIso) {
   return out;
 }
 
+// ===== Expediaのメールの読み取り =====
+// Expedia Partner Central の予約通知（Hotels.com・Vrbo 経由の予約も同じ形で届く）。
+// 件名「Expedia - New Booking - Arriving on 21 Nov 2026」で種類を決め、予約番号は本文の「Reservation ID」。
+// 本文は「見出し: 値」が並ぶHTMLメール。getPlainBody では表の都合で見出しと値の間に改行が入ることがあるので、
+// 見出しのすぐ後ろ（改行をまたいで）を読む。読めなかった欄は [Expedia要確認] に書いて台帳に出す
+
+function classifyExpedia_(subject) {
+  const m = clean_(subject).replace(/\n/g, ' ').match(EXPEDIA_SUBJECT_RE);
+  if (!m) return null;
+  const k = m[1].toLowerCase();
+  if (/^cancel/.test(k)) return 'cancel';
+  if (/^(?:modified|change)/.test(k)) return 'change';
+  return 'confirm';
+}
+
+// 「見出し:」のあとの最初の値（空行・記号だけの行は飛ばす）。見出しが見つからなければ ''
+function expediaField_(body, labelRe, valueRe) {
+  const m = body.match(new RegExp('(?:' + labelRe + ')\\s*[:：]?[ \\t]*', 'i'));
+  if (!m) return '';
+  const seg = body.slice(m.index + m[0].length, m.index + m[0].length + 200).split('\n')
+    .map(function (x) { return x.trim(); }).filter(function (x) { return x && !/^[:：\-–]$/.test(x); });
+  if (!seg.length) return '';
+  if (!valueRe) return seg[0];
+  const v = seg.slice(0, 2).join('\n').match(valueRe);
+  return v ? (v[1] || v[0]).trim() : '';
+}
+
+// 次の見出しの手前で切る（1行に「Guest: 名前 Booked on: …」と並んだときのため）
+const EXPEDIA_LABELS_RE = /\s+(?:Reservation ID|Guest Email|Guest|Booked on|Room Type (?:Code|Name)|Rate Plan(?: Code| Name)?|Check[- ]?(?:In|Out)|Adults?|Kids(?:\/Ages)?|Children|Smoking|Special Requests?|Bed Type|Total)\b\s*[:：].*$/i;
+
+function parseExpedia_(kind, subject, rawBody, refIso) {
+  const body = clean_(String(rawBody || '').replace(/\*/g, '').replace(/<https?:[^>]*>/g, ''));
+  const rawAll = String(rawBody || '');
+  const code = expediaField_(body, '(?:Expedia\\s+)?Reservation\\s*(?:ID|#|Number)|Itinerary\\s*(?:ID|#|Number)', /(\d{6,14})/) ||
+               firstGroup_(rawAll, /reservationIds?=(\d{6,14})/i);
+  if (!code) return { ok: false, kind: kind, error: 'Reservation IDが見つからない', code: '' };
+  const out = { ok: true, kind: kind, channel: 'Expedia', code: code, warns: [] };
+
+  // 日程（Check-In: Nov 21, 2026 ／ 21 Nov 2026 ／ 2026-11-21）。チェックアウトが読めなければ件名の Arriving on と泊数から
+  const inSeg = afterLabel_(body, 'Check[- ]?In(?: Date)?\\s*[:：]|Arrival(?: Date)?\\s*[:：]', 80);
+  const outSeg = afterLabel_(body, 'Check[- ]?Out(?: Date)?\\s*[:：]|Departure(?: Date)?\\s*[:：]', 80);
+  out.checkIn = findDates_(inSeg)[0] || findDates_(afterLabel_(clean_(subject), 'Arriving on', 40))[0] || '';
+  out.checkOut = findDates_(outSeg).filter(function (d) { return d > out.checkIn; })[0] || '';
+  if (out.checkIn && !out.checkOut) {
+    const nights = Number(firstGroup_(body, /(?:Number of )?Nights?\s*[:：]\s*(\d{1,3})/i) || firstGroup_(body, /(\d{1,3})\s*(?:nights?|泊)/i) || 0);
+    if (nights > 0) out.checkOut = addDays_(out.checkIn, nights);
+  }
+  const n = (out.checkIn && out.checkOut) ? nights_(out.checkIn, out.checkOut) : 0;
+  if (n <= 0 || n > 120) {
+    out.checkIn = ''; out.checkOut = '';
+    if (kind === 'confirm') return { ok: false, kind: kind, error: '日程が読めない', code: code };
+  }
+  if (kind === 'cancel') return out;
+
+  // 部屋タイプ（Room Type Name。Code は「RoomCode」のような中身のない値のことがあるので、名前がなければ使う）
+  let type = expediaField_(body, 'Room Type Name|Room Name').replace(EXPEDIA_LABELS_RE, '');
+  if (!type) {
+    const c = expediaField_(body, 'Room Type Code').replace(EXPEDIA_LABELS_RE, '');
+    if (c && !/^RoomCode$/i.test(c)) type = c;
+  }
+  out.roomType = type.slice(0, 80);
+  if (!out.roomType) out.warns.push('部屋タイプが読めない');
+  const roomsN = Number(expediaField_(body, 'Number of Rooms|No\\.? of Rooms|Rooms', /^(\d+)\b/) || 1);
+  if (roomsN > 1) out.warns.push(roomsN + '室の予約。台帳は1行なので、残りの部屋は手で足して');
+
+  // 人数（Adults: 2 ／ 2 Adults、Kids/Ages: 1/5 ／ Children: 1）
+  const adults = expediaField_(body, 'Adults?|Number of Adults', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*Adults?\b/i);
+  const kids = expediaField_(body, 'Kids(?:\\s*\\/\\s*Ages)?|Children|Number of Children', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*(?:Child(?:ren)?|Kids?)\b/i);
+  out.adults = adults ? Number(adults) : 0;
+  out.children = kids ? Number(kids) : 0;
+  if (!adults) out.warns.push('人数が読めない');
+
+  // 名前・電話（Guest: KAI YUI のあとの行に 81 9000000000）
+  const g = body.match(/(?:^|[\n \t])Guest(?: Name)?\s*[:：][ \t]*([^\n]*)(?:\n[ \t]*([+\d][\d \-()]{6,}))?/i);
+  let gname = g ? g[1].replace(EXPEDIA_LABELS_RE, '').trim() : '';
+  const phoneIn = gname.match(/\s+([+\d][\d \-()]{6,})$/);
+  if (phoneIn) gname = gname.slice(0, phoneIn.index).trim();
+  out.name = /^\d/.test(gname) ? '' : gname;
+  if (!out.name) out.warns.push('名前が読めない');
+  out.contact = ((g && g[2]) || (phoneIn && phoneIn[1]) || expediaField_(body, 'Phone|Guest Phone', /([+\d][\d \-()]{6,})/) || '').trim();
+  if (out.contact && !/^\+/.test(out.contact)) out.contact = '+' + out.contact;
+
+  // 支払い（Hotel Collect＝宿が現地で受け取る、Expedia Collect＝Expediaが受け取って宿に払う）・金額
+  out.payAtHotel = /Hotel Collects? Payment|Hotel Collect\b|Pay at (?:the )?(?:hotel|property)/i.test(body);
+  out.guestTotal = agodaYen_(body, 'Total Booking Amount|Total Amount(?: Due)?|Amount to (?:collect|charge)(?: from (?:the )?guest)?|Total Guest Payment|Booking Total|Total (?:price|charge)');
+  out.payout = agodaYen_(body, 'Amount Expedia (?:will )?pay|Total (?:Amount )?Payable to (?:the )?Hotel|Net (?:Amount|Rate|Total)|Hotel Payout');
+
+  // 特別なリクエスト（次の見出しの手前まで）
+  const sr = body.match(/Special Requests?\s*[:：]?([\s\S]*?)(?:\n[ \t]*[A-Z][A-Za-z\/ ]{2,40}\s*[:：]|Cancellation Policy|$)/i);
+  out.request = sr ? sr[1].replace(/\s+/g, ' ').trim() : '';
+  if (/^(?:なし|無し|-|—|N\/?A|None)?$/i.test(out.request)) out.request = '';
+  out.request = out.request.slice(0, 100);
+  out.url = firstGroup_(rawAll, /(https:\/\/[^\s<>"]*expediapartnercentral\.com\/[^\s<>"]*reserv[^\s<>"]*)/i) || 'https://www.expediapartnercentral.com';
+  return out;
+}
+
 // ===== iCal =====
 
 function parseIcal_(text) {
@@ -734,8 +880,8 @@ function applyIcal_(ctx, lid, events, todayIso, notes) {
 // ほかの媒体の予約で部屋が埋まった夜を見つけて、まだ売っている媒体を「閉じる作業」タブに出し、通知に載せる。
 // - Airbnb：リスティングの部屋が、ほかの媒体（またはAirbnbの別のリスティング）の予約で埋まった夜。
 //   AirbnbのiCalにその夜が載っていれば（予約・手で閉じた日）閉じてあるとみなし、自動で「済」にする
-// - Agoda：部屋タイプの候補の部屋（「Agoda」タブの「部屋」、空ならすべての販売可の部屋）がすべて埋まり、
-//   そのうち1件でもAgoda以外の予約がある夜。閉じたかどうかは分からないので、人が「済」にする
+// - Agoda・Expedia：部屋タイプの候補の部屋（媒体のタブの「部屋」、空ならすべての販売可の部屋）がすべて埋まり、
+//   そのうち1件でもその媒体以外の予約がある夜。閉じたかどうかは分からないので、人が「済」にする
 // - HP：予約管理（Cloudflare版）が空室を見て売るので対象外
 // 閉じたあとにキャンセルなどで理由が消えたら「開け直す」にして知らせる
 function checkFullRooms_(ctx, close, todayIso, now, notes) {
@@ -759,8 +905,10 @@ function checkFullRooms_(ctx, close, todayIso, now, notes) {
   });
 
   const order = ctx.rooms ? ctx.rooms.rows.map(function (r) { return str_(r.v['部屋']); }).filter(Boolean) : Object.keys(ctx.roomInfo);
-  if (ctx.agoda) ctx.agoda.rows.forEach(function (tr) {
-    const type = str_(tr.v['Agodaの部屋タイプ']);
+  Object.keys(TYPED).forEach(function (channel) {
+  const tbl = ctx.typeTables[channel];
+  if (tbl) tbl.rows.forEach(function (tr) {
+    const type = str_(tr.v[TYPED[channel].col]);
     if (!type) return;
     const listed = str_(tr.v['部屋']).split(/[,、，\s]+/).filter(Boolean);
     const cands = listed.length ? listed : order.filter(function (n) { return ctx.roomInfo[n] && ctx.roomInfo[n].state === '販売可'; });
@@ -771,8 +919,9 @@ function checkFullRooms_(ctx, close, todayIso, now, notes) {
       if (!cands.every(function (n) { return occ[n] && occ[n][d]; })) return;
       const by = [];
       cands.forEach(function (n) { occ[n][d].forEach(function (b) { if (by.indexOf(b) < 0) by.push(b); }); });
-      if (by.some(function (b) { return str_(b.v['媒体']) !== 'Agoda'; })) add('Agoda', type, cands.join(','), d, by);
+      if (by.some(function (b) { return str_(b.v['媒体']) !== channel; })) add(channel, type, cands.join(','), d, by);
     });
+  });
   });
 
   // Airbnbで売れない夜か（iCalが取れなかった回は分からない＝null）
@@ -921,7 +1070,7 @@ function calendarPlan_(r, ssUrl) {
     str_(r.v['予約URL']) ? '予約画面：' + str_(r.v['予約URL']) : '',
     '予約台帳：' + ssUrl,
   ].filter(function (x, i) { return x !== '' || i === 8; }).join('\n');
-  const color = tags.length ? 'RED' : tentative ? 'GRAY' : ({ 'Airbnb': 'ORANGE', 'Agoda': 'MAUVE', '楽天': 'BLUE', '直販': 'YELLOW' }[channel] || 'GRAY');
+  const color = tags.length ? 'RED' : tentative ? 'GRAY' : ({ 'Airbnb': 'ORANGE', 'Agoda': 'MAUVE', 'Expedia': 'CYAN', '楽天': 'BLUE', '直販': 'YELLOW' }[channel] || 'GRAY');
   return { title: title, start: s, end: e, desc: desc, color: color, sig: hash_([title, s, e, desc, color].join('|')) };
 }
 
@@ -1134,7 +1283,7 @@ function cfPayload_(res, rooms, lastImport) {
 // ===== メールの中身を台帳に反映 =====
 
 function applyMail_(ctx, p, refIso, notes) {
-  if (p.channel === 'Agoda') return applyAgoda_(ctx, p, refIso, notes);
+  if (TYPED[p.channel]) return applyTyped_(ctx, p, refIso, notes);
   if (p.kind === 'confirm') return applyConfirm_(ctx, p, refIso, notes);
   if (p.kind === 'cancel') return applyCancel_(ctx, p, notes);
   if (p.kind === 'change') return applyChange_(ctx, p, notes);
@@ -1199,15 +1348,17 @@ function applyChange_(ctx, p, notes) {
   return '変更ありの札を付けた';
 }
 
-// ===== Agodaのメールを台帳に反映 =====
-// 予約番号はAgodaの予約ID（数字）。「リスティングID」列にはAgodaの部屋タイプ名を入れ、「Agoda」タブで部屋に紐付ける
+// ===== Agoda・Expediaのメールを台帳に反映 =====
+// 予約番号は媒体の予約ID（数字）。「リスティングID」列には媒体の部屋タイプ名を入れ、媒体のタブで部屋に紐付ける
 
-function applyAgoda_(ctx, p, refIso, notes) {
-  if (p.kind === 'cancel') return applyAgodaCancel_(ctx, p, notes);
-  ensureAgodaType_(ctx, p.roomType, refIso, notes);
-  const memo = p.request ? 'Agodaの要望：' + p.request : '';
+function applyTyped_(ctx, p, refIso, notes) {
+  const ch = p.channel, t = TYPED[ch];
+  if (p.kind === 'cancel') return applyTypedCancel_(ctx, p, notes);
+  ensureType_(ctx, ch, p.roomType, refIso, notes);
+  const memoHead = ch + 'の要望：';
+  const memo = p.request ? memoHead + p.request : '';
   const vals = {
-    '媒体': 'Agoda', '予約番号': p.code, 'ステータス': '確定', 'リスティングID': p.roomType || '',
+    '媒体': ch, '予約番号': p.code, 'ステータス': '確定', 'リスティングID': p.roomType || '',
     'チェックイン': p.checkIn, 'チェックアウト': p.checkOut,
     '大人': p.adults || '', '子ども': p.children || '',
     '代表者名': p.name || '', '連絡先': p.contact || '', 'ゲスト支払額': p.guestTotal, '受取額': p.payout,
@@ -1219,7 +1370,7 @@ function applyAgoda_(ctx, p, refIso, notes) {
   let result;
   if (created) {
     if (!p.checkIn) {
-      r = newRow_(ctx.res, { '媒体': 'Agoda', '予約番号': p.code, 'ステータス': '確定', '代表者名': p.name || '', 'リスティングID': p.roomType || '' });
+      r = newRow_(ctx.res, { '媒体': ch, '予約番号': p.code, 'ステータス': '確定', '代表者名': p.name || '', 'リスティングID': p.roomType || '' });
     } else {
       r = newRow_(ctx.res, vals);
     }
@@ -1230,7 +1381,7 @@ function applyAgoda_(ctx, p, refIso, notes) {
     if (p.checkIn && (oi !== p.checkIn || oo !== p.checkOut)) {
       set_(r, 'チェックイン', p.checkIn);
       set_(r, 'チェックアウト', p.checkOut);
-      notes.push(p.code + ' の日程がAgodaで変わった：' + md_(oi) + '〜' + md_(oo) + ' → ' + md_(p.checkIn) + '〜' + md_(p.checkOut));
+      notes.push(p.code + ' の日程が' + ch + 'で変わった：' + md_(oi) + '〜' + md_(oo) + ' → ' + md_(p.checkIn) + '〜' + md_(p.checkOut));
     }
     ['大人', '子ども', '代表者名', 'ゲスト支払額', '受取額'].forEach(function (k) { if (!isBlank_(vals[k])) set_(r, k, vals[k]); });
     if (p.roomType && str_(r.v['リスティングID']) !== p.roomType) { set_(r, 'リスティングID', p.roomType); set_(r, '部屋', ''); }
@@ -1240,8 +1391,8 @@ function applyAgoda_(ctx, p, refIso, notes) {
     ['大人', '子ども', '代表者名', '連絡先', 'ゲスト支払額', '受取額', '支払い状況'].forEach(function (k) { if (!isBlank_(vals[k])) set_(r, k, vals[k]); });
     if (p.roomType) set_(r, 'リスティングID', p.roomType);
     const memo0 = str_(r.v['メモ']);
-    if (!memo0 || memo0.indexOf('Agodaの要望：') === 0) set_(r, 'メモ', memo);
-    removeTag_(r, TAG.AGODA_READ);
+    if (!memo0 || memo0.indexOf(memoHead) === 0) set_(r, 'メモ', memo);
+    removeTag_(r, t.tag);
     result = '読み直した';
   } else {
     Object.keys(vals).forEach(function (k) { if (isBlank_(r.v[k])) set_(r, k, vals[k]); });
@@ -1250,23 +1401,26 @@ function applyAgoda_(ctx, p, refIso, notes) {
   if (isCancelled_(r) && p.kind === 'confirm' && !created) return result;
   fillRoom_(ctx, r);
   if (p.kind === 'change') {
-    addTag_(r, TAG.CHANGED + ' Agodaで予約内容が変わった。日程・人数・部屋をYCSで確認');
-    notes.push('予約変更（Agoda）：' + rowLabel_(r) + (p.checkIn ? '' : '。メールから日程が読めないので、YCSで確認'));
+    addTag_(r, TAG.CHANGED + ' ' + ch + 'で予約内容が変わった。日程・人数・部屋を' + t.admin + 'で確認');
+    notes.push('予約変更（' + ch + '）：' + rowLabel_(r) + (p.checkIn ? '' : '。メールから日程が読めないので、' + t.admin + 'で確認'));
   }
   if (p.warns && p.warns.length) {
-    const t = TAG.AGODA_READ + ' ' + p.warns.join('、') + '。YCSで確認';
-    if (addTag_(r, t)) notes.push(rowLabel_(r) + '：Agodaのメールで' + p.warns.join('、'));
+    const tag = t.tag + ' ' + p.warns.join('、') + '。' + t.admin + 'で確認';
+    if (addTag_(r, tag)) notes.push(rowLabel_(r) + '：' + ch + 'のメールで' + p.warns.join('、'));
   }
-  if (created && p.kind === 'confirm' && CONFIG.NOTIFY_NEW_BOOKING) notes.push('新しい予約（Agoda）：' + rowLabel_(r));
+  if (created && p.kind === 'confirm' && CONFIG.NOTIFY_NEW_BOOKING) {
+    // Expediaは予約ごとに「確認番号」をPartner Centralに入れるよう求めてくる
+    notes.push('新しい予約（' + ch + '）：' + rowLabel_(r) + (ch === 'Expedia' ? '\n  Partner Centralで確認番号（台帳の予約番号でいい）を入れて' : ''));
+  }
   return result;
 }
 
-function applyAgodaCancel_(ctx, p, notes) {
+function applyTypedCancel_(ctx, p, notes) {
   let r = ctx.byCode[p.code];
   const existed = !!r;
   if (!r) {
     r = newRow_(ctx.res, {
-      '媒体': 'Agoda', '予約番号': p.code, 'ステータス': 'キャンセル',
+      '媒体': p.channel, '予約番号': p.code, 'ステータス': 'キャンセル',
       'チェックイン': p.checkIn || '', 'チェックアウト': p.checkOut || '',
     });
     ctx.byCode[p.code] = r;
@@ -1275,14 +1429,17 @@ function applyAgodaCancel_(ctx, p, notes) {
   } else {
     set_(r, 'ステータス', 'キャンセル');
   }
-  notes.push('キャンセル（Agoda）：' + rowLabel_(r));
+  notes.push('キャンセル（' + p.channel + '）：' + rowLabel_(r));
   return existed ? 'キャンセルにした' : 'キャンセル（台帳になかったので行を足した）';
 }
 
-function ensureAgodaType_(ctx, type, refIso, notes) {
-  if (!type || !ctx.agoda || ctx.agodaTypes[type]) return;
-  ctx.agodaTypes[type] = newRow_(ctx.agoda, { 'Agodaの部屋タイプ': type, '最初に見た日': refIso });
-  notes.push('新しいAgodaの部屋タイプを見つけた（' + type + '）。「Agoda」タブで部屋を選んで（複数の部屋にまたがるタイプなら空のままにして、予約ごとに選ぶ）');
+function ensureType_(ctx, channel, type, refIso, notes) {
+  const tbl = ctx.typeTables[channel], map = ctx.types[channel];
+  if (!type || !tbl || map[type]) return;
+  const v = { '最初に見た日': refIso };
+  v[TYPED[channel].col] = type;
+  map[type] = newRow_(tbl, v);
+  notes.push('新しい' + channel + 'の部屋タイプを見つけた（' + type + '）。「' + TYPED[channel].sheet + '」タブで部屋を選んで（複数の部屋にまたがるタイプなら空のままにして、予約ごとに選ぶ）');
 }
 
 function ensureListing_(ctx, id, title, notes) {
@@ -1298,7 +1455,7 @@ function ensureListing_(ctx, id, title, notes) {
 
 function fillRoom_(ctx, r) {
   const lid = str_(r.v['リスティングID']);
-  const map = str_(r.v['媒体']) === 'Agoda' ? ctx.agodaTypes : ctx.listings;
+  const map = ctx.types[str_(r.v['媒体'])] || ctx.listings;
   const l = lid && map[lid];
   const room = l ? str_(l.v['部屋']) : '';
   if (!str_(r.v['部屋']) && room && !/[,、，\s]/.test(room)) set_(r, '部屋', room);
@@ -1306,19 +1463,19 @@ function fillRoom_(ctx, r) {
 
 // ===== 台帳ルール（重複・準備中・定員・入湯税・泊数） =====
 
-// Agodaのメールには部屋タイプしか書いていないので、部屋が空の予約は人数と空きを見て部屋を決める。
-// 候補は「Agoda」タブの「部屋」（「302,月山」のようにカンマで複数書ける。空ならすべての販売可の部屋）。
+// Agoda・Expediaのメールには部屋タイプしか書いていないので、部屋が空の予約は人数と空きを見て部屋を決める。
+// 候補は媒体のタブの「部屋」（「302,月山」のようにカンマで複数書ける。空ならすべての販売可の部屋）。
 // 定員が足りて、その日程に重なる予約がない部屋のうち、定員の小さい順（同じなら「部屋」タブの並び順）で選ぶ
-function autoRoomAgoda_(ctx, todayIso, notes) {
+function autoRoomTyped_(ctx, todayIso, notes) {
   const order = ctx.rooms ? ctx.rooms.rows.map(function (r) { return str_(r.v['部屋']); }).filter(Boolean) : Object.keys(ctx.roomInfo);
   const active = ctx.res.rows.filter(function (r) {
     return hasData_(r) && !isCancelled_(r) && r.v['チェックイン'] && r.v['チェックアウト'];
   });
   const todo = active
-    .filter(function (r) { return str_(r.v['媒体']) === 'Agoda' && !str_(r.v['部屋']) && r.v['チェックアウト'] > todayIso; })
+    .filter(function (r) { return TYPED[str_(r.v['媒体'])] && !str_(r.v['部屋']) && r.v['チェックアウト'] > todayIso; })
     .sort(function (a, b) { return a.v['チェックイン'] < b.v['チェックイン'] ? -1 : 1; });
   todo.forEach(function (r) {
-    const type = ctx.agodaTypes[str_(r.v['リスティングID'])];
+    const type = ctx.types[str_(r.v['媒体'])][str_(r.v['リスティングID'])];
     const listed = type ? str_(type.v['部屋']).split(/[,、，\s]+/).filter(Boolean) : [];
     const people = Math.max(1, num_(r.v['大人']) + num_(r.v['子ども']));
     const cands = (listed.length ? listed : order).filter(function (name) {
@@ -1336,12 +1493,12 @@ function autoRoomAgoda_(ctx, todayIso, notes) {
     const memo = str_(r.v['メモ']);
     const line = '部屋は人数と空きから自動で決めた（' + cands[0] + '）';
     if (memo.indexOf(line) < 0) set_(r, 'メモ', memo ? memo + '\n' + line : line);
-    notes.push('Agodaの予約の部屋を ' + cands[0] + ' にした：' + shortLabel_(r));
+    notes.push(str_(r.v['媒体']) + 'の予約の部屋を ' + cands[0] + ' にした：' + shortLabel_(r));
   });
 }
 
 function applyRules_(ctx, todayIso, notes) {
-  autoRoomAgoda_(ctx, todayIso, notes);
+  autoRoomTyped_(ctx, todayIso, notes);
   const rows = ctx.res.rows.filter(hasData_);
   const derived = new Map();
   rows.forEach(function (r) { derived.set(r, []); });
@@ -1357,9 +1514,9 @@ function applyRules_(ctx, todayIso, notes) {
     const room = str_(r.v['部屋']);
     const lid = str_(r.v['リスティングID']);
     const upcoming = !outIso || outIso >= todayIso;
-    const agodaRow = str_(r.v['媒体']) === 'Agoda';
+    const typedRow = !!TYPED[str_(r.v['媒体'])];
     if (!room) tags.push(TAG.ROOM_UNSET + (!lid ? ' 部屋を選んで'
-      : agodaRow ? ' 人数に合う空き部屋が見つからなかった。この予約の部屋を選んで'
+      : typedRow ? ' 人数に合う空き部屋が見つからなかった。この予約の部屋を選んで'
       : ' 「Airbnb」タブでこのリスティングの部屋を選んで'));
     const info = room ? ctx.roomInfo[room] : null;
     if (info && upcoming && info.state && info.state !== '販売可') tags.push(TAG.NOT_FOR_SALE + ' ' + room + 'は「' + info.state + '」');
@@ -1402,7 +1559,7 @@ function applyRules_(ctx, todayIso, notes) {
 
 // ===== シートの読み書き =====
 
-function makeCtx_(res, airbnb, rooms, agoda) {
+function makeCtx_(res, airbnb, rooms, agoda, expedia) {
   const byCode = {};
   res.rows.forEach(function (r) { const c = str_(r.v['予約番号']); if (c) byCode[c] = r; });
   const listings = {};
@@ -1412,9 +1569,17 @@ function makeCtx_(res, airbnb, rooms, agoda) {
     const n = str_(r.v['部屋']);
     if (n) roomInfo[n] = { cap: num_(r.v['定員']), state: str_(r.v['状態']) };
   });
-  const agodaTypes = {};
-  if (agoda) agoda.rows.forEach(function (r) { const t = str_(r.v['Agodaの部屋タイプ']); if (t) agodaTypes[t] = r; });
-  return { res: res, airbnb: airbnb, rooms: rooms, agoda: agoda || null, byCode: byCode, listings: listings, agodaTypes: agodaTypes, roomInfo: roomInfo };
+  // 部屋タイプで部屋を決める媒体（Agoda・Expedia）の「部屋タイプ → タブの行」
+  const typeTables = { Agoda: agoda || null, Expedia: expedia || null };
+  const types = {};
+  Object.keys(TYPED).forEach(function (ch) {
+    types[ch] = {};
+    if (typeTables[ch]) typeTables[ch].rows.forEach(function (r) { const t = str_(r.v[TYPED[ch].col]); if (t) types[ch][t] = r; });
+  });
+  return {
+    res: res, airbnb: airbnb, rooms: rooms, agoda: typeTables.Agoda, expedia: typeTables.Expedia,
+    byCode: byCode, listings: listings, typeTables: typeTables, types: types, agodaTypes: types.Agoda, roomInfo: roomInfo,
+  };
 }
 
 function loadTable_(sheet, requiredCols, dateCols, tz, fixedWidth) {
