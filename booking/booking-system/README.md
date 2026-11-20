@@ -70,6 +70,7 @@ iCal URLは「Airbnb」タブにだけある。リポジトリやドキュメン
 | `setupExpedia` | Expediaの取り込みを足したときに1回。「Expedia」タブを作り、媒体の選択肢にExpediaを足す |
 | `checkExpediaMail` | Expediaのメールが拾えないときの確認用。差出人・件名・判定と、読み取った中身を実行ログに出す |
 | `refreshExpedia` | Expediaの読み方を直したあとに1回。直近60日のExpediaのメールを読み直して上書きする（手で選んだ部屋は残す） |
+| `showAgodaMail` | Agodaのメールで人数・部屋タイプが読めないときに。読めなかったメールの本文を実行ログに出す（最大3通。名前・電話が入るので外に貼らない） |
 | `dryRun` | 台帳に書かずに、直近60日のメール（Airbnb・Agoda・Expedia）の読み取り結果だけを実行ログに出す |
 
 `setup` は「予約」タブをチェックイン順に並べ替える。行番号が変わるので、**Webアプリを使い始めたら押さない**。

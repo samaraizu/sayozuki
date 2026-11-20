@@ -313,3 +313,18 @@ test('部屋が空のAgodaの予約は、人数と空きから部屋を決める
   X.applyRules_(c2, '2026-11-12', []);
   assert.strictEqual(res2.rows[0].v['部屋'], '月山');
 });
+
+test('手入力の全角数字（大人「１」）も人数・入湯税に数える', () => {
+  const res = table([{ '媒体': 'Agoda', '予約番号': '1700000099', 'ステータス': '確定', '部屋': '301', 'チェックイン': '2026-12-26', 'チェックアウト': '2026-12-30', '大人': '１', '子ども': '1', '予約日': '2026-11-10' }]);
+  const c = X.makeCtx_(res, table([]), table(ROOMS), table([]));
+  X.applyRules_(c, '2026-11-20', []);
+  assert.strictEqual(res.rows[0].v['入湯税'], 1200);
+  assert.match(X.calendarPlan_(res.rows[0], 'https://x').title, / 2名/);
+});
+
+test('表の形が違っても、本文の「2 Adults」「大人 2」から人数を拾う', () => {
+  const body = 'Booking ID 1700000098\nCheck-in 20-Dec-2026\nCheck-out 21-Dec-2026\n客室：和室\n大人 2名 子ども 1名\n';
+  const p = X.parseAgoda_('confirm', 'Agoda予約ID 1700000098 - 予約確定', body, '2026-11-20');
+  assert.strictEqual(p.adults, 2);
+  assert.strictEqual(p.children, 1);
+});

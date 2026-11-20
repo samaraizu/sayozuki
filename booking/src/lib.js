@@ -54,7 +54,9 @@ function sayozukiLib() {
   }
 
   function toInt(value) {
-    var n = parseInt(String(value === undefined || value === null ? '' : value).replace(/[^0-9\-]/g, ''), 10);
+    var s = String(value === undefined || value === null ? '' : value)
+      .replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); });
+    var n = parseInt(s.replace(/[^0-9\-]/g, ''), 10);
     return isNaN(n) ? 0 : n;
   }
 

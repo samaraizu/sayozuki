@@ -248,6 +248,25 @@ function refreshExpedia() {
   if (r.notes.length) Logger.log('気になる点：\n' + r.notes.join('\n'));
 }
 
+// Agodaのメールで人数・部屋タイプが読めないときの確認用。読めなかったメールの本文を実行ログに出す（最大3通）。
+// ログをClaude Codeに貼れば読み方を直せる。本文には名前・電話が入るので、リポジトリやほかの場所には貼らない
+function showAgodaMail() {
+  const threads = GmailApp.search('{from:agoda subject:Agoda} newer_than:60d', 0, 50);
+  let shown = 0;
+  threads.forEach(function (th) {
+    th.getMessages().forEach(function (m) {
+      if (shown >= 3) return;
+      const kind = classifyAgoda_(m.getSubject());
+      if (kind !== 'confirm' && kind !== 'change') return;
+      const p = parseAgoda_(kind, m.getSubject(), m.getPlainBody(), '');
+      if (p.ok && !(p.warns || []).length) return;
+      shown++;
+      Logger.log('===== ' + m.getSubject() + '\n読めなかったもの：' + (p.ok ? p.warns.join('、') : p.error) + '\n----- 本文 -----\n' + String(m.getPlainBody() || '').slice(0, 6000));
+    });
+  });
+  Logger.log(shown ? shown + '通を出した' : '人数・部屋タイプが読めないAgodaのメールはなかった');
+}
+
 // 取り込みを、今エディタを開いているアカウントで動かす（そのアカウントのGmailを読むようになる）。
 // 並べ替えも取り込みもしない。前のアカウントの自動実行は、前のアカウントで「トリガー」画面から消す
 // Agodaの読み方を直したあとに1回。直近60日のAgodaのメールを読み直し、台帳の名前・人数・部屋タイプ・金額を上書きする。
@@ -648,7 +667,9 @@ function parseAgoda_(kind, subject, rawBody, refIso) {
   if (!out.roomType) out.warns.push('部屋タイプが読めない');
   if (row && row.rooms > 1) out.warns.push(row.rooms + '室の予約。台帳は1行なので、残りの部屋は手で足して');
   const occ = row ? row.occupancy : body;
-  const adults = occ.match(/(\d+)[ \t]*Adults?\b/i) || occ.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) || occ.match(/(\d+)[ \t]*名?の?大人/);
+  const adults = occ.match(/(\d+)[ \t]*Adults?\b/i) || occ.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) || occ.match(/(\d+)[ \t]*名?の?大人/) ||
+    body.match(/(\d+)[ \t]*Adults?\b/i) || body.match(/Adults?[ \t]*[:：][ \t]*(\d+)/i) || body.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) ||
+    body.match(/(?:宿泊可能人数|宿泊人数|人数|Occupancy|No\.? of (?:Guests|Adults))[ \t]*[:：]?[ \t\n]*(\d+)[ \t]*(?:名|人|Adults?|Guests?)/i);
   const kids = occ.match(/(\d+)[ \t]*(?:Child(?:ren)?|Kids?)\b/i) || occ.match(/(?:子ども|子供|こども|お子様|児童)[ \t]*[:：]?[ \t]*(\d+)/);
   out.adults = adults ? Number(adults[1]) : 0;
   out.children = kids ? Number(kids[1]) : 0;
@@ -1798,7 +1819,12 @@ function toIso_(x, tz) {
 function fromIso_(iso, tz) { return Utilities.parseDate(iso, tz, 'yyyy-MM-dd'); }
 
 function str_(x) { return (x === null || x === undefined) ? '' : String(x).trim(); }
-function num_(x) { const n = Number(x); return isFinite(n) ? n : 0; }
+// 手入力の全角数字（１・２）も数える
+function num_(x) {
+  const s = typeof x === 'string' ? x.replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }).trim() : x;
+  const n = Number(s);
+  return isFinite(n) ? n : 0;
+}
 function yen_(s) { return s ? Number(String(s).replace(/,/g, '')) : ''; }
 function isBlank_(x) { return x === '' || x === null || x === undefined || (typeof x === 'string' && !x.trim()); }
 function isCancelled_(r) { return str_(r.v['ステータス']) === 'キャンセル'; }
