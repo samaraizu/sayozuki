@@ -109,4 +109,5 @@ iCal URLは「Airbnb」タブにだけある。リポジトリやドキュメン
 - 「Hotel Collects Payment from Guest」（現地払い）は「支払い状況」を「未収」、Expedia Collect は「媒体で決済済」
 - 部屋は「Expedia」タブで紐付ける。空なら人数と空きから自動で決める（Agodaと同じ）
 - 新しい予約の通知に「Partner Centralで確認番号を入れて」を添える（Expediaが予約ごとに求めてくる。台帳の予約番号を入れればいい）
-- 2026-11-19 の実物はメールの上半分（Reservation ID・Guest まで）しか見ていない。日程・人数・金額の見出しは Partner Central の通知の形に合わせた。実物で読めない欄があれば [Expedia要確認] が付くので、`checkExpediaMail` の実行ログを見て直す
+- 実物（2026-11-19 受信）で確かめた形：日程・人数は「Check-In Check-Out Adults Kids/Ages Room Nights」の見出しの行のあとに値の行（Kids/Ages は「1 /12」＝子ども1人・12歳）。名前は「Guest:」の次の行、電話はその下の数字だけの行。合計は「Total:」。メールのリンクは計測用URLを経由するので、予約画面のURLは予約番号から組み立てる
+- 読めない欄があれば [Expedia要確認] が付くので、`checkExpediaMail` の実行ログを見て直す

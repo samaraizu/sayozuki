@@ -479,10 +479,11 @@ function htmlText_(html) {
   const h = String(html || '');
   if (!/<(?:td|table|div|p|br)\b/i.test(h)) return '';
   const ent = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'", yen: '¥' };
+  const links = [];
   return h
     .replace(/<(style|script|head)\b[\s\S]*?<\/\1>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, function (_, url, text) { return text + ' <' + url + '>'; })
+    .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, function (_, url, text) { links.push(url); return text + ' \u0001' + (links.length - 1) + '\u0002'; })
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(?:td|th|tr|p|div|li|h[1-6]|table|tbody|thead)>/gi, '\n')
     .replace(/<[^>]+>/g, '')
@@ -493,6 +494,7 @@ function htmlText_(html) {
       return all;
     })
     .replace(/\u00a0/g, ' ')
+    .replace(/\u0001(\d+)\u0002/g, function (_, i) { return '<' + links[Number(i)].replace(/&amp;/g, '&') + '>'; })
     .split('\n').map(function (x) { return x.replace(/[ \t]+/g, ' ').trim(); }).filter(Boolean).join('\n');
 }
 
@@ -766,6 +768,28 @@ function expediaField_(body, labelRe, valueRe) {
 // 次の見出しの手前で切る（1行に「Guest: 名前 Booked on: …」と並んだときのため）
 const EXPEDIA_LABELS_RE = /\s+(?:Reservation ID|Guest Email|Guest|Booked on|Room Type (?:Code|Name)|Rate Plan(?: Code| Name)?|Check[- ]?(?:In|Out)|Adults?|Kids(?:\/Ages)?|Children|Smoking|Special Requests?|Bed Type|Total)\b\s*[:：].*$/i;
 
+// 日程・人数の表（見出しの行 → 値の行）。見出しが見つからなければ null
+function expediaGrid_(body) {
+  const h = body.match(/Check[- ]?In\s+Check[- ]?Out\s+Adults\s+Kids\s*\/\s*Ages(?:\s+Room Nights)?(?:\s+Hotel Conf(?:irmation)?)?/i);
+  if (!h) return null;
+  let seg = body.slice(h.index + h[0].length, h.index + h[0].length + 160);
+  const dateRe = /(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}|\d{1,2}[\s\-]+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?[\s,\-]+\d{4}|\d{4}\s*[年\/\-.]\s*\d{1,2}\s*[月\/\-.]\s*\d{1,2}日?/gi;
+  const ds = [];
+  let m;
+  while ((m = dateRe.exec(seg)) && ds.length < 2) ds.push({ iso: findDates_(m[0])[0], end: m.index + m[0].length });
+  if (ds.length < 2) return null;
+  // 日程のあと：大人・子ども（「1 /12」＝1人で12歳、「0」）・泊数
+  const tok = seg.slice(ds[1].end).split(/\s+/).filter(Boolean);
+  const out = { checkIn: ds[0].iso, checkOut: ds[1].iso, adults: '', kids: '', nights: 0 };
+  let i = 0;
+  if (/^\d+$/.test(tok[i] || '')) out.adults = Number(tok[i++]);
+  const k = (tok[i] || '').match(/^(\d+)(?:\/[\d,\/]*)?$/);
+  if (k) { out.kids = Number(k[1]); i++; }
+  while (i < tok.length && /^\/[\d,\/]*$/.test(tok[i])) i++;
+  if (/^\d+$/.test(tok[i] || '')) out.nights = Number(tok[i]);
+  return out;
+}
+
 function parseExpedia_(kind, subject, rawBody, refIso) {
   const body = clean_(String(rawBody || '').replace(/\*/g, '').replace(/<https?:[^>]*>/g, ''));
   const rawAll = String(rawBody || '');
@@ -774,11 +798,16 @@ function parseExpedia_(kind, subject, rawBody, refIso) {
   if (!code) return { ok: false, kind: kind, error: 'Reservation IDが見つからない', code: '' };
   const out = { ok: true, kind: kind, channel: 'Expedia', code: code, warns: [] };
 
+  // 実物（2026-11）は日程・人数が表で、見出しの行のあとに値の行が並ぶ
+  //   Check-In Check-Out Adults Kids/Ages Room Nights Hotel Conf
+  //   Nov 21, 2026 Nov 23, 2026 2 1 /12 2
+  const grid = expediaGrid_(body);
   // 日程（Check-In: Nov 21, 2026 ／ 21 Nov 2026 ／ 2026-11-21）。チェックアウトが読めなければ件名の Arriving on と泊数から
   const inSeg = afterLabel_(body, 'Check[- ]?In(?: Date)?\\s*[:：]|Arrival(?: Date)?\\s*[:：]', 80);
   const outSeg = afterLabel_(body, 'Check[- ]?Out(?: Date)?\\s*[:：]|Departure(?: Date)?\\s*[:：]', 80);
-  out.checkIn = findDates_(inSeg)[0] || findDates_(afterLabel_(clean_(subject), 'Arriving on', 40))[0] || '';
-  out.checkOut = findDates_(outSeg).filter(function (d) { return d > out.checkIn; })[0] || '';
+  out.checkIn = (grid && grid.checkIn) || findDates_(inSeg)[0] || findDates_(afterLabel_(clean_(subject), 'Arriving on', 40))[0] || '';
+  out.checkOut = (grid && grid.checkOut > out.checkIn && grid.checkOut) || findDates_(outSeg).filter(function (d) { return d > out.checkIn; })[0] || '';
+  if (out.checkIn && !out.checkOut && grid && grid.nights) out.checkOut = addDays_(out.checkIn, grid.nights);
   if (out.checkIn && !out.checkOut) {
     const nights = Number(firstGroup_(body, /(?:Number of )?Nights?\s*[:：]\s*(\d{1,3})/i) || firstGroup_(body, /(\d{1,3})\s*(?:nights?|泊)/i) || 0);
     if (nights > 0) out.checkOut = addDays_(out.checkIn, nights);
@@ -802,33 +831,43 @@ function parseExpedia_(kind, subject, rawBody, refIso) {
   if (roomsN > 1) out.warns.push(roomsN + '室の予約。台帳は1行なので、残りの部屋は手で足して');
 
   // 人数（Adults: 2 ／ 2 Adults、Kids/Ages: 1/5 ／ Children: 1）
-  const adults = expediaField_(body, 'Adults?|Number of Adults', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*Adults?(?![a-z])/i);
-  const kids = expediaField_(body, 'Kids(?:\\s*\\/\\s*Ages)?|Children|Number of Children', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*(?:Child(?:ren)?|Kids?)(?![a-z])/i);
+  const adults = (grid && grid.adults !== '' ? String(grid.adults) : '') ||
+    expediaField_(body, 'Adults?\\s*[:：]|Number of Adults\\s*[:：]?', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*Adults?(?![a-z])/i);
+  const kids = (grid && grid.kids !== '' ? String(grid.kids) : '') ||
+    expediaField_(body, 'Kids(?:\\s*\\/\\s*Ages)?\\s*[:：]|Children\\s*[:：]|Number of Children\\s*[:：]?', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*(?:Child(?:ren)?|Kids?)(?![a-z])/i);
   out.adults = adults ? Number(adults) : 0;
   out.children = kids ? Number(kids) : 0;
   if (!adults) out.warns.push('人数が読めない');
 
   // 名前・電話（Guest: KAI YUI のあとの行に 81 9000000000）
-  const g = body.match(/(?:^|[\n \t])Guest(?: Name)?\s*[:：][ \t]*([^\n]*)(?:\n[ \t]*([+\d][\d \-()]{6,}))?/i);
-  let gname = g ? g[1].replace(EXPEDIA_LABELS_RE, '').trim() : '';
-  const phoneIn = gname.match(/\s+([+\d][\d \-()]{6,})$/);
-  if (phoneIn) gname = gname.slice(0, phoneIn.index).trim();
-  out.name = /^\d/.test(gname) ? '' : gname;
+  // 「Guest:」の同じ行か次の行に名前（後ろに Booked on: … が続くことがある）、その近くの数字だけの行が電話
+  const gm = body.match(/(?:^|[\n \t])Guest(?: Name)?\s*[:：][ \t]*/i);
+  let gname = '', phone = '';
+  if (gm) {
+    const lines = body.slice(gm.index + gm[0].length, gm.index + gm[0].length + 300).split('\n').map(function (x) { return x.trim(); });
+    gname = (lines[0] || lines[1] || '').replace(EXPEDIA_LABELS_RE, '').trim();
+    const phoneIn = gname.match(/\s+([+\d][\d \-()]{6,})$/);
+    if (phoneIn) { phone = phoneIn[1]; gname = gname.slice(0, phoneIn.index).trim(); }
+    if (!phone) lines.slice(1, 5).some(function (x) { const m = x.match(/^([+]?\d[\d \-()]{6,})$/); if (m) phone = m[1]; return !!m; });
+  }
+  out.name = /^\d/.test(gname) || /^Booked on/i.test(gname) ? '' : gname;
   if (!out.name) out.warns.push('名前が読めない');
-  out.contact = ((g && g[2]) || (phoneIn && phoneIn[1]) || expediaField_(body, 'Phone|Guest Phone', /([+\d][\d \-()]{6,})/) || '').trim();
+  out.contact = (phone || expediaField_(body, 'Guest Phone\\s*[:：]|Phone Number\\s*[:：]', /([+\d][\d \-()]{6,})/) || '').trim();
   if (out.contact && !/^\+/.test(out.contact)) out.contact = '+' + out.contact;
 
   // 支払い（Hotel Collect＝宿が現地で受け取る、Expedia Collect＝Expediaが受け取って宿に払う）・金額
   out.payAtHotel = /Hotel Collects? Payment|Hotel Collect\b|Pay at (?:the )?(?:hotel|property)/i.test(body);
-  out.guestTotal = agodaYen_(body, 'Total Booking Amount|Total Amount(?: Due)?|Amount to (?:collect|charge)(?: from (?:the )?guest)?|Total Guest Payment|Booking Total|Total (?:price|charge)');
+  out.guestTotal = agodaYen_(body, 'Total Booking Amount|Total Amount(?: Due)?|Amount to (?:collect|charge)(?: from (?:the )?guest)?|Total Guest Payment|Booking Total|Total (?:price|charge)|Total\\s*[:：]');
   out.payout = agodaYen_(body, 'Amount Expedia (?:will )?pay|Total (?:Amount )?Payable to (?:the )?Hotel|Net (?:Amount|Rate|Total)|Hotel Payout');
 
   // 特別なリクエスト（次の見出しの手前まで）
-  const sr = body.match(/Special Requests?\s*[:：]?([\s\S]*?)(?:\n[ \t]*[A-Z][A-Za-z\/ ]{2,40}\s*[:：]|Cancellation Policy|$)/i);
+  const sr = body.match(/Special Requests?[ \t]*[:：]?([\s\S]*?)(?:\n[ \t]*[A-Z][A-Za-z\/ ]{2,40}\s*[:：]|\n[ \t]*Daily Rate|Cancellation Policy|$)/i);
   out.request = sr ? sr[1].replace(/\s+/g, ' ').trim() : '';
   if (/^(?:なし|無し|-|—|N\/?A|None)?$/i.test(out.request)) out.request = '';
   out.request = out.request.slice(0, 100);
-  out.url = firstGroup_(rawAll, /(https:\/\/[^\s<>"]*expediapartnercentral\.com\/[^\s<>"]*reserv[^\s<>"]*)/i) || 'https://www.expediapartnercentral.com';
+  // メールのリンクは計測用のURL（awstrack）を経由するので、予約番号から Partner Central の予約画面を組み立てる
+  const htid = firstGroup_(rawAll, /htid(?:=|%3D)(\d+)/i);
+  out.url = 'https://apps.expediapartnercentral.com/lodging/reservations/reservationDetails.html?reservationIds=' + code + (htid ? '&htid=' + htid : '');
   return out;
 }
 
