@@ -7,7 +7,7 @@ import { test } from 'node:test';
 
 const src = fs.readFileSync(new URL('../booking-system/Code.js', import.meta.url), 'utf8');
 const ctx = vm.createContext({ console });
-vm.runInContext(src + '\n;this.__x = { classifyAgoda_, parseAgoda_, findDates_, applyMail_, applyRules_, calendarPlan_, makeCtx_, tagsOf_, TAG };', ctx);
+vm.runInContext(src + '\n;this.__x = { htmlText_, classifyAgoda_, parseAgoda_, findDates_, applyMail_, applyRules_, calendarPlan_, makeCtx_, tagsOf_, TAG };', ctx);
 const X = ctx.__x;
 const table = (rows) => ({ rows: rows.map((v, i) => ({ _row: i + 2, v, dirty: {}, isNew: false })) });
 const ROOMS = [{ '部屋': '301', '定員': 4, '状態': '販売可' }, { '部屋': '月山', '定員': 4, '状態': '販売可' }];
@@ -312,4 +312,65 @@ test('部屋が空のAgodaの予約は、人数と空きから部屋を決める
   const c2 = X.makeCtx_(res2, table([]), table(rooms), table([{ 'Agodaの部屋タイプ': 'Japanese Room', '部屋': '302,月山' }]));
   X.applyRules_(c2, '2026-11-12', []);
   assert.strictEqual(res2.rows[0].v['部屋'], '月山');
+});
+
+test('手入力の全角数字（大人「１」）も人数・入湯税に数える', () => {
+  const res = table([{ '媒体': 'Agoda', '予約番号': '1700000099', 'ステータス': '確定', '部屋': '301', 'チェックイン': '2026-12-26', 'チェックアウト': '2026-12-30', '大人': '１', '子ども': '1', '予約日': '2026-11-10' }]);
+  const c = X.makeCtx_(res, table([]), table(ROOMS), table([]));
+  X.applyRules_(c, '2026-11-20', []);
+  assert.strictEqual(res.rows[0].v['入湯税'], 1200);
+  assert.match(X.calendarPlan_(res.rows[0], 'https://x').title, / 2名/);
+});
+
+test('表の形が違っても、本文の「2 Adults」「大人 2」から人数を拾う', () => {
+  const body = 'Booking ID 1700000098\nCheck-in 20-Dec-2026\nCheck-out 21-Dec-2026\n客室：和室\n大人 2名 子ども 1名\n';
+  const p = X.parseAgoda_('confirm', 'Agoda予約ID 1700000098 - 予約確定', body, '2026-11-20');
+  assert.strictEqual(p.adults, 2);
+  assert.strictEqual(p.children, 1);
+});
+
+// 実物の表（2026-11 のスクショ）をHTMLにしたもの。getPlainBody だとセルがつながって読めなかった
+const HTML = `<html><head><style>td{font:12px}</style></head><body>
+<table><tr><td><b>Booking ID</b><br>予約ID</td><td>1700000097</td></tr></table>
+<table><tr><td><b>Customer First Name</b> 宿泊者氏名（名）</td></tr><tr><td>HANAKO</td></tr>
+<tr><td><b>Customer Last Name</b> 宿泊者氏名（姓）</td></tr><tr><td>TEST</td></tr>
+<tr><td><b>Check-in</b> チェックイン</td></tr><tr><td>21-Nov-2026 (21-11-2026)</td></tr>
+<tr><td><b>Check-out</b> チェックアウト</td></tr><tr><td>23-Nov-2026 (23-11-2026)</td></tr></table>
+<table><tr><th><b>Room Type</b><br>客室タイプ</th><th><b>No. of Rooms</b><br>部屋数</th><th><b>Occupancy</b><br>宿泊可能人数</th><th><b>No. of Extra Bed</b><br>エキストラベッド数&nbsp;:</th></tr>
+<tr><td><b>Japanese Style Room for 2 People with Shared Bathroom - Non Smoking</b></td><td><b>1</b></td><td><b>2 Adults</b></td><td><b>0</b></td></tr></table>
+<table><tr><td><b>料金プラン名:</b> Room Only (Room Only)</td></tr></table></body></html>`;
+
+test('HTML本文から、表の部屋タイプ・人数を読む（セルがつながった本文でも人数を拾う）', () => {
+  const p = X.parseAgoda_('confirm', 'Agoda予約ID 1700000097 - 予約確定', X.htmlText_(HTML), '2026-11-10');
+  assert.strictEqual(p.roomType, 'Japanese Style Room for 2 People with Shared Bathroom - Non Smoking');
+  assert.strictEqual(p.adults, 2);
+  assert.strictEqual(p.checkIn, '2026-11-21');
+  assert.strictEqual(p.name, 'HANAKO TEST');
+  assert.deepStrictEqual([...p.warns], []);
+  const glued = 'Check-in 21-Nov-2026\nCheck-out 23-Nov-2026\nRoom Type客室タイプNo. of Rooms部屋数Occupancy宿泊可能人数No. of Extra Bedエキストラベッド数 :Japanese Style Room for 2 People with Shared Bathroom - Non Smoking12 Adults0';
+  assert.strictEqual(X.parseAgoda_('confirm', 'Agoda予約ID 1700000096 - 予約確定', glued, '2026-11-10').adults, 2);
+});
+
+test('部屋の自動割り当て：人数が分からないうちは決めない／自動で決めた部屋が人数に足りなければ選び直す', () => {
+  const rooms = [{ '部屋': '302', '定員': 1, '状態': '販売可' }, { '部屋': '301', '定員': 4, '状態': '販売可' }, { '部屋': '月山', '定員': 4, '状態': '販売可' }];
+  const res = table([
+    { '媒体': 'Agoda', '予約番号': '1700000095', 'ステータス': '確定', '部屋': '', 'チェックイン': '2026-12-01', 'チェックアウト': '2026-12-02', '大人': '', 'リスティングID': 'T' },
+    { '媒体': 'Agoda', '予約番号': '1700000094', 'ステータス': '確定', '部屋': '302', 'チェックイン': '2026-11-21', 'チェックアウト': '2026-11-23', '大人': 2, 'リスティングID': 'T', 'メモ': '部屋は人数と空きから自動で決めた（302）' },
+    { '媒体': '直販', '予約番号': 'SZ-1', 'ステータス': '確定', '部屋': '301', 'チェックイン': '2026-11-22', 'チェックアウト': '2026-11-23', '大人': 2 },
+  ]);
+  const c = X.makeCtx_(res, table([]), table(rooms), table([{ 'Agodaの部屋タイプ': 'T', '部屋': '' }]));
+  X.applyRules_(c, '2026-11-20', []);
+  assert.strictEqual(res.rows[0].v['部屋'], '');
+  assert.ok(X.tagsOf_(res.rows[0]).some((t) => /人数が分からない/.test(t)));
+  assert.strictEqual(res.rows[1].v['部屋'], '月山'); // 302は定員1、301は11/22に埋まってる
+  assert.strictEqual(res.rows[1].v['メモ'], '部屋は人数と空きから自動で決めた（月山）');
+});
+
+test('getPlainBody で表の1行が折り返された形（…Non Smoking 1 2 ／ Adults 0）も読む', () => {
+  const body = 'Booking ID 1700000093\nCheck-in チェックイン\n21-Nov-2026 (21-11-2026)\nCheck-out チェックアウト\n23-Nov-2026 (23-11-2026)\n' +
+    '*Room Type *\n客室タイプ *No. of Rooms*\n部屋数 *Occupancy*\n宿泊可能人数 *No. of Extra Bed*\nエキストラベッド数 :\n' +
+    'Japanese Style Room for 2 People with Shared Bathroom - Non Smoking 1 2\nAdults 0\n料金プラン名: Room Only (Room Only)\n';
+  const p = X.parseAgoda_('confirm', 'Agoda予約ID 1700000093 - 予約確定', body, '2026-11-10');
+  assert.strictEqual(p.roomType, 'Japanese Style Room for 2 People with Shared Bathroom - Non Smoking');
+  assert.strictEqual(p.adults, 2);
 });

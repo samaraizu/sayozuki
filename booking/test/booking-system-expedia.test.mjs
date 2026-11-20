@@ -8,7 +8,7 @@ import { test } from 'node:test';
 
 const src = fs.readFileSync(new URL('../booking-system/Code.js', import.meta.url), 'utf8');
 const ctx = vm.createContext({ console });
-vm.runInContext(src + '\n;this.__x = { classifyExpedia_, parseExpedia_, applyMail_, applyRules_, calendarPlan_, checkFullRooms_, makeCtx_, tagsOf_, TAG };', ctx);
+vm.runInContext(src + '\n;this.__x = { htmlText_, classifyExpedia_, parseExpedia_, applyMail_, applyRules_, calendarPlan_, checkFullRooms_, makeCtx_, tagsOf_, TAG };', ctx);
 const X = ctx.__x;
 const table = (rows) => ({ rows: rows.map((v, i) => ({ _row: i + 2, v, dirty: {}, isNew: false })) });
 const ROOMS = [{ '部屋': '302', '定員': 1, '状態': '販売可' }, { '部屋': '301', '定員': 4, '状態': '販売可' }, { '部屋': '月山', '定員': 4, '状態': '販売可' }];
@@ -143,4 +143,58 @@ test('満室アラート：Expediaの部屋タイプの候補が他の媒体で�
   assert.ok(row);
   assert.strictEqual(row.v['対象'], 'Twin Room');
   assert.strictEqual(row.v['日付'], '2026-12-05');
+});
+
+// 2026-11-19 受信の実物（Hotels.com 経由・現地払い）の構造。日程・人数は見出しの行 → 値の行の表（名前・電話・番号はダミー）
+const REAL_HTML = `<table><tbody><tr><td style="width:30%"><b>Reservation ID: </b><a href="https://x.awstrack.me/L0/https:%2F%2Fapps.expediapartnercentral.com%2Flodging%2Freservations%2FreservationDetails.html%3FreservationIds=2600000001%26htid=1/1/abc=474" target="_blank">2600000001</a></td><td style="width:30%"><b>Guest: </b>TARO  TEST</td><td style="width:40%" align="right">Booked on: Nov 19, 2026 6:55 AM PST</td>
+</tr><tr><td style="width:30%"></td><td style="width:30%">81 9000000000</td></tr>
+<tr><td colspan="3"><b>Guest Email: </b>dummy@m.expediapartnercentral.com</td></tr>
+<tr><td colspan="3">Room Type Code: RoomCode</td></tr>
+<tr><td colspan="3"><table><tbody><tr><td>Room Type Name: </td><td style="width:4px"></td><td>Quadruple Room - Standard</td></tr></tbody></table></td></tr>
+<tr><td colspan="3">Payment Instructions: Hotel collects payment from the traveler</td></tr>
+<tr><td colspan="3"><table><tbody><tr valign="bottom"><td>Check-In</td><td>Check-Out</td><td>Adults</td><td>Kids/Ages</td><td>Room Nights</td><td>Hotel Conf</td></tr>
+<tr valign="top"><td>Nov 21, 2026</td><td>Nov 23, 2026</td><td>2</td><td>1
+                /12</td><td>2</td><td></td></tr></tbody></table></td></tr>
+<tr valign="bottom"><td colspan="3"><b>Special Request</b></td></tr><tr valign="BOTTOM"><td colspan="3"></td></tr>
+<tr><td><table><tbody><tr><td colspan="7"><b>Daily Rate - 12,151 JPY</b></td></tr><tr><td>Sat, Nov 21</td><td>Sun, Nov 22</td><td></td></tr></tbody></table></td>
+<td><table><tbody><tr><td align="right">Extra Person: </td><td align="right">0 JPY</td></tr><tr><td align="right"><b>Total: </b></td><td align="right"><b>24,302 JPY</b></td></tr></tbody></table></td></tr>
+</tbody></table>
+`;
+const REAL_PLAIN = `Hotel Collects Payment from Guest
+*Reservation ID: *2600000001
+<https://x.awstrack.me/L0/https:%2F%2Fapps.expediapartnercentral.com%2Flodging%2Freservations%2FreservationDetails.html%3FreservationIds=2600000001%26htid=1/1/abc=474>
+*Guest:
+*TARO TEST Booked on: Nov 19, 2026 6:55 AM PST
+81 9000000000
+*Guest Email: *dummy@m.expediapartnercentral.com
+Room Type Code: RoomCode
+Room Type Name: Quadruple Room - Standard
+Payment Instructions: Hotel collects payment from the traveler
+Check-In Check-Out Adults Kids/Ages Room Nights Hotel Conf
+Nov 21, 2026 Nov 23, 2026 2 1 /12 2
+*Special Request*
+*Daily Rate - 12,151 JPY*
+Sat, Nov 21 Sun, Nov 22
+Extra Person: 0 JPY
+*Total: * *24,302 JPY*
+`;
+
+test('実物の形（HTML本文・getPlainBody とも）：表の日程・人数、次の行の名前、合計、予約画面のURL', () => {
+  for (const body of [X.htmlText_(REAL_HTML), REAL_PLAIN]) {
+    const p = X.parseExpedia_('confirm', SUBJ, body, '2026-11-19');
+    assert.strictEqual(p.ok, true);
+    assert.strictEqual(p.code, '2600000001');
+    assert.strictEqual(p.checkIn, '2026-11-21');
+    assert.strictEqual(p.checkOut, '2026-11-23');
+    assert.strictEqual(p.adults, 2);
+    assert.strictEqual(p.children, 1);
+    assert.strictEqual(p.name, 'TARO TEST');
+    assert.strictEqual(p.contact, '+81 9000000000');
+    assert.strictEqual(p.roomType, 'Quadruple Room - Standard');
+    assert.strictEqual(p.payAtHotel, true);
+    assert.strictEqual(p.guestTotal, 24302);
+    assert.strictEqual(p.request, '');
+    assert.strictEqual(p.url, 'https://apps.expediapartnercentral.com/lodging/reservations/reservationDetails.html?reservationIds=2600000001&htid=1');
+    assert.deepStrictEqual([...p.warns], []);
+  }
 });
