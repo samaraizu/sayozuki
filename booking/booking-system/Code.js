@@ -235,7 +235,7 @@ function checkExpediaMail() {
       const ok = EXPEDIA_FROM_RE.test(m.getFrom()) || isForwardedFrom_(m, EXPEDIA_FROM_RE);
       const kind = ok ? classifyExpedia_(m.getSubject()) : '（差出人にexpediaがない）';
       Logger.log((kind || '読まない') + '｜' + m.getFrom() + '｜' + m.getSubject());
-      if (ok && kind) Logger.log(JSON.stringify(parseExpedia_(kind, m.getSubject(), m.getPlainBody(), ''), null, 1));
+      if (ok && kind) Logger.log(JSON.stringify(parseExpedia_(kind, m.getSubject(), htmlText_(m.getBody()) || m.getPlainBody(), ''), null, 1));
     });
   });
 }
@@ -258,10 +258,10 @@ function showAgodaMail() {
       if (shown >= 3) return;
       const kind = classifyAgoda_(m.getSubject());
       if (kind !== 'confirm' && kind !== 'change') return;
-      const p = parseAgoda_(kind, m.getSubject(), m.getPlainBody(), '');
+      const p = parseAgoda_(kind, m.getSubject(), htmlText_(m.getBody()) || m.getPlainBody(), '');
       if (p.ok && !(p.warns || []).length) return;
       shown++;
-      Logger.log('===== ' + m.getSubject() + '\n読めなかったもの：' + (p.ok ? p.warns.join('、') : p.error) + '\n----- 本文 -----\n' + String(m.getPlainBody() || '').slice(0, 6000));
+      Logger.log('===== ' + m.getSubject() + '\n読めなかったもの：' + (p.ok ? p.warns.join('、') : p.error) + '\n----- 本文 -----\n' + String(htmlText_(m.getBody()) || m.getPlainBody() || '').slice(0, 6000));
     });
   });
   Logger.log(shown ? shown + '通を出した' : '人数・部屋タイプが読めないAgodaのメールはなかった');
@@ -299,7 +299,7 @@ function dryRun() {
   found.forEach(function (f) {
     const m = f.message;
     const refIso = Utilities.formatDate(m.getDate(), tz, 'yyyy-MM-dd');
-    const p = parseMail_(f, m.getSubject(), m.getPlainBody(), refIso);
+    const p = parseMail_(f, m.getSubject(), mailText_(f), refIso);
     Logger.log(kindLabel_(f) + '｜' + m.getSubject() + '\n' + JSON.stringify(p, null, 1));
   });
   Logger.log(found.length + '通を読んだ（シートには書いてない）');
@@ -351,7 +351,7 @@ function runCore_(opts) {
       const refIso = Utilities.formatDate(m.getDate(), tz, 'yyyy-MM-dd');
       const link = 'https://mail.google.com/mail/?authuser=' + encodeURIComponent(me) + '#all/' + f.thread.getId();
       let p;
-      try { p = parseMail_(f, subject, m.getPlainBody(), refIso); }
+      try { p = parseMail_(f, subject, mailText_(f), refIso); }
       catch (e) { p = { ok: false, error: String((e && e.message) || e) }; }
       if (opts.refresh && f.source === opts.refresh) p.refresh = true;
       let result;
@@ -460,6 +460,40 @@ function classify_(subject) {
   if (/ご予約が変更されました/.test(s)) return 'change';
   if (/キャンセル/.test(s) && /予約/.test(s)) return 'cancel';
   return null;
+}
+
+// メールの本文。Agoda・Expediaは表組みのHTMLメールで、getPlainBody だとセルの区切りが消えて
+// 「…Non Smoking12 Adults0」のようにつながることがあるので、HTMLからセルごとに改行を入れて読む
+function mailText_(f) {
+  const m = f.message;
+  if (f.source === 'agoda' || f.source === 'expedia') {
+    let t = '';
+    try { t = htmlText_(m.getBody()); } catch (e) { t = ''; }
+    if (t) return t;
+  }
+  return m.getPlainBody();
+}
+
+// HTMLを、セル・段落・改行ごとに1行のテキストにする。リンクは「文字 <URL>」で残す
+function htmlText_(html) {
+  const h = String(html || '');
+  if (!/<(?:td|table|div|p|br)\b/i.test(h)) return '';
+  const ent = { nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", '#39': "'", yen: '¥' };
+  return h
+    .replace(/<(style|script|head)\b[\s\S]*?<\/\1>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, function (_, url, text) { return text + ' <' + url + '>'; })
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:td|th|tr|p|div|li|h[1-6]|table|tbody|thead)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&(#\d+|#x[0-9a-f]+|[a-z]+\d*);/gi, function (all, e) {
+      const k = e.toLowerCase();
+      if (k in ent) return ent[k];
+      if (k[0] === '#') { const n = k[1] === 'x' ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10); return isFinite(n) ? String.fromCharCode(n) : all; }
+      return all;
+    })
+    .replace(/\u00a0/g, ' ')
+    .split('\n').map(function (x) { return x.replace(/[ \t]+/g, ' ').trim(); }).filter(Boolean).join('\n');
 }
 
 function parseMail_(f, subject, body, refIso) {
@@ -630,8 +664,11 @@ function agodaRoomRow_(body) {
   const lines = seg.split('\n').map(function (x) { return x.trim(); }).filter(function (x) { return x && !/^[:：]$/.test(x); });
   if (!lines.length) return null;
   // 1行にまとまっている形（Japanese Room 1 2 Adults 0）
-  const one = lines[0].match(/^(.+?)\s+(\d+)\s+(\d+\s*Adults?\b.*?)(?:\s+\d+)?$/i);
+  const one = lines[0].match(/^(.+?)\s+(\d+)\s+(\d+\s*Adults?(?![a-z]).*?)(?:\s+\d+)?$/i);
   if (one) return { roomType: one[1].trim(), rooms: Number(one[2]), occupancy: one[3] };
+  // セルの区切りが消えてつながった形（…Non Smoking12 Adults0）。部屋数は1桁とみなして分ける
+  const glued = lines[0].match(/^(.*?[^\d\s])\s*(\d)\s*(\d+\s*Adults?(?![a-z]).*?)\s*\d*$/i);
+  if (glued) return { roomType: glued[1].trim(), rooms: Number(glued[2]), occupancy: glued[3] };
   if (lines.length < 3 || !/^\d+$/.test(lines[1])) return null;
   return { roomType: lines[0], rooms: Number(lines[1]), occupancy: lines[2] };
 }
@@ -667,10 +704,10 @@ function parseAgoda_(kind, subject, rawBody, refIso) {
   if (!out.roomType) out.warns.push('部屋タイプが読めない');
   if (row && row.rooms > 1) out.warns.push(row.rooms + '室の予約。台帳は1行なので、残りの部屋は手で足して');
   const occ = row ? row.occupancy : body;
-  const adults = occ.match(/(\d+)[ \t]*Adults?\b/i) || occ.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) || occ.match(/(\d+)[ \t]*名?の?大人/) ||
-    body.match(/(\d+)[ \t]*Adults?\b/i) || body.match(/Adults?[ \t]*[:：][ \t]*(\d+)/i) || body.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) ||
+  const adults = occ.match(/(\d+)[ \t]*Adults?(?![a-z])/i) || occ.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) || occ.match(/(\d+)[ \t]*名?の?大人/) ||
+    body.match(/(\d+)[ \t]*Adults?(?![a-z])/i) || body.match(/Adults?[ \t]*[:：][ \t]*(\d+)/i) || body.match(/大人[ \t]*[:：]?[ \t]*(\d+)/) ||
     body.match(/(?:宿泊可能人数|宿泊人数|人数|Occupancy|No\.? of (?:Guests|Adults))[ \t]*[:：]?[ \t\n]*(\d+)[ \t]*(?:名|人|Adults?|Guests?)/i);
-  const kids = occ.match(/(\d+)[ \t]*(?:Child(?:ren)?|Kids?)\b/i) || occ.match(/(?:子ども|子供|こども|お子様|児童)[ \t]*[:：]?[ \t]*(\d+)/);
+  const kids = occ.match(/(\d+)[ \t]*(?:Child(?:ren)?|Kids?)(?![a-z])/i) || occ.match(/(?:子ども|子供|こども|お子様|児童)[ \t]*[:：]?[ \t]*(\d+)/);
   out.adults = adults ? Number(adults[1]) : 0;
   out.children = kids ? Number(kids[1]) : 0;
   if (!adults) out.warns.push('人数が読めない');
@@ -765,8 +802,8 @@ function parseExpedia_(kind, subject, rawBody, refIso) {
   if (roomsN > 1) out.warns.push(roomsN + '室の予約。台帳は1行なので、残りの部屋は手で足して');
 
   // 人数（Adults: 2 ／ 2 Adults、Kids/Ages: 1/5 ／ Children: 1）
-  const adults = expediaField_(body, 'Adults?|Number of Adults', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*Adults?\b/i);
-  const kids = expediaField_(body, 'Kids(?:\\s*\\/\\s*Ages)?|Children|Number of Children', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*(?:Child(?:ren)?|Kids?)\b/i);
+  const adults = expediaField_(body, 'Adults?|Number of Adults', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*Adults?(?![a-z])/i);
+  const kids = expediaField_(body, 'Kids(?:\\s*\\/\\s*Ages)?|Children|Number of Children', /^(\d+)\b/) || firstGroup_(body, /(\d+)\s*(?:Child(?:ren)?|Kids?)(?![a-z])/i);
   out.adults = adults ? Number(adults) : 0;
   out.children = kids ? Number(kids) : 0;
   if (!adults) out.warns.push('人数が読めない');
@@ -1492,13 +1529,27 @@ function autoRoomTyped_(ctx, todayIso, notes) {
   const active = ctx.res.rows.filter(function (r) {
     return hasData_(r) && !isCancelled_(r) && r.v['チェックイン'] && r.v['チェックアウト'];
   });
+  // 自動で決めた部屋が、あとで分かった人数に足りなければ選び直す（人が選んだ部屋・タブで紐付けた部屋は触らない）
+  active.forEach(function (r) {
+    const room = str_(r.v['部屋']);
+    if (!TYPED[str_(r.v['媒体'])] || !room || r.v['チェックアウト'] <= todayIso) return;
+    const line = '部屋は人数と空きから自動で決めた（' + room + '）';
+    const memo = str_(r.v['メモ']);
+    const people = num_(r.v['大人']) + num_(r.v['子ども']);
+    const info = ctx.roomInfo[room];
+    if (memo.indexOf(line) < 0 || !people || !info || !info.cap || info.cap >= people) return;
+    set_(r, '部屋', '');
+    set_(r, 'メモ', memo.split('\n').filter(function (x) { return x !== line; }).join('\n'));
+  });
   const todo = active
     .filter(function (r) { return TYPED[str_(r.v['媒体'])] && !str_(r.v['部屋']) && r.v['チェックアウト'] > todayIso; })
+    // 人数が分からないうちは決めない（1名と見て定員の小さい部屋に入れてしまうため）
+    .filter(function (r) { return num_(r.v['大人']) + num_(r.v['子ども']) > 0; })
     .sort(function (a, b) { return a.v['チェックイン'] < b.v['チェックイン'] ? -1 : 1; });
   todo.forEach(function (r) {
     const type = ctx.types[str_(r.v['媒体'])][str_(r.v['リスティングID'])];
     const listed = type ? str_(type.v['部屋']).split(/[,、，\s]+/).filter(Boolean) : [];
-    const people = Math.max(1, num_(r.v['大人']) + num_(r.v['子ども']));
+    const people = num_(r.v['大人']) + num_(r.v['子ども']);
     const cands = (listed.length ? listed : order).filter(function (name) {
       const info = ctx.roomInfo[name];
       if (!info || info.state !== '販売可' || (info.cap && info.cap < people)) return false;
@@ -1537,6 +1588,7 @@ function applyRules_(ctx, todayIso, notes) {
     const upcoming = !outIso || outIso >= todayIso;
     const typedRow = !!TYPED[str_(r.v['媒体'])];
     if (!room) tags.push(TAG.ROOM_UNSET + (!lid ? ' 部屋を選んで'
+      : typedRow && !(num_(r.v['大人']) + num_(r.v['子ども'])) ? ' 人数が分からないので部屋を決めてない。人数を入れれば自動で決まる'
       : typedRow ? ' 人数に合う空き部屋が見つからなかった。この予約の部屋を選んで'
       : ' 「Airbnb」タブでこのリスティングの部屋を選んで'));
     const info = room ? ctx.roomInfo[room] : null;
