@@ -365,3 +365,12 @@ test('部屋の自動割り当て：人数が分からないうちは決めな�
   assert.strictEqual(res.rows[1].v['部屋'], '月山'); // 302は定員1、301は11/22に埋まってる
   assert.strictEqual(res.rows[1].v['メモ'], '部屋は人数と空きから自動で決めた（月山）');
 });
+
+test('getPlainBody で表の1行が折り返された形（…Non Smoking 1 2 ／ Adults 0）も読む', () => {
+  const body = 'Booking ID 1700000093\nCheck-in チェックイン\n21-Nov-2026 (21-11-2026)\nCheck-out チェックアウト\n23-Nov-2026 (23-11-2026)\n' +
+    '*Room Type *\n客室タイプ *No. of Rooms*\n部屋数 *Occupancy*\n宿泊可能人数 *No. of Extra Bed*\nエキストラベッド数 :\n' +
+    'Japanese Style Room for 2 People with Shared Bathroom - Non Smoking 1 2\nAdults 0\n料金プラン名: Room Only (Room Only)\n';
+  const p = X.parseAgoda_('confirm', 'Agoda予約ID 1700000093 - 予約確定', body, '2026-11-10');
+  assert.strictEqual(p.roomType, 'Japanese Style Room for 2 People with Shared Bathroom - Non Smoking');
+  assert.strictEqual(p.adults, 2);
+});

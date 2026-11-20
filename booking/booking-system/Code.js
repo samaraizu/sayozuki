@@ -665,6 +665,12 @@ function agodaRoomRow_(body) {
   const seg = body.slice(m.index + m[0].length, m.index + m[0].length + 300);
   const lines = seg.split('\n').map(function (x) { return x.trim(); }).filter(function (x) { return x && !/^[:：]$/.test(x); });
   if (!lines.length) return null;
+  // 折り返しで1行が割れた形（…Non Smoking 1 2 ／ Adults 0）は、料金プラン名の手前までを1行にまとめて読む
+  if (!/Adults?(?![a-z])/i.test(lines[0]) && !/^\d+$/.test(lines[1] || '')) {
+    const upto = [];
+    for (let i = 0; i < lines.length && !/料金プラン|Rate ?plan|Benefits|特典/i.test(lines[i]); i++) upto.push(lines[i]);
+    if (upto.length > 1) lines.splice(0, upto.length, upto.join(' '));
+  }
   // 1行にまとまっている形（Japanese Room 1 2 Adults 0）
   const one = lines[0].match(/^(.+?)\s+(\d+)\s+(\d+\s*Adults?(?![a-z]).*?)(?:\s+\d+)?$/i);
   if (one) return { roomType: one[1].trim(), rooms: Number(one[2]), occupancy: one[3] };
