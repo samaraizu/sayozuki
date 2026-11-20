@@ -839,7 +839,7 @@ function parseExpedia_(kind, subject, rawBody, refIso) {
   out.children = kids ? Number(kids) : 0;
   if (!adults) out.warns.push('人数が読めない');
 
-  // 名前・電話（Guest: KAI YUI のあとの行に 81 9000000000）
+  // 名前・電話（Guest: TARO TEST のあとの行に 81 9000000000）
   // 「Guest:」の同じ行か次の行に名前（後ろに Booked on: … が続くことがある）、その近くの数字だけの行が電話
   const gm = body.match(/(?:^|[\n \t])Guest(?: Name)?\s*[:：][ \t]*/i);
   let gname = '', phone = '';
