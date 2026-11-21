@@ -29,6 +29,7 @@
  *
  * スクリプトプロパティ（コードは公開リポジトリにも置くので、アドレスはここに書かない）
  *   NOTIFY_TO  … 通知メールを足す宛先（カンマ区切り）。スクリプトを作ったアカウントには何もしなくても送る
+ *   SLACK_WEBHOOK_URL … 通知メールと同じ文を送る Slack の Incoming Webhook。空なら送らない
  *   calendarId … setupCalendar が自動で入れる。手で触らない
  *   CF_SYNC_URL   … Cloudflare版の予約管理（https://booking.sayozuki.com）。空なら同期しない
  *   CF_SYNC_TOKEN … Cloudflare版と同じ合言葉（Worker の Secret SYNC_TOKEN と同じ値）
@@ -450,6 +451,42 @@ function sendNotes_(ss, notes) {
     : '【小夜月】要確認 ' + notes.length + '件';
   const body = notes.map(function (n) { return '・' + n; }).join('\n') + '\n\n予約台帳：' + ss.getUrl();
   GmailApp.sendEmail(to, subject, body);
+  postSlack_(subject, notes, ss.getUrl());
+}
+
+// 通知メールと同じ中身を Slack にも送る（スクリプトプロパティ SLACK_WEBHOOK_URL を入れたときだけ）。
+// 失敗してもメールは送ってあるので、実行ログに残すだけで止めない
+function postSlack_(subject, notes, ssUrl) {
+  const url = String(PropertiesService.getScriptProperties().getProperty('SLACK_WEBHOOK_URL') || '').trim();
+  if (!url) return false;
+  try {
+    const resp = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+      payload: JSON.stringify({ text: slackText_(subject, notes, ssUrl) }),
+    });
+    if (resp.getResponseCode() >= 300) Logger.log('Slackに送れなかった：' + resp.getResponseCode() + ' ' + resp.getContentText().slice(0, 200));
+    return resp.getResponseCode() < 300;
+  } catch (e) {
+    Logger.log('Slackに送れなかった：' + String((e && e.message) || e));
+    return false;
+  }
+}
+
+// Slack の書式にする。& < > はそのままだとSlackの記号になるので置き換え、URL はリンクにする
+function slackText_(subject, notes, ssUrl) {
+  const esc = function (t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  const link = function (t) {
+    return esc(t).replace(/https:\/\/mail\.google\.com\/\S+/g, function (u) { return '<' + u.replace(/&amp;/g, '&') + '|Gmailで開く>'; });
+  };
+  return '*' + esc(subject) + '*\n' + notes.map(function (n) { return '・' + link(n); }).join('\n') +
+    '\n\n<' + ssUrl + '|予約台帳>';
+}
+
+// Slack の通知を試す（SLACK_WEBHOOK_URL を入れたあとに1回）
+function testSlack() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ok = postSlack_('【小夜月】Slack通知のテスト', ['この通知がSlackに出ていれば、予約の通知メールと同じ文がここにも届く'], ss ? ss.getUrl() : 'https://docs.google.com');
+  Logger.log(ok ? 'Slackに送った' : 'Slackに送れなかった。スクリプトプロパティ SLACK_WEBHOOK_URL を確かめて');
 }
 
 // ===== メールの読み取り（AIなし。決まった位置から文字を抜く） =====
