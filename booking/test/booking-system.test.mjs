@@ -331,3 +331,10 @@ console.log('OK 入湯税：3/31までの予約は150円で計算');
 
 console.log('\nぜんぶ通った');
 });
+
+test('Slack：通知メールと同じ文を、Slackの書式で（& < > を置き換え、GmailのURLはリンクに）', () => {
+  const c2 = vm.createContext({ console });
+  vm.runInContext(fs.readFileSync(new URL('../booking-system/Code.js', import.meta.url), 'utf8') + '\n;this.__s = { slackText_ };', c2);
+  const t = c2.__s.slackText_('【小夜月】新しい予約（Agoda）', ['新しい予約（Agoda）：301 11/21〜11/23 TEST <2名>', 'メールが読めなかった：件名\n  https://mail.google.com/mail/?authuser=a&b#all/1'], 'https://docs.google.com/x');
+  assert.strictEqual(t, '*【小夜月】新しい予約（Agoda）*\n・新しい予約（Agoda）：301 11/21〜11/23 TEST &lt;2名&gt;\n・メールが読めなかった：件名\n  <https://mail.google.com/mail/?authuser=a&b#all/1|Gmailで開く>\n\n<https://docs.google.com/x|予約台帳>');
+});
