@@ -131,6 +131,57 @@ const css = `<style>
     .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .topnav .nav-ico svg { width: 20px; height: 20px; }
   }
+  /* ---- フラット：枠線をなくし、面の浮き沈みはドロップシャドウだけで見せる（2026-11-22） ---- */
+  :root {
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5), 0 24px 48px rgba(0, 0, 0, 0.45);
+    --raise: #1B202A;
+  }
+  .topnav a { border: 0 !important; }
+  @media (max-width: 899px) {
+    .topnav a { background: var(--raise); box-shadow: var(--shadow-sm); }
+    .topnav a[aria-current="page"] { background: #1C2A3A; }
+  }
+  @media (min-width: 900px) {
+    .top { border-right: 0; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35); z-index: 3; }
+    .month { border-left: 0; }
+  }
+  .appnav { border-top: 0; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4); }
+  .appnav a + a { border-left: 0; }
+  .pill { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .alert { border: 0; box-shadow: var(--shadow-md); }
+  .inbox-alert { border: 0; }
+  .need { border: 0; background: rgba(255, 107, 107, 0.16); }
+  .sw.prep { border: 0; }
+  .todaycards { padding: 12px 16px 6px; }
+  .card { border: 0; background: var(--raise); box-shadow: var(--shadow-md); }
+  .legend { padding: 12px 16px 4px; }
+  /* 予約のブロック：枠なしの面＋影。媒体の色は下の帯（内側の影）で出す */
+  .bar { --ch: var(--line-2); border: 0; background: #222834; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 -3px 0 var(--ch), var(--shadow-sm); }
+  .bar.airbnb { --ch: var(--airbnb); }
+  .bar.agoda { --ch: var(--agoda); }
+  .bar.expedia { --ch: var(--expedia); }
+  .bar.rakuten { --ch: var(--rakuten-line); }
+  .bar.direct { --ch: var(--direct); }
+  .bar.need-input { outline: 0; background: #3A1F25; }
+  .empty { border: 0; background: var(--panel-2); }
+  .qcard, .step, .savebox { border: 0; background: var(--raise); box-shadow: var(--shadow-md); }
+  .ghost { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .ghost.danger { background: #2A171B; }
+  .from-inq { border: 0; box-shadow: var(--shadow-sm); }
+  .cancelbox { border: 0; box-shadow: var(--shadow-sm); }
+  .mealbox .mpreview, .policy { border: 0; background: var(--panel-2); }
+  .detail { border: 0; box-shadow: var(--shadow-lg); }
+  .input { border: 0; background: #0B0E13; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
+  .stepper button { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .rcard { border: 0 !important; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .rcard[aria-pressed="true"] { background: #1C3550; box-shadow: var(--shadow-md); }
+  .rcard:disabled { background: var(--panel-2); box-shadow: none; opacity: 0.7; }
+  .seg { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .seg[aria-pressed="true"] { background: var(--accent); }
+  .save { box-shadow: var(--shadow-md); }
+  .toast { border: 0; box-shadow: var(--shadow-lg); }
 </style>`;
 // ヘッダーのロゴと「小夜月 予約」の文字は出さない（Cloudflare版だけ。ホーム画面のアプリ名で分かるため）
 const brand = html.match(/\n\s*<div class="brand">[\s\S]*?<\/div>/);
