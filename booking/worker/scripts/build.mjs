@@ -116,6 +116,16 @@ const css = `<style>
   .mcell.clash .mfree { color: var(--red-soft); }
   @media (min-width: 1200px) { .mn { font-size: 18px; } }
   @media (max-width: 899px) { .top { padding-top: calc(10px + env(safe-area-inset-top)); } }
+  /* スマホ：一番下の切り替えを position: fixed で貼り付けると、iPhoneのホーム画面アプリでは
+     スクロール中に画面の外へずれて見切れる。ページ全体ではなく .shell（画面の高さぴったり）をスクロールさせ、
+     切り替えはその中で sticky にして一番下に留める。上のメニューは前と同じく中身と一緒に流れる */
+  @media (max-width: 899px) {
+    html, body { height: 100%; overflow: hidden; }
+    .shell { position: relative; height: 100vh; height: 100dvh; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
+    .top, .appnav { flex: none; }
+    .view { padding-bottom: 24px; }
+    .appnav { position: sticky; bottom: 0; margin-top: auto; }
+  }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
     .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
