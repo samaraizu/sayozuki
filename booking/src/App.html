@@ -108,6 +108,8 @@
     });
     render();
     window.scrollTo(0, 0);
+    var shell = $view.closest('.shell');
+    if (shell) shell.scrollTop = 0; // スマホのCloudflare版は .shell がスクロールする
   }
 
   document.querySelectorAll('[data-view]').forEach(function (a) {
