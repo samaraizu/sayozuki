@@ -20,8 +20,16 @@ if (IN_BOOKING) {
   // 見た目は予約管理の一番下（booking/worker/scripts/build.mjs の appnav）と同じ
   const icon = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
   document.head.insertAdjacentHTML('beforeend', `<style>
-    body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
-    .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #262B37; background: #131720; font-family: 'Zen Kaku Gothic New', system-ui, sans-serif; }
+    /* 一番下の切り替えを position: fixed にすると、iPhoneのホーム画面アプリではスクロール中に画面の外へずれて見切れる。
+       ページ全体ではなく body（画面の高さぴったり）をスクロールさせ、切り替えはその中で sticky にして一番下に留める
+       （予約管理側の booking/worker/scripts/build.mjs と同じやり方）。印刷（QR）には効かせない */
+    @media screen {
+      html { height: 100%; overflow: hidden; }
+      body { height: 100%; height: 100dvh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; display: flex; flex-direction: column; }
+      #root { flex: 1 0 auto; }
+      .appnav { position: sticky; bottom: 0; flex: none; }
+    }
+    .appnav { left: 0; right: 0; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #262B37; background: #131720; font-family: 'Zen Kaku Gothic New', system-ui, sans-serif; }
     .appnav a { min-height: 60px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #A4A9B6; text-decoration: none; font-size: 12px; }
     .appnav a + a { border-left: 1px solid #2C3240; }
     .appnav a[aria-current="page"] { background: #F3F0E8; color: #15181F; font-weight: 700; }
