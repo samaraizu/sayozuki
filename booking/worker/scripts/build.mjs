@@ -74,11 +74,17 @@ const topnav = `<nav class="topnav" aria-label="メイン">
     </nav>`;
 const bottom = html.match(/\n\s*<nav class="bottomnav"[\s\S]*?<\/nav>/);
 if (!bottom) throw new Error('Index.html の下のナビが見つからない');
+// スマホでは「予約登録・問い合わせ・カレンダー」を一番下の切り替えのすぐ上に出す（すりガラスで中身が透ける帯）。
+// PCは左のサイドバーの topnav を使うので、こちらは隠す（.dock は display: contents）
+const docknav = topnav.replace('<nav class="topnav" aria-label="メイン">', '<nav class="topnav docknav" aria-label="メイン（画面の下）">');
 const appnav = `
+  <div class="dock">
+  ${docknav}
   <nav class="appnav" aria-label="切り替え">
     <a href="/" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg><span>予約管理</span></a>
     <a href="/staff/"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18"></path><path d="M5 18a7 7 0 0 1 14 0"></path><path d="M12 8V6"></path><path d="M10 6h4"></path></svg><span>リクエスト</span></a>
-  </nav>`;
+  </nav>
+  </div>`;
 const css = `<style>
   /* 一番下の切り替え（予約管理／リクエスト）。客室オーダーのスタッフ画面（order/public/staff/staff.js）と同じ見た目 */
   .bottomnav { display: none !important; }
@@ -122,9 +128,19 @@ const css = `<style>
   @media (max-width: 899px) {
     html, body { height: 100%; overflow: hidden; }
     .shell { position: relative; height: 100vh; height: 100dvh; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
-    .top, .appnav { flex: none; }
+    .top { flex: none; }
     .view { padding-bottom: 24px; }
-    .appnav { position: sticky; bottom: 0; margin-top: auto; }
+    /* 下に固定する帯：予約登録・問い合わせ・カレンダー（すりガラス）＋切り替え */
+    .top .topnav { display: none; }
+    .dock { position: sticky; bottom: 0; margin-top: auto; z-index: 6; flex: none; }
+    .dock .appnav { position: static; }
+    .docknav { padding: 10px 16px; background: rgba(15, 18, 24, 0.55); -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%); box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.3); }
+    .docknav a { background: rgba(32, 38, 50, 0.72) !important; }
+    .docknav a[aria-current="page"] { background: rgba(28, 46, 66, 0.85) !important; }
+  }
+  @media (min-width: 900px) {
+    .dock { display: contents; }
+    .docknav { display: none !important; }
   }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
