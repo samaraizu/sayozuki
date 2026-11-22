@@ -285,6 +285,9 @@
 
   // 月ごとの縦棒グラフを2つ（売上・稼働率）。単位が違うので軸を分け、月は上下でそろえる。
   // 棒を押すとその月を選び、上に数字を出す。表示は12か月（‹ › で6か月ずつ動く）
+  // 画面の売上は、媒体の掲載費を差し引いた目安として、ゲスト支払額の70%で出す（直販も含めて一律）
+  var SALES_RATE = 0.7;
+
   function renderSales() {
     var b = state.board;
     var thisMonth = b.today.slice(0, 7);
@@ -292,8 +295,13 @@
     var first = state.salesFrom || shiftMonth(thisMonth, -5);
     var months = [];
     for (var k = 0; k < 12; k++) months.push(shiftMonth(first, k));
-    var data = months.map(function (ym) { return Lib.monthSales(b.bookings, b.rooms, ym); });
-    var cur = Lib.monthSales(b.bookings, b.rooms, sel);
+    var sales = function (ym) {
+      var m = Lib.monthSales(b.bookings, b.rooms, ym);
+      m.gross = Math.round(m.gross * SALES_RATE);
+      return m;
+    };
+    var data = months.map(sales);
+    var cur = sales(sel);
     var maxGross = Math.max.apply(null, data.map(function (d) { return d.gross; }).concat([1]));
     var label = function (ym, short) { var p = ym.split('-'); return short ? (+p[1]) + '月' : (+p[0]) + '年' + (+p[1]) + '月'; };
     var pct = function (x) { return Math.round(x * 100) + '%'; };
@@ -336,7 +344,7 @@
       ),
       chart('売上', function (d) { return man(d.gross) + '円'; }, function (d) { return d.gross / maxGross; }, '最大 ' + man(maxGross === 1 ? 0 : maxGross) + '円'),
       chart('稼働率', function (d) { return pct(d.occupancy); }, function (d) { return d.occupancy; }, '100%'),
-      h('p', { class: 'snote' }, '売上はゲスト支払額（税込）を泊ごとに割り振った額。稼働率は売れた室泊÷販売可の部屋×日数。キャンセル・決済待ちは含まない')
+      h('p', { class: 'snote' }, '売上は、媒体の掲載費を差し引いた目安として、ゲスト支払額（税込）の70%を泊ごとに割り振った額（直販も同じく70%）。稼働率は売れた室泊÷販売可の部屋×日数。キャンセル・決済待ちは含まない')
     );
     append($view, box);
   }
