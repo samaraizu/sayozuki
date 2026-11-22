@@ -74,11 +74,17 @@ const topnav = `<nav class="topnav" aria-label="メイン">
     </nav>`;
 const bottom = html.match(/\n\s*<nav class="bottomnav"[\s\S]*?<\/nav>/);
 if (!bottom) throw new Error('Index.html の下のナビが見つからない');
+// スマホでは「予約登録・問い合わせ・カレンダー」を一番下の切り替えのすぐ上に出す（すりガラスで中身が透ける帯）。
+// PCは左のサイドバーの topnav を使うので、こちらは隠す（.dock は display: contents）
+const docknav = topnav.replace('<nav class="topnav" aria-label="メイン">', '<nav class="topnav docknav" aria-label="メイン（画面の下）">');
 const appnav = `
+  <div class="dock">
+  ${docknav}
   <nav class="appnav" aria-label="切り替え">
     <a href="/" aria-current="page"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18"></path><path d="M8 3v4"></path><path d="M16 3v4"></path></svg><span>予約管理</span></a>
     <a href="/staff/"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18h18"></path><path d="M5 18a7 7 0 0 1 14 0"></path><path d="M12 8V6"></path><path d="M10 6h4"></path></svg><span>リクエスト</span></a>
-  </nav>`;
+  </nav>
+  </div>`;
 const css = `<style>
   /* 一番下の切り替え（予約管理／リクエスト）。客室オーダーのスタッフ画面（order/public/staff/staff.js）と同じ見た目 */
   .bottomnav { display: none !important; }
@@ -122,15 +128,76 @@ const css = `<style>
   @media (max-width: 899px) {
     html, body { height: 100%; overflow: hidden; }
     .shell { position: relative; height: 100vh; height: 100dvh; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; }
-    .top, .appnav { flex: none; }
+    .top { flex: none; }
     .view { padding-bottom: 24px; }
-    .appnav { position: sticky; bottom: 0; margin-top: auto; }
+    /* 下に固定する帯：予約登録・問い合わせ・カレンダー（すりガラス）＋切り替え */
+    .top .topnav { display: none; }
+    .dock { position: sticky; bottom: 0; margin-top: auto; z-index: 6; flex: none; }
+    .dock .appnav { position: static; }
+    .docknav { padding: 10px 16px; background: rgba(15, 18, 24, 0.55); -webkit-backdrop-filter: blur(14px) saturate(140%); backdrop-filter: blur(14px) saturate(140%); box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.3); }
+    .docknav a { background: rgba(32, 38, 50, 0.72) !important; }
+    .docknav a[aria-current="page"] { background: rgba(28, 46, 66, 0.85) !important; }
+  }
+  @media (min-width: 900px) {
+    .dock { display: contents; }
+    .docknav { display: none !important; }
   }
   @media (min-width: 900px) {
     .top { height: calc(100vh - 66px); }
     .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .topnav .nav-ico svg { width: 20px; height: 20px; }
   }
+  /* ---- フラット：枠線をなくし、面の浮き沈みはドロップシャドウだけで見せる（2026-11-22） ---- */
+  :root {
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5), 0 24px 48px rgba(0, 0, 0, 0.45);
+    --raise: #1B202A;
+  }
+  .topnav a { border: 0 !important; }
+  @media (max-width: 899px) {
+    .topnav a { background: var(--raise); box-shadow: var(--shadow-sm); }
+    .topnav a[aria-current="page"] { background: #1C2A3A; }
+  }
+  @media (min-width: 900px) {
+    .top { border-right: 0; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35); z-index: 3; }
+    .month { border-left: 0; }
+  }
+  .appnav { border-top: 0; box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.4); }
+  .appnav a + a { border-left: 0; }
+  .pill { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .alert { border: 0; box-shadow: var(--shadow-md); }
+  .inbox-alert { border: 0; }
+  .need { border: 0; background: rgba(255, 107, 107, 0.16); }
+  .sw.prep { border: 0; }
+  .todaycards { padding: 12px 16px 6px; }
+  .card { border: 0; background: var(--raise); box-shadow: var(--shadow-md); }
+  .legend { padding: 12px 16px 4px; }
+  /* 予約のブロック：枠なしの面＋影。媒体の色は下の帯（内側の影）で出す */
+  .bar { --ch: var(--line-2); border: 0; background: #222834; -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: inset 0 -3px 0 var(--ch), var(--shadow-sm); }
+  .bar.airbnb { --ch: var(--airbnb); }
+  .bar.agoda { --ch: var(--agoda); }
+  .bar.expedia { --ch: var(--expedia); }
+  .bar.rakuten { --ch: var(--rakuten-line); }
+  .bar.direct { --ch: var(--direct); }
+  .bar.need-input { outline: 0; background: #3A1F25; }
+  .empty { border: 0; background: var(--panel-2); }
+  .qcard, .step, .savebox { border: 0; background: var(--raise); box-shadow: var(--shadow-md); }
+  .ghost { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .ghost.danger { background: #2A171B; }
+  .from-inq { border: 0; box-shadow: var(--shadow-sm); }
+  .cancelbox { border: 0; box-shadow: var(--shadow-sm); }
+  .mealbox .mpreview, .policy { border: 0; background: var(--panel-2); }
+  .detail { border: 0; box-shadow: var(--shadow-lg); }
+  .input { border: 0; background: #0B0E13; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
+  .stepper button { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .rcard { border: 0 !important; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .rcard[aria-pressed="true"] { background: #1C3550; box-shadow: var(--shadow-md); }
+  .rcard:disabled { background: var(--panel-2); box-shadow: none; opacity: 0.7; }
+  .seg { border: 0; background: var(--raise); box-shadow: var(--shadow-sm); }
+  .seg[aria-pressed="true"] { background: var(--accent); }
+  .save { box-shadow: var(--shadow-md); }
+  .toast { border: 0; box-shadow: var(--shadow-lg); }
 </style>`;
 // ヘッダーのロゴと「小夜月 予約」の文字は出さない（Cloudflare版だけ。ホーム画面のアプリ名で分かるため）
 const brand = html.match(/\n\s*<div class="brand">[\s\S]*?<\/div>/);

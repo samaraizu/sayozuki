@@ -174,6 +174,9 @@
     var b = state.board;
     var start = state.weekStart;
 
+    // いちばん上：今日のチェックイン・チェックアウト
+    renderTodayCards();
+
     // ダブルブッキング（今日以降に泊まりがかかるもの）
     Lib.findConflicts(b.bookings)
       .filter(function (c) { return c.a.checkOut > b.today && c.b.checkOut > b.today; })
@@ -220,14 +223,6 @@
       h('span', null, h('span', { class: 'dot', 'aria-hidden': 'true' }), 'Airbnb・Agoda・Expedia取り込み ' + (b.lastImport || '—')),
       needCount ? h('span', { class: 'need' }, '要入力 ' + needCount + '件') : null
     ));
-    append($view, h('div', { class: 'legend' },
-      h('span', null, h('i', { class: 'sw airbnb' }), 'Airbnb'),
-      h('span', null, h('i', { class: 'sw agoda' }), 'Agoda'),
-      h('span', null, h('i', { class: 'sw expedia' }), 'Expedia'),
-      h('span', null, h('i', { class: 'sw rakuten' }), '楽天'),
-      h('span', null, h('i', { class: 'sw direct' }), '直販'),
-      h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
-    ));
 
     var end = Lib.addDays(start, DAYS - 1);
     var week = h('section', { class: 'week', 'aria-label': '週の予約' },
@@ -262,10 +257,17 @@
     state.slide = '';
     swipeWeeks(scroller);
     append(week, scroller);
+    // 媒体の色分けは週の表のすぐ下
+    append(week, h('div', { class: 'legend' },
+      h('span', null, h('i', { class: 'sw airbnb' }), 'Airbnb'),
+      h('span', null, h('i', { class: 'sw agoda' }), 'Agoda'),
+      h('span', null, h('i', { class: 'sw expedia' }), 'Expedia'),
+      h('span', null, h('i', { class: 'sw rakuten' }), '楽天'),
+      h('span', null, h('i', { class: 'sw direct' }), '直販'),
+      h('span', null, h('i', { class: 'sw prep' }), '準備中・停止')
+    ));
 
     append($view, h('div', { class: 'cal-split' }, renderMonth(), week));
-
-    renderTodayCards();
   }
 
   function shiftWeek(n) {
