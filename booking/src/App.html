@@ -17,7 +17,8 @@
     view: 'cal',
     weekStart: '',  // 左の週の月曜
     monthStart: '', // 右の月のマスの1日目
-    salesMonth: '', // 一番下の売上の月（yyyy-MM）。空なら今月
+    salesMonth: '', // 一番下の売上で選んでいる月（yyyy-MM）。空なら今月
+    salesFrom: '',  // 売上のグラフの左端の月。空なら今月の5か月前
     form: null,
     saving: false,
     closing: '' // 見送りの理由を入れている問い合わせの受付番号
@@ -282,46 +283,60 @@
     return Math.floor(m / 12) + '-' + ('0' + (m % 12 + 1)).slice(-2);
   }
 
+  // 月ごとの縦棒グラフを2つ（売上・稼働率）。単位が違うので軸を分け、月は上下でそろえる。
+  // 棒を押すとその月を選び、上に数字を出す。表示は12か月（‹ › で6か月ずつ動く）
   function renderSales() {
     var b = state.board;
-    var ym = state.salesMonth || b.today.slice(0, 7);
-    var s = Lib.monthSales(b.bookings, b.rooms, ym);
-    var p = ym.split('-');
-    var label = (+p[0]) + '年' + (+p[1]) + '月';
-    var CH_CLASS = { 'Airbnb': 'airbnb', 'Agoda': 'agoda', 'Expedia': 'expedia', '楽天': 'rakuten', '直販': 'direct' };
-    var stat = function (k, v, sub) {
-      return h('div', { class: 'sstat' }, h('span', { class: 'k' }, k), h('span', { class: 'v' }, v), sub ? h('span', { class: 'm' }, sub) : null);
-    };
-    var box = h('section', { class: 'sales', 'aria-label': '月の売上' },
+    var thisMonth = b.today.slice(0, 7);
+    var sel = state.salesMonth || thisMonth;
+    var first = state.salesFrom || shiftMonth(thisMonth, -5);
+    var months = [];
+    for (var k = 0; k < 12; k++) months.push(shiftMonth(first, k));
+    var data = months.map(function (ym) { return Lib.monthSales(b.bookings, b.rooms, ym); });
+    var cur = Lib.monthSales(b.bookings, b.rooms, sel);
+    var maxGross = Math.max.apply(null, data.map(function (d) { return d.gross; }).concat([1]));
+    var label = function (ym, short) { var p = ym.split('-'); return short ? (+p[1]) + '月' : (+p[0]) + '年' + (+p[1]) + '月'; };
+    var pct = function (x) { return Math.round(x * 100) + '%'; };
+    var man = function (n) { return n >= 10000 ? (Math.round(n / 1000) / 10) + '万' : n.toLocaleString('ja-JP'); };
+
+    function chart(title, value, ratio, topLabel) {
+      var cols = h('div', { class: 'bars', role: 'list' });
+      data.forEach(function (d, k) {
+        var ym = months[k];
+        var r = Math.max(0, Math.min(1, ratio(d)));
+        var on = ym === sel;
+        append(cols, h('button', {
+          type: 'button', role: 'listitem',
+          class: 'bcol' + (on ? ' on' : '') + (ym === thisMonth ? ' now' : '') + (ym > thisMonth ? ' future' : ''),
+          'aria-label': label(ym) + ' ' + title + ' ' + value(d), 'aria-pressed': on ? 'true' : 'false',
+          onclick: function () { state.salesMonth = ym; render(); }
+        },
+          h('span', { class: 'bval' }, on ? value(d) : ''),
+          h('span', { class: 'btrack' }, h('span', { class: 'bfill', style: 'height:' + (r > 0 ? Math.max(r * 100, 1.5) : 0) + '%' })),
+          h('span', { class: 'bx' }, label(ym, true))
+        ));
+      });
+      return h('div', { class: 'chart' },
+        h('div', { class: 'chart-h' }, h('span', { class: 'ct' }, title), h('span', { class: 'cmax' }, topLabel)),
+        cols);
+    }
+
+    var box = h('section', { class: 'sales', 'aria-label': '月ごとの売上と稼働率' },
       h('div', { class: 'cal-head' },
-        h('h2', { class: 'sales-title' }, '売上 ' + label),
+        h('h2', { class: 'sales-title' }, label(sel)),
         h('div', { class: 'pager' },
-          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の月', onclick: function () { state.salesMonth = shiftMonth(ym, -1); render(); } }, svg(ICON_PREV)),
-          ym !== b.today.slice(0, 7) ? h('button', { type: 'button', class: 'pill', onclick: function () { state.salesMonth = ''; render(); } }, '今月') : null,
-          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の月', onclick: function () { state.salesMonth = shiftMonth(ym, 1); render(); } }, svg(ICON_NEXT))
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の6か月', onclick: function () { state.salesFrom = shiftMonth(first, -6); render(); } }, svg(ICON_PREV)),
+          (first !== shiftMonth(thisMonth, -5) || sel !== thisMonth) ? h('button', { type: 'button', class: 'pill', onclick: function () { state.salesFrom = ''; state.salesMonth = ''; render(); } }, '今月') : null,
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の6か月', onclick: function () { state.salesFrom = shiftMonth(first, 6); render(); } }, svg(ICON_NEXT))
         )
       ),
-      h('div', { class: 'stotal' },
-        h('span', { class: 'v' }, yen(s.gross)),
-        h('span', { class: 'm' }, s.bookings + '件・' + s.nights + '室泊')
+      h('div', { class: 'skpi' },
+        h('div', null, h('span', { class: 'k' }, '売上'), h('span', { class: 'v' }, yen(cur.gross))),
+        h('div', null, h('span', { class: 'k' }, '稼働率'), h('span', { class: 'v' }, pct(cur.occupancy)))
       ),
-      h('div', { class: 'sstats' },
-        stat('手取り', s.netMissing ? yen(s.net) + '＋?' : yen(s.net), s.netMissing ? '受取額のない予約 ' + yen(s.netMissing) + ' 分を除く' : 'OTAの手数料を引いた額'),
-        stat('稼働率', Math.round(s.occupancy * 100) + '%', s.rooms + '室×' + s.days + '日'),
-        stat('平均単価', s.nights ? yen(s.adr) : '—', '1室1泊'),
-        stat('未収（直販）', yen(s.unpaid), s.unpaid ? '現地で受け取る分' : '')
-      ),
-      s.byChannel.length
-        ? h('div', { class: 'schannels' }, s.byChannel.map(function (c) {
-            var share = s.gross ? Math.round(c.gross / s.gross * 100) : 0;
-            return h('div', { class: 'srow' },
-              h('span', { class: 'sname' }, h('i', { class: 'sw ' + (CH_CLASS[c.channel] || '') }), c.channel),
-              h('span', { class: 'sbar', 'aria-hidden': 'true' }, h('i', { class: 'sw ' + (CH_CLASS[c.channel] || ''), style: 'width:' + Math.max(share, 2) + '%' })),
-              h('span', { class: 'samt' }, yen(c.gross)),
-              h('span', { class: 'sshare' }, share + '%・' + c.nights + '泊'));
-          }))
-        : h('p', { class: 'snote' }, 'この月の予約はまだない'),
-      h('p', { class: 'snote' }, '売上はゲスト支払額（税込）を泊ごとに割り振った額。キャンセル・決済待ちは含まない')
+      chart('売上', function (d) { return man(d.gross) + '円'; }, function (d) { return d.gross / maxGross; }, '最大 ' + man(maxGross === 1 ? 0 : maxGross) + '円'),
+      chart('稼働率', function (d) { return pct(d.occupancy); }, function (d) { return d.occupancy; }, '100%'),
+      h('p', { class: 'snote' }, '売上はゲスト支払額（税込）を泊ごとに割り振った額。稼働率は売れた室泊÷販売可の部屋×日数。キャンセル・決済待ちは含まない')
     );
     append($view, box);
   }
