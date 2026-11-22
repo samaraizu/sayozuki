@@ -285,7 +285,8 @@
 
   // 月ごとの縦棒グラフを2つ（売上・稼働率）。単位が違うので軸を分け、月は上下でそろえる。
   // 棒を押すとその月を選び、上に数字を出す。表示は12か月（‹ › で6か月ずつ動く）
-  // 画面の売上は、媒体の掲載費を差し引いた目安として、ゲスト支払額の70%で出す（直販も含めて一律）
+  // 画面の売上は、媒体の掲載費を差し引いた目安として、OTAの予約はゲスト支払額の70%で出す。
+  // 直販（電話・HP・紹介）は掲載費がかからないので100%のまま
   var SALES_RATE = 0.7;
 
   function renderSales() {
@@ -297,7 +298,9 @@
     for (var k = 0; k < 12; k++) months.push(shiftMonth(first, k));
     var sales = function (ym) {
       var m = Lib.monthSales(b.bookings, b.rooms, ym);
-      m.gross = Math.round(m.gross * SALES_RATE);
+      m.gross = Math.round(m.byChannel.reduce(function (sum, c) {
+        return sum + c.gross * (c.channel === '直販' ? 1 : SALES_RATE);
+      }, 0));
       return m;
     };
     var data = months.map(sales);
@@ -344,7 +347,7 @@
       ),
       chart('売上', function (d) { return man(d.gross) + '円'; }, function (d) { return d.gross / maxGross; }, '最大 ' + man(maxGross === 1 ? 0 : maxGross) + '円'),
       chart('稼働率', function (d) { return pct(d.occupancy); }, function (d) { return d.occupancy; }, '100%'),
-      h('p', { class: 'snote' }, '売上は、媒体の掲載費を差し引いた目安として、ゲスト支払額（税込）の70%を泊ごとに割り振った額（直販も同じく70%）。稼働率は売れた室泊÷販売可の部屋×日数。キャンセル・決済待ちは含まない')
+      h('p', { class: 'snote' }, '売上は、ゲスト支払額（税込）を泊ごとに割り振った額。OTAの予約は媒体の掲載費を差し引いた目安として70%、直販は100%で数える。稼働率は売れた室泊÷販売可の部屋×日数。キャンセル・決済待ちは含まない')
     );
     append($view, box);
   }
