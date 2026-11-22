@@ -199,6 +199,16 @@ const css = `<style>
   .seg[aria-pressed="true"] { background: var(--accent); }
   .save { box-shadow: var(--shadow-md); }
   .toast { border: 0; box-shadow: var(--shadow-lg); }
+  /* 今日のチェックインは青系の面（チェックアウトはいつもの面のまま） */
+  .todaycards .card:first-child { background: #17324D; }
+  .todaycards .card:first-child .k, .todaycards .card:first-child .m { color: var(--accent-soft); }
+  /* 月のカレンダーを1枚の面に載せる（外枠＋ドロップシャドウ）。
+     左右の余白は「面の外 8px＋面の内 8px」で前の 16px と同じにし、マスの大きさは変えない */
+  .month { margin: 0 8px; padding: 4px 0 10px; border-radius: 18px; background: var(--raise); box-shadow: var(--shadow-md); }
+  .month .cal-head { padding-left: 8px; padding-right: 8px; }
+  .mgrid { padding: 0 8px; }
+  .mcell:hover { background: #222834; }
+  @media (min-width: 1200px) { .month { margin: 0 16px 0 8px; } }
 </style>`;
 // ヘッダーのロゴと「小夜月 予約」の文字は出さない（Cloudflare版だけ。ホーム画面のアプリ名で分かるため）
 const brand = html.match(/\n\s*<div class="brand">[\s\S]*?<\/div>/);
