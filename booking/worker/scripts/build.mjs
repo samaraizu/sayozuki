@@ -90,7 +90,8 @@ const css = `<style>
   .bottomnav { display: none !important; }
   /* 真ん中に線。選んでいる方は背景をオフホワイト、もう片方は黒系のまま */
   .appnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); background: #131720; }
-  .appnav a { min-height: 60px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); text-decoration: none; font-size: 12px; }
+  /* アイコンと文字を横並びにして高さを詰める。ホームバーの分の余白は safe-area から 14px 引いた分だけ（最低 10px） */
+  .appnav a { min-height: 0; padding: 10px 0 max(10px, calc(env(safe-area-inset-bottom) - 14px)); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; color: var(--muted); text-decoration: none; font-size: 13px; }
   .appnav a + a { border-left: 1px solid var(--line-2); }
   .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .appnav a[aria-current="page"] { background: #F3F0E8; color: #15181F; font-weight: 700; }
@@ -143,7 +144,7 @@ const css = `<style>
     .docknav { display: none !important; }
   }
   @media (min-width: 900px) {
-    .top { height: calc(100vh - 66px); }
+    .top { height: calc(100vh - 42px); } /* 一番下の切り替えの高さ（42px）を除く */
     .view { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
     .topnav .nav-ico svg { width: 20px; height: 20px; }
   }

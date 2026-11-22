@@ -30,7 +30,8 @@ if (IN_BOOKING) {
       .appnav { position: sticky; bottom: 0; flex: none; }
     }
     .appnav { left: 0; right: 0; z-index: 40; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #262B37; background: #131720; font-family: 'Zen Kaku Gothic New', system-ui, sans-serif; }
-    .appnav a { min-height: 60px; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #A4A9B6; text-decoration: none; font-size: 12px; }
+    /* アイコンと文字を横並びにして高さを詰める。ホームバーの分の余白は safe-area から 14px 引いた分だけ（最低 10px） */
+    .appnav a { min-height: 0; padding: 10px 0 max(10px, calc(env(safe-area-inset-bottom) - 14px)); display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; color: #A4A9B6; text-decoration: none; font-size: 13px; }
     .appnav a + a { border-left: 1px solid #2C3240; }
     .appnav a[aria-current="page"] { background: #F3F0E8; color: #15181F; font-weight: 700; }
   </style>`);
