@@ -22,6 +22,7 @@ export const FIELDS = [
   ['arrival', 'arrival', '到着予定'],
   ['meals', 'meals', '食事'],
   ['guestPaid', 'guest_paid', 'ゲスト支払額'],
+  ['received', 'received', '受取額'],
   ['payment', 'payment', '支払い状況'],
   ['tax', 'tax', '入湯税'],
   ['taxCollected', 'tax_collected', '入湯税の徴収'],
@@ -62,7 +63,8 @@ export async function getBoard(env: Env, email: string) {
   const [rooms, bookings, meta, inquiries, mealPlans] = await Promise.all([
     readRooms(env.DB),
     // カレンダーは今日から先しか出さない。重なりの判定に足りるよう少し前から
-    readBookings(env.DB, Lib.addDays(today, -62)),
+    // 売上の月表示で過去の月も見られるよう、1年ちょっと前から読む
+    readBookings(env.DB, Lib.addDays(today, -400)),
     env.DB.prepare("SELECT value FROM meta WHERE key = 'lastImport'").first<{ value: string }>(),
     openInquiries(env.DB),
     readMealPlans(env.DB, today),

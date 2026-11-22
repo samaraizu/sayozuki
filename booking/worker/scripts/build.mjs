@@ -209,6 +209,28 @@ const css = `<style>
   .mgrid { padding: 0 8px; }
   .mcell:hover { background: #222834; }
   @media (min-width: 1200px) { .month { margin: 0 16px 0 8px; } }
+  /* 一番下の月の売上 */
+  .sales { margin: 20px 8px 8px; padding: 4px 0 14px; border-radius: 18px; background: var(--raise); box-shadow: var(--shadow-md); }
+  .sales .cal-head { padding-left: 8px; padding-right: 8px; }
+  .sales-title { font-size: 16px !important; color: var(--text) !important; }
+  .stotal { padding: 4px 16px 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .stotal .v { font-size: 30px; font-weight: 700; letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+  .stotal .m { font-size: 12px; color: var(--muted); }
+  .sstats { padding: 0 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .sstat { padding: 10px 12px; border-radius: 12px; background: var(--panel-2); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sstat .k { font-size: 11px; color: var(--muted); }
+  .sstat .v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .sstat .m { font-size: 10px; color: var(--faint); line-height: 1.4; }
+  .schannels { padding: 14px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+  .srow { display: grid; grid-template-columns: 86px minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: 10px; }
+  .srow .sname { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .srow .sbar { height: 8px; border-radius: 999px; background: var(--panel-2); overflow: hidden; display: block; }
+  .srow .sbar .sw { display: block; height: 100%; border-radius: 999px; }
+  .srow .sbar .sw.rakuten { background: var(--rakuten-line); box-shadow: none; }
+  .srow .samt { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .srow .sshare { grid-column: 3; font-size: 10px; color: var(--faint); text-align: right; }
+  .snote { margin: 12px 16px 0; font-size: 11px; color: var(--faint); line-height: 1.5; }
+  @media (min-width: 900px) { .sstats { grid-template-columns: repeat(4, minmax(0, 1fr)); } .sales { margin: 24px 16px 8px; } }
 </style>`;
 // ヘッダーのロゴと「小夜月 予約」の文字は出さない（Cloudflare版だけ。ホーム画面のアプリ名で分かるため）
 const brand = html.match(/\n\s*<div class="brand">[\s\S]*?<\/div>/);

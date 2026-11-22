@@ -17,6 +17,7 @@
     view: 'cal',
     weekStart: '',  // 左の週の月曜
     monthStart: '', // 右の月のマスの1日目
+    salesMonth: '', // 一番下の売上の月（yyyy-MM）。空なら今月
     form: null,
     saving: false,
     closing: '' // 見送りの理由を入れている問い合わせの受付番号
@@ -268,6 +269,61 @@
     ));
 
     append($view, h('div', { class: 'cal-split' }, renderMonth(), week));
+
+    // 一番下：月の売上
+    renderSales();
+  }
+
+  // ---------- 月の売上 ----------
+
+  function shiftMonth(ym, n) {
+    var p = ym.split('-');
+    var m = +p[0] * 12 + (+p[1] - 1) + n;
+    return Math.floor(m / 12) + '-' + ('0' + (m % 12 + 1)).slice(-2);
+  }
+
+  function renderSales() {
+    var b = state.board;
+    var ym = state.salesMonth || b.today.slice(0, 7);
+    var s = Lib.monthSales(b.bookings, b.rooms, ym);
+    var p = ym.split('-');
+    var label = (+p[0]) + '年' + (+p[1]) + '月';
+    var CH_CLASS = { 'Airbnb': 'airbnb', 'Agoda': 'agoda', 'Expedia': 'expedia', '楽天': 'rakuten', '直販': 'direct' };
+    var stat = function (k, v, sub) {
+      return h('div', { class: 'sstat' }, h('span', { class: 'k' }, k), h('span', { class: 'v' }, v), sub ? h('span', { class: 'm' }, sub) : null);
+    };
+    var box = h('section', { class: 'sales', 'aria-label': '月の売上' },
+      h('div', { class: 'cal-head' },
+        h('h2', { class: 'sales-title' }, '売上 ' + label),
+        h('div', { class: 'pager' },
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '前の月', onclick: function () { state.salesMonth = shiftMonth(ym, -1); render(); } }, svg(ICON_PREV)),
+          ym !== b.today.slice(0, 7) ? h('button', { type: 'button', class: 'pill', onclick: function () { state.salesMonth = ''; render(); } }, '今月') : null,
+          h('button', { type: 'button', class: 'icon-btn', 'aria-label': '次の月', onclick: function () { state.salesMonth = shiftMonth(ym, 1); render(); } }, svg(ICON_NEXT))
+        )
+      ),
+      h('div', { class: 'stotal' },
+        h('span', { class: 'v' }, yen(s.gross)),
+        h('span', { class: 'm' }, s.bookings + '件・' + s.nights + '室泊')
+      ),
+      h('div', { class: 'sstats' },
+        stat('手取り', s.netMissing ? yen(s.net) + '＋?' : yen(s.net), s.netMissing ? '受取額のない予約 ' + yen(s.netMissing) + ' 分を除く' : 'OTAの手数料を引いた額'),
+        stat('稼働率', Math.round(s.occupancy * 100) + '%', s.rooms + '室×' + s.days + '日'),
+        stat('平均単価', s.nights ? yen(s.adr) : '—', '1室1泊'),
+        stat('未収（直販）', yen(s.unpaid), s.unpaid ? '現地で受け取る分' : '')
+      ),
+      s.byChannel.length
+        ? h('div', { class: 'schannels' }, s.byChannel.map(function (c) {
+            var share = s.gross ? Math.round(c.gross / s.gross * 100) : 0;
+            return h('div', { class: 'srow' },
+              h('span', { class: 'sname' }, h('i', { class: 'sw ' + (CH_CLASS[c.channel] || '') }), c.channel),
+              h('span', { class: 'sbar', 'aria-hidden': 'true' }, h('i', { class: 'sw ' + (CH_CLASS[c.channel] || ''), style: 'width:' + Math.max(share, 2) + '%' })),
+              h('span', { class: 'samt' }, yen(c.gross)),
+              h('span', { class: 'sshare' }, share + '%・' + c.nights + '泊'));
+          }))
+        : h('p', { class: 'snote' }, 'この月の予約はまだない'),
+      h('p', { class: 'snote' }, '売上はゲスト支払額（税込）を泊ごとに割り振った額。キャンセル・決済待ちは含まない')
+    );
+    append($view, box);
   }
 
   function shiftWeek(n) {
