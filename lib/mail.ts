@@ -1,11 +1,19 @@
 import "server-only";
+import { postSlack } from "@/lib/slack";
 
 /**
- * ご予約・お問い合わせの通知メール。
+ * ご予約・お問い合わせ・お取り寄せの注文の、宿あての通知メール。
  * RESEND_API_KEY が未設定のあいだは送信せず、サーバーのログに出すだけにしている。
  * 送信元ドメインの認証と宛先が決まったら .env.local に入れる。
+ * 同じ件名・本文を Slack にも送る（SLACK_WEBHOOK_URL があるときだけ）。
+ * 返り値はメールの結果だけ。Slack は知らせるためだけなので、受け付けたかどうかの判定には使わない。
  */
 export async function sendInquiryMail(subject: string, body: string, replyTo?: string) {
+  const [mail] = await Promise.all([sendStaffMail(subject, body, replyTo), postSlack(subject, body)]);
+  return mail;
+}
+
+async function sendStaffMail(subject: string, body: string, replyTo?: string) {
   const key = process.env.RESEND_API_KEY;
   const to = process.env.INQUIRY_MAIL_TO;
   const from = process.env.INQUIRY_MAIL_FROM;

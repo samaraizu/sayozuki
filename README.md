@@ -91,6 +91,7 @@ HPの「201号室」は台帳の「201」に読み替え、台帳にない客室
 | 値 | 用途 |
 | --- | --- |
 | `RESEND_API_KEY` `INQUIRY_MAIL_TO` `INQUIRY_MAIL_FROM` | メール通知 |
+| `SLACK_WEBHOOK_URL` | 通知メールと同じ件名・本文を送る Slack の Incoming Webhook（お問い合わせとお取り寄せの注文）。空なら送らない |
 
 本番は Worker の secret（`npx wrangler secret put 名前`）、手元は `.env.local`（`.env.local.example` をコピー）に入れる。
 入っているかは `npx wrangler secret list --name sayozuki` で確かめられる。
