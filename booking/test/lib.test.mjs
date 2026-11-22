@@ -187,3 +187,30 @@ test('食事の初期値：台帳の文字から毎泊の人数分にする', ()
   assert.deepEqual(j(Lib.mealPlanFrom('なし（確認済み）', 1, 2)), [{ dinner: 0, breakfast: 0 }]);
   assert.deepEqual(j(Lib.mealPlanFrom('', 1, 2)), [{ dinner: 0, breakfast: 0 }]);
 });
+
+test('monthSales：泊ごとに月へ割り振り、媒体別・稼働率・平均単価・手取りを出す', () => {
+  const rs = [{ name: 'A', capacity: 4, state: '販売可' }, { name: 'B', capacity: 4, state: '販売可' }, { name: 'C', capacity: 1, state: '準備中' }];
+  const bk = (channel, room, checkIn, checkOut, guestPaid, extra = {}) => ({ channel, room, checkIn, checkOut, guestPaid, status: '確定', adults: '2', ...extra });
+  const list = [
+    bk('Airbnb', 'A', '2026-11-30', '2026-12-02', '¥20,000', { received: '¥17,000' }), // 11月に1泊・12月に1泊
+    bk('直販', 'B', '2026-11-10', '2026-11-12', '¥12,000', { payment: '未収' }),
+    bk('Agoda', 'B', '2026-11-20', '2026-11-21', '¥7,000'), // 受取額なし
+    bk('Airbnb', 'A', '2026-11-05', '2026-11-06', '¥9,999', { status: 'キャンセル' }),
+    bk('直販', 'A', '2026-11-15', '2026-11-16', '¥5,000', { status: '仮' }),
+  ];
+  const m = Lib.monthSales(list, rs, '2026-11');
+  assert.equal(m.days, 30);
+  assert.equal(m.rooms, 2);
+  assert.equal(m.nights, 4);
+  assert.equal(m.bookings, 3);
+  assert.equal(m.gross, 10000 + 12000 + 7000);
+  assert.equal(m.net, 8500 + 12000);
+  assert.equal(m.netMissing, 7000);
+  assert.equal(m.unpaid, 12000);
+  assert.equal(m.adr, Math.round(29000 / 4));
+  assert.equal(m.occupancy, 4 / 60);
+  assert.deepEqual(JSON.parse(JSON.stringify(m.byChannel.map((c) => [c.channel, c.gross, c.nights]))), [['直販', 12000, 2], ['Airbnb', 10000, 1], ['Agoda', 7000, 1]]);
+  const d = Lib.monthSales(list, rs, '2026-12');
+  assert.equal(d.gross, 10000);
+  assert.equal(d.days, 31);
+});

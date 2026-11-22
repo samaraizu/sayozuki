@@ -1278,7 +1278,7 @@ function alertOnce_(props, key, todayIso, notes, msg) {
 const CF_FIELDS = {
   '媒体': 'channel', '予約番号': 'no', 'ステータス': 'status', '要確認': 'flag', '部屋': 'room',
   'チェックイン': 'checkIn', 'チェックアウト': 'checkOut', '大人': 'adults', '子ども': 'children', '乳幼児': 'infants',
-  '代表者名': 'name', '連絡先': 'contact', '到着予定': 'arrival', '食事': 'meals', 'ゲスト支払額': 'guestPaid',
+  '代表者名': 'name', '連絡先': 'contact', '到着予定': 'arrival', '食事': 'meals', 'ゲスト支払額': 'guestPaid', '受取額': 'received',
   '支払い状況': 'payment', '入湯税': 'tax', '入湯税の徴収': 'taxCollected', '予約URL': 'url', 'メモ': 'memo', '予約日': 'bookedOn',
 };
 const CF_NUMBER_COLS = ['大人', '子ども', '乳幼児', 'ゲスト支払額'];

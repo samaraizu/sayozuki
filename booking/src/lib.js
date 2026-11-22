@@ -327,7 +327,56 @@ function sayozukiLib() {
     return out;
   }
 
+  /**
+   * 月の売上（ym = 'yyyy-MM'）。泊ごとに割り振る：1予約の金額を泊数で割り、その月に入る夜の分だけ数える。
+   * 売上＝ゲスト支払額（税込・お客様が払った総額）、手取り＝受取額（OTAの手数料を引いた額。直販は売上と同じ）。
+   * キャンセル・決済待ちの「仮」は入れない（キャンセル料も入らない）。部屋数は今の販売可の部屋で数える。
+   */
+  function monthSales(bookings, rooms, ym) {
+    var from = ym + '-01';
+    var p = ym.split('-');
+    var nextMonth = +p[1] === 12 ? (+p[0] + 1) + '-01-01' : p[0] + '-' + pad2(+p[1] + 1) + '-01';
+    var days = nightsBetween(from, nextMonth);
+    var sellable = rooms.filter(function (r) { return r.state === SELLABLE; }).length;
+    var out = { month: ym, days: days, rooms: sellable, gross: 0, net: 0, netMissing: 0, nights: 0, bookings: 0, unpaid: 0, byChannel: [] };
+    var ch = {};
+    bookings.forEach(function (b) {
+      if (!isActive(b) || b.status === '仮') return;
+      var n = nightsBetween(b.checkIn, b.checkOut);
+      var inMonth = 0;
+      for (var k = 0; k < n; k++) {
+        var night = addDays(b.checkIn, k);
+        if (night >= from && night < nextMonth) inMonth++;
+      }
+      if (!inMonth) return;
+      var gross = toInt(b.guestPaid) * inMonth / n;
+      var name = String(b.channel || '').trim() || '不明';
+      var direct = name === '直販';
+      var received = direct ? toInt(b.guestPaid) : toInt(b.received);
+      out.gross += gross;
+      out.nights += inMonth;
+      out.bookings++;
+      if (received > 0) out.net += received * inMonth / n;
+      else out.netMissing += gross;
+      if (direct && b.payment === '未収') out.unpaid += gross;
+      var c = ch[name] || (ch[name] = { channel: name, gross: 0, nights: 0, bookings: 0 });
+      c.gross += gross;
+      c.nights += inMonth;
+      c.bookings++;
+    });
+    out.gross = Math.round(out.gross);
+    out.net = Math.round(out.net);
+    out.netMissing = Math.round(out.netMissing);
+    out.unpaid = Math.round(out.unpaid);
+    out.byChannel = Object.keys(ch).map(function (k) { ch[k].gross = Math.round(ch[k].gross); return ch[k]; })
+      .sort(function (a, b) { return b.gross - a.gross; });
+    out.occupancy = sellable && days ? out.nights / (sellable * days) : 0; // 稼働率（室泊 ÷ 販売可の部屋×日数）
+    out.adr = out.nights ? Math.round(out.gross / out.nights) : 0;    // 1室1泊あたりの平均単価
+    return out;
+  }
+
   return {
+    monthSales: monthSales,
     MEAL_MAX: MEAL_MAX,
     MEAL_NONE: MEAL_NONE,
     cleanMealPlan: cleanMealPlan,

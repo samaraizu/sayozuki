@@ -209,6 +209,37 @@ const css = `<style>
   .mgrid { padding: 0 8px; }
   .mcell:hover { background: #222834; }
   @media (min-width: 1200px) { .month { margin: 0 16px 0 8px; } }
+  /* 一番下の月の売上 */
+  .sales { margin: 20px 8px 8px; padding: 4px 0 14px; border-radius: 18px; background: var(--raise); box-shadow: var(--shadow-md); }
+  .sales .cal-head { padding-left: 8px; padding-right: 8px; }
+  .sales-title { font-size: 16px !important; color: var(--text) !important; }
+  .skpi { padding: 2px 16px 8px; display: flex; gap: 28px; }
+  .skpi div { display: flex; flex-direction: column; gap: 2px; }
+  .skpi .k { font-size: 11px; color: var(--muted); }
+  .skpi .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* 縦棒グラフ：1系列なので凡例なし（見出しが名前）。選んだ月だけ濃い青と値ラベル、ほかは薄い青 */
+  .chart { padding: 12px 16px 0; }
+  .chart-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--muted); padding-bottom: 6px; }
+  .chart-h .cmax { font-size: 10px; color: var(--faint); }
+  .bars { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 0; height: 132px; border-bottom: 1px solid var(--line-2); }
+  .bcol { all: unset; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; min-width: 0; height: 100%; cursor: pointer; padding-top: 2px; }
+  .bcol .bval { height: 14px; font-size: 10px; font-weight: 700; color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .bcol .btrack { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+  .bcol .bfill { display: block; width: min(70%, 22px); border-radius: 4px 4px 0 0; background: rgba(124, 196, 255, 0.42); }
+  .bcol.future .bfill { background: rgba(124, 196, 255, 0.22); }
+  .bcol.on .bfill { background: var(--accent); }
+  .bcol:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+  .bx { display: none; }
+  .chart + .chart .bars { height: 96px; }
+  /* 月の目盛りは下のグラフの下にだけ出す */
+  .chart:last-of-type .bx { display: block; }
+  .chart:last-of-type .bars { border-bottom: 0; }
+  .chart:last-of-type .btrack { border-bottom: 1px solid var(--line-2); }
+  .bx { padding-top: 4px; font-size: 10px; color: var(--faint); white-space: nowrap; }
+  .bcol.now .bx { color: var(--accent); font-weight: 700; }
+  .bcol.on .bx { color: var(--text); font-weight: 700; }
+  .snote { margin: 12px 16px 0; font-size: 11px; color: var(--faint); line-height: 1.5; }
+  @media (min-width: 900px) { .sales { margin: 24px 16px 8px; } .bars { height: 160px; } .chart + .chart .bars { height: 110px; } }
 </style>`;
 // ヘッダーのロゴと「小夜月 予約」の文字は出さない（Cloudflare版だけ。ホーム画面のアプリ名で分かるため）
 const brand = html.match(/\n\s*<div class="brand">[\s\S]*?<\/div>/);
