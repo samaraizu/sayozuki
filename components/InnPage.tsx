@@ -2,6 +2,7 @@ import Link from "next/link";
 import { OtaIcon } from "@/components/OtaIcon";
 import { Photo } from "@/components/Photo";
 import { Reservation } from "@/components/Reservation";
+import { Mascot, MascotSays, Sparkle } from "@/components/Mascot";
 import { Heading, SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { dictionaries, fmt, formatYen, localePath, type Locale } from "@/lib/i18n";
@@ -106,8 +107,11 @@ export function InnPage({ lang }: { lang: Locale }) {
               </button>
             </form>
           </div>
-          <div className="order-1 md:order-2">
+          <div className="relative order-1 md:order-2">
             <Photo src={photos.hero} alt={t.hero.alt} priority sizes="(min-width: 768px) 55vw, 100vw" className="arch h-[52svh] min-h-[360px] md:h-[600px]" />
+            {/* マスコットはアーチの左下の縁にちょこんと座らせる */}
+            <Mascot priority className="absolute -bottom-6 -left-3 h-auto w-[96px] drop-shadow-[0_6px_10px_rgba(51,48,42,0.18)] md:-bottom-8 md:-left-10 md:w-[150px]" />
+            <Sparkle className="absolute bottom-24 left-20 size-4 text-wood md:bottom-40 md:left-28 md:size-5" />
           </div>
         </section>
 
@@ -129,11 +133,15 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* 温泉 */}
         {/* 温泉は苔色の帯。ページの中で一か所だけ色の面にする */}
-        <section id="onsen" className="grid scroll-mt-6 items-center gap-8 rounded-[32px] bg-sea p-5 text-cream md:grid-cols-2 md:gap-10 md:p-12">
+        <section id="onsen" className="relative grid scroll-mt-6 items-center gap-8 rounded-[32px] bg-sea p-5 text-cream md:grid-cols-2 md:gap-10 md:p-12">
           <div className="order-2 flex flex-col gap-5 md:order-1">
             <div className="flex flex-col gap-2">
               <p className="text-[12px] font-bold tracking-[0.24em] text-[#D6C7A8]">ONSEN</p>
               <h2 className="font-mincho text-[26px] font-bold leading-snug md:text-[32px]">{t.onsen.title}</h2>
+            </div>
+            {/* 苔色の地では切り抜きのフチが目立つので、生成りの丸に入れる */}
+            <div className="absolute -top-10 right-4 z-10 flex size-28 items-center justify-center rounded-full bg-cream shadow-soft md:-top-12 md:left-[calc(50%-5.5rem)] md:right-auto md:size-36">
+              <Mascot pose="onsen" className="h-auto w-[88px] md:w-[116px]" />
             </div>
             <p className="text-[15px] leading-8 text-[#DCD6C8]">{t.onsen.body}</p>
             <div className="rounded-2xl bg-cream/10 px-4 py-3.5">
@@ -156,7 +164,10 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* 客室 */}
         <section id="rooms" className="scroll-mt-6">
-          <Heading en="ROOMS" ja={t.rooms.title} lead={fmt(t.rooms.body, { n: rooms.length })} />
+          <div className="flex items-end justify-between gap-4">
+            <Heading en="ROOMS" ja={t.rooms.title} lead={fmt(t.rooms.body, { n: rooms.length })} />
+            <Mascot pose="oyasumi" className="mb-6 h-auto w-[110px] shrink-0 md:mb-8 md:w-[170px]" />
+          </div>
           <div className="grid gap-3 md:grid-cols-[2fr_1fr]">
             <Photo src={photos.room} alt={t.rooms.altRoom} sizes="(min-width: 768px) 66vw, 100vw" className="aspect-[16/10] rounded-[24px]" />
             <Photo src={photos.corridor} alt={t.rooms.altCorridor} sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[16/10] rounded-[24px] md:aspect-auto" />
@@ -193,7 +204,10 @@ export function InnPage({ lang }: { lang: Locale }) {
             </ul>
           </div>
           <div className="flex flex-col gap-3 rounded-[24px] bg-white p-6 shadow-soft md:p-8">
-            <h3 className="font-mincho text-xl font-semibold">{t.price.mealsTitle}</h3>
+            <div className="flex items-end justify-between gap-3">
+              <h3 className="font-mincho text-xl font-semibold">{t.price.mealsTitle}</h3>
+              <Mascot pose="nonbiri" className="-mt-4 h-auto w-[72px] md:w-[88px]" />
+            </div>
             <p className="text-[13px] leading-6 text-slate">{t.price.mealsNote}</p>
             {photos.meal && <Photo src={photos.meal} alt={t.price.altMeal} sizes="(min-width: 768px) 33vw, 100vw" className="aspect-[4/3] rounded-2xl" />}
             <div className="flex items-center justify-between rounded-2xl bg-sky px-4 py-3.5">
@@ -222,7 +236,10 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* ご予約 */}
         <section id="reserve" className="scroll-mt-6">
-          <Heading en="RESERVATION" ja={t.book.title} lead={t.book.lead} />
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between md:gap-8">
+            <Heading en="RESERVATION" ja={t.book.title} lead={t.book.lead} />
+            <MascotSays text={t.mascot.welcome} pose="odekake" className="-mt-4 mb-6 md:mt-0 md:mb-8 md:shrink-0" />
+          </div>
           {/* 空室カレンダーと事前決済。ページを移らずにここで予約まで進める */}
           <Reservation lang={lang} t={t} roomNames={t.rooms.names} />
 
@@ -259,9 +276,12 @@ export function InnPage({ lang }: { lang: Locale }) {
 
           {/* お問い合わせはフォームを別ページ（/contact）に分けた */}
           <div className="mt-4 flex flex-col gap-4 rounded-[32px] bg-white p-6 shadow-soft md:flex-row md:items-center md:justify-between md:p-8">
-            <div>
-              <h3 className="font-mincho text-xl font-semibold">{t.reserve.directTitle}</h3>
-              <p className="mt-2 max-w-xl text-sm leading-7 text-slate">{t.reserve.directBody}</p>
+            <div className="flex items-center gap-4">
+              <Mascot pose="heart" className="h-auto w-[64px] shrink-0 md:w-[76px]" />
+              <div>
+                <h3 className="font-mincho text-xl font-semibold">{t.reserve.directTitle}</h3>
+                <p className="mt-2 max-w-xl text-sm leading-7 text-slate">{t.reserve.directBody}</p>
+              </div>
             </div>
             <a
               href={contactHref}

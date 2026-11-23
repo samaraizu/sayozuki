@@ -248,5 +248,6 @@ export const en: Dict = {
     lead: "Order Yamagata sake for delivery within Japan (Japanese only)",
     more: "Visit the sake shop",
   },
+  mascot: { welcome: "A quiet night awaits you.", goodbye: "Until the next quiet night." },
   footer: { operator: "Operated by {company}" },
 };

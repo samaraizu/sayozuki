@@ -246,5 +246,6 @@ export const zh: Dict = {
     lead: "山形地酒网购（仅限日本国内配送・日语页面）",
     more: "前往日本酒网店",
   },
+  mascot: { welcome: "在静谧的夜晚，静候您的光临。", goodbye: "静谧之夜，期待再会。" },
   footer: { operator: "运营：{company}" },
 };

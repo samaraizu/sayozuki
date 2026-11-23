@@ -248,5 +248,6 @@ export const vi: Dict = {
     lead: "Đặt mua rượu sake Yamagata (chỉ giao trong Nhật Bản, trang tiếng Nhật)",
     more: "Xem cửa hàng rượu sake",
   },
+  mascot: { welcome: "Một đêm yên tĩnh đang chờ bạn.", goodbye: "Hẹn gặp lại vào một đêm yên tĩnh." },
   footer: { operator: "Điều hành: {company}" },
 };
