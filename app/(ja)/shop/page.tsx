@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ProductGrid } from "@/components/shop/ProductGrid";
+import { Mascot } from "@/components/Mascot";
 import { TasteMap } from "@/components/shop/TasteMap";
 import { Chip, Crest, MoreLink, PhotoBand, SectionHeading } from "@/components/ui";
 import { allTags, delivery, products, shop, tagsOf, type Product } from "@/lib/shop";
@@ -160,6 +161,13 @@ export default async function ShopTop({ searchParams }: PageProps<"/shop">) {
       {/* ご購入について */}
       <section id="guide" className="scroll-mt-4 px-4 py-20 md:py-24">
         <SectionHeading en="GUIDE" ja="ご購入について" />
+        {/* マスコットは酒の広告に見えないよう、商品まわりには置かず案内と手続きだけに出す。飲むしぐさのポーズは使わない */}
+        <div className="mx-auto -mt-4 mb-8 flex max-w-3xl items-end justify-center gap-2">
+          <Mascot pose="odekake" className="h-auto w-[84px] md:w-[96px]" />
+          <p className="relative mb-9 border border-line bg-white px-4 py-2.5 font-brush text-[14px] font-bold before:absolute before:bottom-3 before:-left-[7px] before:size-3 before:rotate-45 before:border-b before:border-l before:border-line before:bg-white md:text-[15px]">
+            山形の地酒を、ご自宅までお届けします。
+          </p>
+        </div>
         <dl className="mx-auto max-w-3xl divide-y divide-line border-y border-line text-sm leading-7">
           {[
             ["お届け", "日本国内のみのお届けです。"],

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Mascot } from "@/components/Mascot";
 import { ClearCart } from "@/components/shop/ClearCart";
 import { StepBar } from "@/components/shop/StepBar";
 import { delivery, payments } from "@/lib/shop";
@@ -23,6 +24,7 @@ export default async function CompletePage({ searchParams }: PageProps<"/shop/co
       <ClearCart />
       <StepBar current={4} />
       <div className="border border-line px-6 py-12 text-center md:px-12">
+        <Mascot pose="heart" className="mx-auto mb-4 h-auto w-[88px]" />
         <p className="font-en text-2xl font-medium">THANK YOU</p>
         <h1 className="mt-3 font-brush text-3xl font-bold">ご注文ありがとうございます</h1>
         {orderNo && (
