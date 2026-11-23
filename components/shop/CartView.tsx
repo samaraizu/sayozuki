@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Mascot } from "@/components/Mascot";
 import { Bottle } from "@/components/shop/Bottle";
 import { AgeNotice } from "@/components/shop/Notice";
 import { OrderSummary } from "@/components/shop/OrderSummary";
@@ -19,6 +20,7 @@ export function CartView() {
   if (!count) {
     return (
       <div className="py-16 text-center">
+        <Mascot pose="oyasumi" className="mx-auto mb-6 h-auto w-[140px]" />
         <p>カートに商品が入っていません。</p>
         <Link href={shopPath("/#lineup")} className="mt-8 inline-block bg-ink px-10 py-4 text-sm text-white">
           日本酒を見る
