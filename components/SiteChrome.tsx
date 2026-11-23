@@ -1,4 +1,5 @@
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Mascot, Sparkle } from "@/components/Mascot";
 import { dictionaries, fmt, localePath, type Locale } from "@/lib/i18n";
 import { intlPhone, site, telHref } from "@/lib/site";
 
@@ -70,7 +71,15 @@ export function SiteFooter({ lang }: { lang: Locale }) {
   const t = dictionaries[lang];
   const phone = (n: string) => (lang === "ja" ? n : intlPhone(n));
   return (
-    <footer className="mt-24 rounded-t-[32px] bg-navy px-4 pt-12 pb-10 text-[#D6CFC2] md:px-6">
+    <footer className="relative mt-36 rounded-t-[32px] bg-navy px-4 pt-12 pb-10 text-[#D6CFC2] md:px-6">
+      {/* マスコットはフッターの縁に腰かけて見送る */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 mx-auto flex max-w-6xl -translate-y-[78%] items-end justify-end gap-3 px-4 md:px-6">
+        <p className="mb-14 font-mincho text-[14px] font-bold tracking-[0.12em] text-navy md:text-[16px]">{t.mascot.goodbye}</p>
+        <div className="relative">
+          <Sparkle className="absolute -top-1 -left-4 size-4 text-wood" />
+          <Mascot className="h-auto w-[84px] md:w-[104px]" />
+        </div>
+      </div>
       <div className="mx-auto flex max-w-6xl flex-col gap-6 text-[13px] md:flex-row md:items-end md:justify-between">
         <div className="flex items-start gap-3">
           <Moon className="mt-1 size-6 text-wood" />

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { OtaIcon } from "@/components/OtaIcon";
 import { Photo } from "@/components/Photo";
 import { Reservation } from "@/components/Reservation";
+import { Mascot, MascotSays, Sparkle } from "@/components/Mascot";
 import { Heading, SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { dictionaries, fmt, formatYen, localePath, type Locale } from "@/lib/i18n";
@@ -106,8 +107,11 @@ export function InnPage({ lang }: { lang: Locale }) {
               </button>
             </form>
           </div>
-          <div className="order-1 md:order-2">
+          <div className="relative order-1 md:order-2">
             <Photo src={photos.hero} alt={t.hero.alt} priority sizes="(min-width: 768px) 55vw, 100vw" className="arch h-[52svh] min-h-[360px] md:h-[600px]" />
+            {/* マスコットはアーチの左下の縁にちょこんと座らせる */}
+            <Mascot priority className="absolute -bottom-6 -left-3 h-auto w-[96px] drop-shadow-[0_6px_10px_rgba(51,48,42,0.18)] md:-bottom-8 md:-left-10 md:w-[150px]" />
+            <Sparkle className="absolute bottom-24 left-20 size-4 text-wood md:bottom-40 md:left-28 md:size-5" />
           </div>
         </section>
 
@@ -222,7 +226,10 @@ export function InnPage({ lang }: { lang: Locale }) {
 
         {/* ご予約 */}
         <section id="reserve" className="scroll-mt-6">
-          <Heading en="RESERVATION" ja={t.book.title} lead={t.book.lead} />
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between md:gap-8">
+            <Heading en="RESERVATION" ja={t.book.title} lead={t.book.lead} />
+            <MascotSays text={t.mascot.welcome} className="-mt-4 mb-6 md:mt-0 md:mb-8 md:shrink-0" />
+          </div>
           {/* 空室カレンダーと事前決済。ページを移らずにここで予約まで進める */}
           <Reservation lang={lang} t={t} roomNames={t.rooms.names} />
 
