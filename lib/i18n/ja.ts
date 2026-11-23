@@ -251,6 +251,7 @@ export const ja = {
     lead: "山形の地酒をご自宅へお取り寄せいただけます",
     more: "お取り寄せを見る",
   },
+  mascot: { welcome: "静かな夜に、お待ちしています。", goodbye: "静かな夜に、また、会いましょう。" },
   footer: { operator: "運営：{company}" },
 };
 

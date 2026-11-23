@@ -246,5 +246,6 @@ export const ko: Dict = {
     lead: "야마가타 지역 사케를 주문하실 수 있습니다 (일본 국내 배송・일본어 페이지)",
     more: "사케 온라인숍 보기",
   },
+  mascot: { welcome: "고요한 밤, 기다리고 있겠습니다.", goodbye: "고요한 밤에 또 만나요." },
   footer: { operator: "운영: {company}" },
 };
