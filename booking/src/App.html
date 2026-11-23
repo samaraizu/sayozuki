@@ -346,8 +346,7 @@
         h('div', null, h('span', { class: 'k' }, '稼働率'), h('span', { class: 'v' }, pct(cur.occupancy)))
       ),
       chart('売上', function (d) { return man(d.gross) + '円'; }, function (d) { return d.gross / maxGross; }, '最大 ' + man(maxGross === 1 ? 0 : maxGross) + '円'),
-      chart('稼働率', function (d) { return pct(d.occupancy); }, function (d) { return d.occupancy; }, '100%'),
-      h('p', { class: 'snote' }, '売上は、ゲスト支払額（税込）を泊ごとに割り振った額。OTAの予約は媒体の掲載費を差し引いた目安として70%、直販は100%で数える。稼働率は売れた室泊÷販売可の部屋×日数。キャンセル・決済待ちは含まない')
+      chart('稼働率', function (d) { return pct(d.occupancy); }, function (d) { return d.occupancy; }, '100%')
     );
     append($view, box);
   }
