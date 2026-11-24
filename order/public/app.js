@@ -415,7 +415,7 @@ function viewChat() {
     })
     .join('');
   return `<main class="chat-main"><h2 class="h2">${esc(t('chatTitle'))}</h2><p class="lead">${esc(t('chatLead'))}</p>
-    <div class="msgs" role="log" aria-live="polite">${msgs || `<div class="chat-empty">${esc(t('chatEmpty'))}</div>`}</div></main>`;
+    <div class="msgs" role="log" aria-live="polite">${msgs || `<div class="chat-empty">${mascot('heart.png', 'm-empty')}<div>${esc(t('chatEmpty'))}</div></div>`}</div></main>`;
 }
 
 function composer() {
@@ -494,7 +494,7 @@ function viewRequest() {
     return `<div class="row-card" data-key="req:${r.kind}"><span><span class="t">${esc(pick(r.name, S.lang))}</span><span class="s">${esc(pick(r.sub, S.lang))}</span></span>
       <button class="req-btn" data-act="req" data-id="${r.kind}" aria-pressed="${sent}" ${sent ? 'disabled' : ''}>${esc(t(sent ? 'reqDone' : 'reqDo'))}</button></div>`;
   }).join('');
-  return `<main><h2 class="h2">${esc(t('reqTitle'))}</h2><p class="lead">${esc(t('reqLead'))}</p>
+  return `<main><div class="title-row"><div><h2 class="h2">${esc(t('reqTitle'))}</h2><p class="lead">${esc(t('reqLead'))}</p></div>${mascot('oyasumi.png', 'm-title')}</div>
     <div class="row-card"><span><span class="t">${esc(t('dndTitle'))}</span><span class="s">${esc(t('dndSub'))}</span></span>
       <button class="switch" data-act="dnd" aria-pressed="${dnd}" aria-label="${esc(t('dndTitle'))}"><span></span></button></div>
     ${rows}</main>`;
@@ -518,10 +518,10 @@ function viewBill() {
   if (b.payUrl)
     action = `<div class="notice">${esc(t('payLead'))}</div><a class="btn-primary" href="${esc(b.payUrl)}" rel="noopener">${esc(t('payNow'))}・${yen(b.pendingTotal)}</a>`;
   else if (S.paidRecently)
-    action = `<div class="notice">${esc(t('paid'))}</div><a class="btn-ghost" href="/receipt">${esc(t('receipt'))}</a>`;
+    action = `${mascot('heart.png', 'm-paid')}<div class="notice">${esc(t('paid'))}</div><a class="btn-ghost" href="/receipt">${esc(t('receipt'))}</a>`;
   return `<main><h2 class="h2">${esc(t('billTitle'))}</h2><p class="lead">${esc(t('billLead'))}</p>
     <div class="bill">
-      ${lines || `<div class="lead" style="padding:8px 0">${esc(t('noOrders'))}</div>`}
+      ${lines || `<div class="bill-empty">${mascot('nonbiri.png', 'm-empty')}<div class="lead">${esc(t('noOrders'))}</div></div>`}
       <div class="bill-total"><span style="font-weight:700">${esc(t('total'))}</span><span class="v">${yen(b.total)}</span></div>
     </div>${action}${s.bathTaxYen ? `<p class="lead" style="margin-top:14px">${esc(t('bathTax').replace('{yen}', yen(s.bathTaxYen)))}</p>` : ''}</main>`;
 }
@@ -536,6 +536,9 @@ function guideLinks() {
       <span><span class="t">${esc(pick(a.name, S.lang))}</span><span class="s">${esc(pick(a.sub, S.lang))}</span></span><span style="color:var(--accent)">${I.ext}</span></a>`
   ).join('');
 }
+
+// マスコット（三日月の頭に作務衣）。飾りなので読み上げない。画像は public/images/mascot/（HPと同じ原画）
+const mascot = (file, cls = '') => `<img class="mascot ${cls}" src="/images/mascot/${file}" alt="" aria-hidden="true" decoding="async">`;
 
 // 日本時間の時刻で、おはよう・こんにちは・こんばんは
 function greeting() {
@@ -561,7 +564,7 @@ function viewHome() {
     .map(([id, k, sub, icon, dot]) => `<button class="quick-btn" data-act="tab" data-id="${id}" data-key="home:q:${id}"><span class="qi">${icon}${dot ? '<span class="dot"></span>' : ''}</span><span class="t">${esc(t(k))}</span><span class="s">${esc(t(sub))}</span></button>`)
     .join('');
   return `<main class="home">
-    <section class="hello" data-key="home:hello"><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></section>
+    <section class="hello has-mascot" data-key="home:hello"><div><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></div>${mascot('sitting.svg', 'm-hello')}</section>
     <section class="wifi-card" data-key="home:wifi"><div class="wifi-head"><span class="wi">${I.wifi}</span><span class="t">Wi-Fi</span></div>${wifi}</section>
     <button class="order-card" data-act="tab" data-id="menu" data-key="home:order">
       <span class="oi">${I.dish}</span>
@@ -579,7 +582,7 @@ function welcomeHtml() {
   return `<div class="welcome" role="dialog" aria-label="${esc(t('welcomeTitle'))}">
     <button class="lang-btn wl-lang" data-act="lang-open" aria-label="${esc(t('langTitle'))}">${I.globe}${esc(curLang().short)}</button>
     <div class="wl-body">
-      <svg class="wl-moon" width="88" height="88" viewBox="0 0 72 72" aria-hidden="true"><path d="M47 10a28 28 0 1 0 16 46A30 30 0 0 1 47 10z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      ${mascot('sitting.svg', 'wl-mascot')}
       <p class="wl-en wl-s1" lang="en">SAYOZUKI</p>
       <h1 class="wl-title wl-s2">${esc(t('welcomeTitle'))}</h1>
       <p class="wl-room wl-s3">${esc(S.session ? S.session.room : '')}</p>
