@@ -436,9 +436,8 @@ function header(full) {
       : `<div class="banner"><span class="muted">${esc(t('lastOrder', { t: s.lastOrder }))}</span><span>${esc(t('deliveryNote'))}</span></div>`;
   return `<header class="header${scrolled ? ' scrolled' : ''}">
     <div class="brand-row">
-      <div class="brand"><span class="moon">${I.moon}</span>
-        <div><div class="brand-name"><span class="brand-ja">小夜月</span><span class="brand-en" lang="en">Sayozuki</span></div>
-        ${s ? `<div class="room">${esc(t('room', { r: s.room }))}</div>` : ''}</div>
+      <div class="brand"><img class="brand-logo" src="/images/logo-header-white.svg" alt="湯の宿 小夜月" width="662" height="250">
+        ${s ? `<div class="room">${esc(t('room', { r: s.room }))}</div>` : ''}
       </div>
       <button class="lang-btn" data-act="lang-open" aria-label="${esc(t('langTitle'))}">${I.globe}${esc(curLang().short)}</button>
     </div>${banner}
@@ -564,7 +563,7 @@ function viewHome() {
     .map(([id, k, sub, icon, dot]) => `<button class="quick-btn" data-act="tab" data-id="${id}" data-key="home:q:${id}"><span class="qi">${icon}${dot ? '<span class="dot"></span>' : ''}</span><span class="t">${esc(t(k))}</span><span class="s">${esc(t(sub))}</span></button>`)
     .join('');
   return `<main class="home">
-    <section class="hello has-mascot" data-key="home:hello"><div><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></div>${mascot('sitting.svg', 'm-hello')}</section>
+    <section class="hello has-mascot" data-key="home:hello"><div><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></div>${mascot('onsen.png', 'm-hello')}</section>
     <section class="wifi-card" data-key="home:wifi"><div class="wifi-head"><span class="wi">${I.wifi}</span><span class="t">Wi-Fi</span></div>${wifi}</section>
     <button class="order-card" data-act="tab" data-id="menu" data-key="home:order">
       <span class="oi">${I.dish}</span>
