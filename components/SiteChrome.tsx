@@ -33,10 +33,10 @@ export function SiteHeader({ lang, onTop = false, sub = "" }: { lang: Locale; on
     <header className="sticky top-0 z-40 border-b border-frost/70 bg-cream/70 text-navy backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pt-4 pb-3 md:px-6 md:py-5">
         <a href={onTop ? "#top" : home} className="flex items-center">
-          {/* 横組みのロゴ（マスコット＋「温泉旅館 小夜月」）。原画は public/images/logo/（ヘッダー用は余白を詰めた logo-header.svg） */}
+          {/* 横組みのロゴ（マスコット＋「湯の宿 小夜月」）。原画は public/images/logo/（ヘッダー用は余白を詰めた logo-header.svg） */}
           <Image
             src="/images/logo/logo-header.svg"
-            alt={`温泉旅館 ${site.name}`}
+            alt={`湯の宿 ${site.name}`}
             width={662}
             height={250}
             priority
