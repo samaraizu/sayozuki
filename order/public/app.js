@@ -563,7 +563,7 @@ function viewHome() {
     .map(([id, k, sub, icon, dot]) => `<button class="quick-btn" data-act="tab" data-id="${id}" data-key="home:q:${id}"><span class="qi">${icon}${dot ? '<span class="dot"></span>' : ''}</span><span class="t">${esc(t(k))}</span><span class="s">${esc(t(sub))}</span></button>`)
     .join('');
   return `<main class="home">
-    <section class="hello has-mascot" data-key="home:hello"><div><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></div>${mascot('sitting.svg', 'm-hello')}</section>
+    <section class="hello has-mascot" data-key="home:hello"><div><p class="greet">${esc(greeting())}</p><p class="hello-lead">${esc(t('homeLead', { r: s.room }))}</p></div>${mascot('onsen.png', 'm-hello')}</section>
     <section class="wifi-card" data-key="home:wifi"><div class="wifi-head"><span class="wi">${I.wifi}</span><span class="t">Wi-Fi</span></div>${wifi}</section>
     <button class="order-card" data-act="tab" data-id="menu" data-key="home:order">
       <span class="oi">${I.dish}</span>
