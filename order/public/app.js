@@ -436,9 +436,8 @@ function header(full) {
       : `<div class="banner"><span class="muted">${esc(t('lastOrder', { t: s.lastOrder }))}</span><span>${esc(t('deliveryNote'))}</span></div>`;
   return `<header class="header${scrolled ? ' scrolled' : ''}">
     <div class="brand-row">
-      <div class="brand"><span class="moon">${I.moon}</span>
-        <div><div class="brand-name"><span class="brand-ja">小夜月</span><span class="brand-en" lang="en">Sayozuki</span></div>
-        ${s ? `<div class="room">${esc(t('room', { r: s.room }))}</div>` : ''}</div>
+      <div class="brand"><img class="brand-logo" src="/images/logo-header-white.svg" alt="湯の宿 小夜月" width="662" height="250">
+        ${s ? `<div class="room">${esc(t('room', { r: s.room }))}</div>` : ''}
       </div>
       <button class="lang-btn" data-act="lang-open" aria-label="${esc(t('langTitle'))}">${I.globe}${esc(curLang().short)}</button>
     </div>${banner}

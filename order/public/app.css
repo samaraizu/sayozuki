@@ -287,3 +287,7 @@ button:active, a.row-card:active { transform: scale(0.93); transition-duration: 
 .m-empty { width: 84px; margin: 0 auto 10px; }
 .bill-empty { padding: 10px 0 6px; text-align: center; }
 .m-paid { width: 76px; margin: 18px auto 4px; }
+
+/* ヘッダーのロゴ。HPと同じ横組み（マスコット＋「湯の宿 小夜月」）を、青緑の地に合わせて文字を白くした版 */
+.brand-logo { display: block; height: 40px; width: auto; }
+.header .room { color: rgba(255,255,255,0.92); padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.4); line-height: 1.3; }
