@@ -48,6 +48,6 @@ export function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // 画像・ビルド成果物・favicon は通さない
-  matcher: ["/((?!_next/|images/|favicon.ico).*)"],
+  // 画像・ビルド成果物・ファビコン（favicon.ico・icon.png・apple-icon.png）は通さない
+  matcher: ["/((?!_next/|images/|favicon.ico|icon.png|apple-icon.png).*)"],
 };
