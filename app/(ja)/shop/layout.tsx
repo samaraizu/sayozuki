@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { AgeGate } from "@/components/shop/AgeGate";
 import { CartLink } from "@/components/shop/CartLink";
@@ -33,12 +34,18 @@ export default function ShopLayout({ children }: LayoutProps<"/shop">) {
 
       <header className="relative z-40 bg-white">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-4 md:h-20 md:px-5">
-          <Link href={shopPath("/")} className="flex items-center gap-3">
-            <Crest className="size-11 md:size-14" />
-            <span className="leading-tight">
-              <span className="block font-serif-ja text-lg tracking-[0.2em]">{site.name}</span>
-              <span className="block font-brush text-[13px] text-sub">お取り寄せ</span>
-            </span>
+          {/* 宿のHPと同じ横組みのロゴ。どのサイトか分かるよう「お取り寄せ」を添える */}
+          <Link href={shopPath("/")} className="flex items-center gap-3 md:gap-4">
+            <Image
+              src="/images/logo/logo-header.svg"
+              alt={`湯の宿 ${site.name}`}
+              width={662}
+              height={250}
+              priority
+              unoptimized
+              className="h-10 w-auto md:h-[52px]"
+            />
+            <span className="border-l border-line pl-3 font-brush text-[13px] text-sub md:pl-4 md:text-[15px]">お取り寄せ</span>
           </Link>
           <div className="flex items-end gap-2">
             <Link href={innUrl("/")} className="flex flex-col items-center gap-0.5 px-2 text-[10px]" aria-label="宿のご案内">
