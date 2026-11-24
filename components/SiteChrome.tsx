@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Mascot, Sparkle } from "@/components/Mascot";
 import { dictionaries, fmt, localePath, type Locale } from "@/lib/i18n";
@@ -31,16 +32,17 @@ export function SiteHeader({ lang, onTop = false, sub = "" }: { lang: Locale; on
   return (
     <header className="sticky top-0 z-40 border-b border-frost/70 bg-cream/70 text-navy backdrop-blur-xl backdrop-saturate-150">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pt-4 pb-3 md:px-6 md:py-5">
-        <a href={onTop ? "#top" : home} className="flex items-center gap-2.5">
-          <span className="flex size-10 items-center justify-center rounded-full bg-sea text-cream">
-            <Moon className="size-5" />
-          </span>
-          <span className="flex flex-col leading-tight">
-            <span lang="ja" className="font-mincho text-[22px] font-bold tracking-[0.16em]">
-              {site.name}
-            </span>
-            <span className="text-[10px] tracking-[0.18em] text-slate">{site.roman}</span>
-          </span>
+        <a href={onTop ? "#top" : home} className="flex items-center">
+          {/* 横組みのロゴ（マスコット＋「温泉旅館 小夜月」）。原画は public/images/logo/（ヘッダー用は余白を詰めた logo-header.svg） */}
+          <Image
+            src="/images/logo/logo-header.svg"
+            alt={`温泉旅館 ${site.name}`}
+            width={662}
+            height={250}
+            priority
+            unoptimized
+            className="h-11 w-auto md:h-[52px]"
+          />
         </a>
         <div className="flex items-center gap-2 md:order-2">
           <LanguageSwitcher lang={lang} sub={sub} />
